@@ -70,7 +70,7 @@ def read_kml(source):
 
 def _read_placemark(placemark, origin):
     """(Track or None, number of gx:Tracks whose <when> and <gx:coord> counts differ)."""
-    points = new_points(_COLUMNS)
+    points = new_points(("ele",))  # the SimpleArray columns join when a gx:Track has one
     segments, mismatched = [], 0
     for part in placemark.iter():
         start = len(points["time"])
@@ -83,6 +83,9 @@ def _read_placemark(placemark, origin):
             segments.append(start)
     if not points["time"]:
         return None, mismatched
+    for column in _COLUMNS[1:]:  # NaN for the points of parts without the column
+        if column in points:
+            points[column].extend([math.nan] * (len(points["time"]) - len(points[column])))
     meta = TrackMeta(name=xml_text(xml_child(placemark, "name")), source=origin)
     return build_track(points, segments, meta), mismatched
 
@@ -107,13 +110,16 @@ def _read_gx_track(track, points):
     if len(whens) != len(coords):
         return False
     arrays = _simple_arrays(track, len(coords))
-    for i, (when, coord) in enumerate(zip(whens, coords, strict=True)):
+    start = len(points["time"])
+    for when, coord in zip(whens, coords, strict=True):
         points["time"].append(parse_iso_time(when) if when else math.nan)
         points["lon"].append(float(coord[0]))
         points["lat"].append(float(coord[1]))
         points["ele"].append(float(coord[2]) if len(coord) > 2 else math.nan)
-        for column in _COLUMNS[1:]:
-            points[column].append(arrays[column][i] if column in arrays else math.nan)
+    for column, values in arrays.items():
+        column_values = points.setdefault(column, [])
+        column_values.extend([math.nan] * (start - len(column_values)))  # earlier parts lacked it
+        column_values.extend(values)
     return True
 
 
@@ -137,5 +143,3 @@ def _read_line_string(line, points):
         points["lon"].append(float(values[0]))
         points["lat"].append(float(values[1]))
         points["ele"].append(float(values[2]) if len(values) > 2 else math.nan)
-        for column in _COLUMNS[1:]:
-            points[column].append(math.nan)
