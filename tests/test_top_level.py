@@ -7,8 +7,8 @@ import placewise
 
 
 def test_headline_names_are_at_the_top_level():
-    from placewise.client import Client
     from placewise.engine import Geocoder, lookup
+    from placewise.service import Client
 
     assert placewise.lookup is lookup and placewise.Geocoder is Geocoder and placewise.Client is Client
     assert {"lookup", "Geocoder", "Client", "load_settings", "load_overrides"} <= set(placewise.__all__)

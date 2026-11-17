@@ -72,7 +72,7 @@ def test_list_marks_pinned(run, release, data_dir, capsys):
     release.add("world", "2026.11")
     run("data", "install", "world")
     # the pin comes from settings; the CLI has no config loader yet, so go through the library
-    from placewise.cli import _list
+    from placewise.cli.data import _list
     from placewise.model import DataSettings
     from placewise.store import Store
 

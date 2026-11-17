@@ -1,4 +1,4 @@
-"""placewise.client.Client against a real test server: round trips, batching and error mapping."""
+"""placewise.service.Client against a real test server: round trips, batching and error mapping."""
 
 import socket
 
@@ -7,7 +7,8 @@ import pytest
 from server_kit import CN_TOWER, DATA_VERSION, EIFFEL, OPERA_HOUSE, FakeGeocoder, expected
 
 from placewise import attribution
-from placewise.client import (
+from placewise.model import Result, ServerSettings, Settings
+from placewise.service import (
     AuthenticationError,
     BadRequestError,
     Client,
@@ -19,7 +20,6 @@ from placewise.client import (
     ServiceError,
     TransportError,
 )
-from placewise.model import Result, ServerSettings, Settings
 
 
 def url(server):

@@ -2,7 +2,7 @@ import pytest
 from server_kit import FakeClock, FakeGeocoder, running
 
 from placewise.model import Settings
-from placewise.server import KeyStore, make_server
+from placewise.service import KeyStore, make_server
 
 
 @pytest.fixture(autouse=True)

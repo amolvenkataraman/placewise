@@ -10,7 +10,7 @@ import pytest
 from server_kit import FakeClock
 
 from placewise.constants import server as const
-from placewise.server import ApiKey, KeyStore, RateLimiter, default_keys_path
+from placewise.service.server import ApiKey, KeyStore, RateLimiter, default_keys_path
 
 
 def test_add_shows_the_key_once_and_stores_only_its_hash(tmp_path):

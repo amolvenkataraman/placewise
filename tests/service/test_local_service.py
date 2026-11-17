@@ -7,9 +7,8 @@ import stat
 import pytest
 from server_kit import CN_TOWER, EIFFEL, OPERA_HOUSE, FakeGeocoder, call, expected, running
 
-from placewise.client import Client
 from placewise.model import Settings, WorldviewSettings
-from placewise.service import CachedGeocoder, make_service
+from placewise.service import CachedGeocoder, Client, make_service
 
 LAT, LON = CN_TOWER
 

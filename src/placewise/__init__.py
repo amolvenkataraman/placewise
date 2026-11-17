@@ -12,7 +12,7 @@ __version__ = "0.0.1"
 _LAZY = {
     "lookup": ("placewise.engine", "lookup"),
     "Geocoder": ("placewise.engine", "Geocoder"),
-    "Client": ("placewise.client", "Client"),
+    "Client": ("placewise.service", "Client"),
     "load_settings": ("placewise.config", "load_settings"),
     "load_overrides": ("placewise.overrides", "load_overrides"),
 }

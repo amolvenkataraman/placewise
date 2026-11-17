@@ -28,11 +28,12 @@ A `Result` is exactly `Result.to_dict()`. Errors are `{"error": {"code": ..., "m
 | 429 | `rate_limited` | over the key's (or address's) rate; wait `Retry-After` seconds |
 | 500 / 503 | `internal` / `busy` | a failure (details are never sent) / too many connections |
 
-Clients in Python use `placewise.client.Client`, which has the same `lookup` / `lookup_many` as the
-library's `Geocoder`, batches transparently and raises one exception class per error:
+Clients in Python use `placewise.service.Client` (also `placewise.Client`), which has the same
+`lookup` / `lookup_many` as the library's `Geocoder`, batches transparently and raises one exception
+class per error:
 
 ```python
-from placewise.client import Client
+from placewise.service import Client
 geo = Client("https://geo.example.org", key="pw_...")
 geo.lookup(43.6426, -79.3871).label
 ```
