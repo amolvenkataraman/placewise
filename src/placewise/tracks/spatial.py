@@ -12,14 +12,14 @@ from typing import NamedTuple
 import numpy as np
 
 from placewise.constants.earth import MEAN_RADIUS_KM
-from placewise.constants.track_ops import SLEPT_HOUR
+from placewise.constants.tracks import SLEPT_HOUR
 from placewise.geo.distances import haversine
 from placewise.geo.lines import _nearest_on_arcs
 from placewise.geo.polygon_index import PolygonIndex
 from placewise.model import BBox, DayPresence, PresenceDays
 from placewise.model.presence import RULES
 
-from ._steps import bisect_change, in_segment_steps, require_sorted, step_km, unit_vectors
+from ._ops import bisect_change, in_segment_steps, require_sorted, step_km, unit_vectors
 
 _DAY_S = 86400
 _EPOCH = dt.date(1970, 1, 1)

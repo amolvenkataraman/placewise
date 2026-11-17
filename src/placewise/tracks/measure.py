@@ -23,7 +23,7 @@ from placewise.geo._arrays import as_floats, out
 from placewise.model._base import Model
 
 from ._ops import M_PER_KM, bounds, leg_metres, nanmedian_rows, point_weights, segment_ids, speed, windows
-from ._ops import within as within_legs
+from ._ops import in_segment_steps as within_legs
 
 _KMH = 3.6  # (km/h) / (m/s)
 

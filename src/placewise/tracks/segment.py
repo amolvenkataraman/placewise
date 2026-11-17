@@ -7,7 +7,7 @@ from itertools import pairwise
 
 import numpy as np
 
-from placewise.constants.track_ops import (
+from placewise.constants.tracks import (
     AIRBORNE_MIN_KMH,
     BIKE_MAX_KMH,
     GAP_S,
@@ -23,7 +23,7 @@ from placewise.constants.track_ops import (
 from placewise.geo.distances import haversine
 from placewise.model._base import Model
 
-from ._steps import in_segment_steps, mean_position, require_sorted, step_km
+from ._ops import in_segment_steps, mean_position, require_sorted, step_km
 
 _SCAN_CHUNK = 64  # first look-ahead when growing a stay; doubles each time it isn't enough
 

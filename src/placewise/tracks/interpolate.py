@@ -11,7 +11,7 @@ from typing import NamedTuple
 
 import numpy as np
 
-from placewise.constants.track_ops import (
+from placewise.constants.tracks import (
     CLOCK_COARSE_STEP_S,
     CLOCK_FINE_STEP_S,
     CLOCK_GOOD_RESIDUAL_M,
@@ -24,7 +24,7 @@ from placewise.constants.track_ops import (
 from placewise.geo.distances import haversine
 from placewise.model._base import Model
 
-from ._steps import in_segment_steps, interpolate, require_sorted, segment_ids, step_km
+from ._ops import in_segment_steps, interpolate, require_sorted, segment_ids, step_km
 from .track import Track
 
 # Candidate offsets are scored in blocks of at most this many (offset, photo) pairs, to bound memory.
