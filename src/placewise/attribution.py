@@ -43,3 +43,31 @@ def _load(folder):
             raise ValueError(f"{path.name} holds source {item.id!r}; the file must be named {item.id}.json")
         sources[item.id] = item
     return sources
+
+
+_INTRO = """\
+# Data attribution
+
+Generated from the source registry (`src/placewise/sources/`) by `placewise attribution`; do not
+edit by hand. It lists every dataset placewise data packs are built from, with its licence and
+the credit line to show. An app that ships or displays placewise data can link to this file, and
+should still read each licence for its own obligations.
+"""
+
+
+def render_markdown(sources=None):
+    """ATTRIBUTION.md: a summary table, then each source's credit line, licence and notes."""
+    sources = load_sources() if sources is None else sources
+    lines = [_INTRO, "| Source | Licence | Used in |", "|---|---|---|"]
+    for s in sources.values():
+        lines.append(f"| [{s.name}]({s.url}) | {s.licence} | {', '.join(s.used_in) or '-'} |")
+    for s in sources.values():
+        lines += ["", f"## {s.name}", "", f"- Credit: {s.credit}", f"- Licence: {s.licence}"]
+        lines.append(f"- Website: {s.url}")
+        if s.share_alike:
+            lines.append("- Share-alike: shipped only in the separate share-alike pack.")
+        if s.derived_database:
+            lines.append(f"- Derived database offered at: {s.derived_database}")
+        if s.notes:
+            lines += ["", s.notes]
+    return "\n".join(lines) + "\n"

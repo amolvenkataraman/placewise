@@ -59,3 +59,26 @@ def test_build_code_takes_every_url_from_the_registry():
     for path in [*sorted((PACKBUILD / "sources").glob("*.py")), PACKBUILD / "world.py"]:
         code = re.sub(r"#.*", "", path.read_text(encoding="utf-8"))  # links in comments are fine
         assert not re.search(r"""["']https?://""", code), f"{path.name} hardcodes a URL"
+
+
+REPO = Path(__file__).resolve().parents[1]
+
+
+def test_attribution_file_lists_every_source_with_licence_and_credit():
+    text = attribution.render_markdown()
+    for s in attribution.load_sources().values():
+        assert s.name in text and s.licence in text and s.credit in text and s.url in text
+
+
+def test_committed_attribution_file_is_up_to_date():
+    # regenerate with: uv run placewise attribution > ATTRIBUTION.md
+    assert (REPO / "ATTRIBUTION.md").read_text(encoding="utf-8") == attribution.render_markdown()
+
+
+def test_cli_prints_the_attribution(capsys):
+    from placewise.cli import main
+
+    assert main(["attribution"]) == 0
+    assert capsys.readouterr().out == attribution.render_markdown()
+    assert main(["attribution", "--json"]) == 0
+    assert set(json.loads(capsys.readouterr().out)) == set(attribution.load_sources())

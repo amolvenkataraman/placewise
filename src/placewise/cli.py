@@ -5,6 +5,7 @@ handler; `lookup`, `find` and `serve` will join `data` the same way, in _COMMAND
 """
 
 import argparse
+import json
 import sys
 
 from placewise import __version__
@@ -220,7 +221,23 @@ def _progress_printer():
 
 
 # Top-level commands, in help order. Future ones (lookup, find, serve) add an `_add_<name>` here.
-_COMMANDS = (_add_data,)
+def _add_attribution(commands):
+    sub = _subparser(commands, "attribution", "the data sources, licences and credit lines to show")
+    sub.add_argument("--json", action="store_true", help="the source registry as JSON")
+    sub.set_defaults(handler=_cmd_attribution)
+
+
+def _cmd_attribution(args):
+    from placewise import attribution
+
+    if args.json:
+        sources = {id_: s.to_dict() for id_, s in attribution.load_sources().items()}
+        print(json.dumps(sources, indent=2, ensure_ascii=False))
+    else:
+        sys.stdout.write(attribution.render_markdown())
+
+
+_COMMANDS = (_add_data, _add_attribution)
 
 
 if __name__ == "__main__":
