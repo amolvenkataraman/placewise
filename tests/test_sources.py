@@ -56,7 +56,8 @@ def test_a_bad_file_fails_the_licence_gate(tmp_path):
 
 
 def test_build_code_takes_every_url_from_the_registry():
-    for path in [*sorted((PACKBUILD / "sources").glob("*.py")), PACKBUILD / "world.py"]:
+    # every build module: world.py, us.py, ... and the per-source loaders
+    for path in [*sorted((PACKBUILD / "sources").glob("*.py")), *sorted(PACKBUILD.glob("*.py"))]:
         code = re.sub(r"#.*", "", path.read_text(encoding="utf-8"))  # links in comments are fine
         assert not re.search(r"""["']https?://""", code), f"{path.name} hardcodes a URL"
 

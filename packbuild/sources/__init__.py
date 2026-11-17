@@ -9,6 +9,12 @@ from placewise.attribution import load_sources
 
 WORLD = ("naturalearth", "geonames", "ourairports")
 SOURCES = {id_: source for id_, source in load_sources().items() if id_ in WORLD}
+US = ("uscensus",)
+SOURCES.update({id_: source for id_, source in load_sources().items() if id_ in US})
+IN = ("indiapost-pincode-boundary", "indiapost-pincode-directory")
+SOURCES.update({id_: source for id_, source in load_sources().items() if id_ in IN})
+CA = ("statcan-boundaries-2021", "statcan-fsa-2021", "statcan-population-2021")
+SOURCES.update({id_: source for id_, source in load_sources().items() if id_ in CA})
 
 
 def url(source_id, name):

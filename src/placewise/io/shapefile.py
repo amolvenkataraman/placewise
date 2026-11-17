@@ -2,9 +2,12 @@
 
 Follows the ESRI Shapefile Technical Description (1998): polygon rings run clockwise for outer
 boundaries and counter-clockwise for holes, and one record may hold several polygons.
-Only WGS84 longitude/latitude files are accepted, matching placewise's scope.
+Only WGS84 longitude/latitude files are accepted, matching placewise's scope; NAD83 (and its
+realisations such as NAD83(2011) and NAD83(CSRS)) can be accepted explicitly, since in North America
+it differs from WGS84 by 1-2 m, less than the generalisation of almost any boundary file.
 """
 
+import re
 import struct
 from pathlib import Path
 
@@ -17,10 +20,11 @@ _POLYGON_TYPES = {5, 15, 25}  # Polygon, PolygonZ, PolygonM (Z and M values are 
 _NULL_SHAPE = 0
 
 
-def read_shapefile(path):
-    """Features from a .shp path (attributes from the .dbf beside it when present)."""
+def read_shapefile(path, accept_nad83=False):
+    """Features from a .shp path (attributes from the .dbf beside it when present). With
+    accept_nad83, NAD83 longitude/latitude is read as WGS84 without transforming."""
     shp = Path(path).with_suffix(".shp")
-    _check_prj(shp.with_suffix(".prj"))
+    _check_prj(shp.with_suffix(".prj"), accept_nad83)
     dbf = shp.with_suffix(".dbf")
     records = list(_read_dbf(dbf, _encoding(shp.with_suffix(".cpg")))) if dbf.exists() else None
     features = []
@@ -30,14 +34,33 @@ def read_shapefile(path):
     return features
 
 
-def _check_prj(prj):
+def _check_prj(prj, accept_nad83):
     if not prj.exists():
         return  # unlabelled files are taken as WGS84 lon/lat, the overwhelmingly common case
-    text = prj.read_text(encoding="utf-8", errors="replace").upper()
-    if text.lstrip().startswith("PROJCS"):
-        raise ValueError(f"{prj.name}: projected coordinates; placewise reads WGS84 longitude/latitude only")
-    if "WGS" not in text or "84" not in text:
-        raise ValueError(f"{prj.name}: datum is not WGS84; placewise reads WGS84 longitude/latitude only")
+    datum = prj_datum(prj.read_text(encoding="utf-8", errors="replace"), name=prj.name)
+    if datum == "nad83" and not accept_nad83:
+        raise ValueError(f"{prj.name}: datum is NAD83, not WGS84; pass accept_nad83=True to read it as WGS84")
+
+
+_DATUM = re.compile(r'DATUM\s*\[\s*"([^"]*)"', re.IGNORECASE)
+
+
+def prj_datum(text, name=".prj"):
+    """ "wgs84" or "nad83" for a geographic .prj; ValueError for projected files and other datums."""
+    text = text.strip().upper()
+    if text.startswith("PROJCS"):
+        raise ValueError(f"{name}: projected coordinates; placewise reads WGS84 longitude/latitude only")
+    match = _DATUM.search(text)
+    # ESRI writes "D_WGS_1984"; other writers "WGS84" or "World Geodetic System 1984"
+    datum = re.sub(r"[^A-Z0-9]", "", re.sub(r"^D_", "", match.group(1))) if match else ""
+    if "WGS84" in datum or "WGS1984" in datum or "WORLDGEODETICSYSTEM1984" in datum:
+        return "wgs84"
+    if datum.startswith(("NAD83", "NAD1983", "NORTHAMERICAN1983", "NORTHAMERICANDATUM1983")):
+        return "nad83"
+    found = repr(match.group(1)) if match else "no datum"
+    raise ValueError(
+        f"{name}: datum is not WGS84 ({found}); other datums need a datum shift placewise doesn't do"
+    )
 
 
 def _encoding(cpg):

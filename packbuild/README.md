@@ -44,3 +44,106 @@ Plan:
 - **Later:** zone polygons arrive with the OSM-based share-alike pack, with the ODbL
   derived-database offer that licence requires. When it is installed, polygons win; the
   nearest-city rule stays as the fallback.
+
+## US pack
+
+```
+uv run python -m packbuild.us --version 2026.11        # writes .cache/packbuild/out/us-2026.11/
+```
+
+Everything comes from the US Census Bureau (registry id `uscensus`, public domain):
+
+| Layer | Kind | Source | Key columns |
+|---|---|---|---|
+| `states` | polygon | CB 2025 state 1:500k | `usps`, `statefp` |
+| `counties` | polygon | CB 2025 county 1:500k + delineation list 1 (2023) | `name` with LSAD, `state`, `cbsa`, `csa`, `central` |
+| `places` | polygon | CB 2025 place 1:500k + 2025 gazetteer + SUB-EST2025 | `lsad`, `class` (incorporated / cdp), `funcstat`, `state`, `population`, `intpt_lat/lon` |
+| `cbsa` | polygon | CB 2025 CBSA 1:500k + delineation list 1 | `type` (metro / micro), `csa`, `counties` |
+| `csa` | polygon | CB 2025 CSA 1:500k + delineation list 1 | `cbsas`, `counties` |
+| `zcta` | polygon | CB 2020 ZCTA5 1:500k + 2025 gazetteer | `aland`, `intpt_lat/lon` |
+
+Ids: `census:<GEOID>` for places and counties; `census:cbsa:<code>`, `census:csa:<code>` and
+`census:zcta:<zcta>` for the rest, because those GEOIDs collide with each other and with county
+GEOIDs (ZCTA 06085 is in Connecticut, county 06085 is Santa Clara); states are `iso:US-CA`, the
+same id as the world pack's admin1. Member lists (`counties`, `cbsas`) are comma-separated codes.
+
+- **Datum.** CB files are NAD83 (EPSG:4269), which `placewise.io.read_shapefile` refuses. NAD83 and
+  WGS84 differ by 1-2 m in the US, well inside the 1:500k generalisation, so
+  `uscensus.read_census_shapefile` accepts a geographic NAD83 .prj and reads the coordinates as
+  WGS84 unchanged. Other datums (NAD27) and projected files are still refused.
+- **Places** are incorporated places first, then CDPs (and Puerto Rico's comunidades and zonas
+  urbanas, `class` "cdp"), so an incorporated place would win where both cover a point (none was
+  found in 2025). `population` is the newest SUB-EST estimate, which covers incorporated places
+  (and Urban Honolulu CDP) only: other CDPs, inactive places and the Island Areas are null. The
+  Las Vegas Strip is in Paradise CDP, not Las Vegas city: names people use and Census names differ.
+- **ZCTAs** are the Census Bureau's areal approximation of USPS ZIP Codes. USPS publishes ZIP Codes
+  as delivery routes, not areas; most addresses' ZIP matches their ZCTA but not all, PO-box-only
+  ZIPs have no ZCTA, and unpopulated land is in none. ZCTAs are defined once a decade, so the
+  2020 file is current. Polygons cost about 52 MB of the pack (26 MB of the archive); gazetteer
+  points would be 2 MB, but the nearest internal point names the containing ZCTA only ~70% of
+  the time near populated places, so the pack ships polygons (`uscensus.zcta_points` is the
+  alternative).
+- **Shoreline.** CB shapes are clipped to the shoreline: points in bays and coastal water fall in
+  no county, place or ZCTA, and gazetteer internal points (computed from full TIGER/Line) can fall
+  outside the clipped shape (San Francisco's is on the Farallon Islands).
+- **Delineation.** OMB list 1 is an .xlsx; it is read with the standard library (zip + XML).
+
+## Canada pack
+
+```
+uv run python -m packbuild.ca --version 2026.11 --via service   # writes .cache/packbuild/out/ca-2026.11/
+```
+
+| Layer | Kind | Source | Licence |
+|---|---|---|---|
+| `provinces` | polygon | StatCan 2021 cartographic boundary file, provinces/territories (`lpr_000b21a_e`) | StatCan Open Licence |
+| `cd` | polygon | ... census divisions (`lcd_000b21a_e`): counties, regional municipalities (Halton, Peel) | StatCan Open Licence |
+| `csd` | polygon | ... census subdivisions (`lcsd000b21a_e`): municipalities (Milton, Toronto), reserves, unorganised areas | StatCan Open Licence |
+| `cma` | polygon | ... census metropolitan areas and agglomerations (`lcma000b21a_e`) | StatCan Open Licence |
+| `fsa` | polygon | 2021 Census forward sortation area boundary file (`lfsa000b21a_e`) | StatCan Open Licence, with Canada Post's notice |
+
+Populations (`population`, null when StatCan suppresses the count) come from the census population
+and dwelling count tables 98-10-0002-01 (provinces, CDs, CSDs), 98-10-0005-01 (CMAs/CAs) and
+98-10-0019-01 (FSAs), joined on DGUID. Registry: `statcan-boundaries-2021`, `statcan-fsa-2021`,
+`statcan-population-2021`; credit lines are the "Adapted from Statistics Canada ..." notice the
+licence requires for value-added products.
+
+Ids are `statcan:<UID>`: PRUID (`statcan:35`), CDUID (`statcan:3524`), CSDUID (`statcan:3524009`),
+CMAPUID (`statcan:35535`: province + CMA code, so Ottawa - Gatineau is two features, `35505` and
+`24505`, both named "Ottawa - Gatineau" and carrying the whole CMA's population; `name_full` keeps
+"(Ontario part / partie de l'Ontario)") and CFSAUID (`statcan:M5V`). Province codes (`ON`, `QC`,
+...) are the SGC 2021 alpha codes. A CSD's `cduid` is its CSDUID's first four digits.
+
+**Downloads.** The zips live on www12.statcan.gc.ca, which answers scripted clients with a
+Cloudflare browser check (HTTP 403, seen November 2026), so `--via files` (the default) only works
+where that check lets you through. `--via service` reads the same 2021 cartographic files from
+Statistics Canada's own ArcGIS REST service (geo.statcan.gc.ca, layers `lcsd000b21s_e` etc.: the
+`s` is StatCan's file-name code for "services"), in pages of Esri JSON in the native projection,
+cached under `.cache/packbuild/<layer>/` with a `<layer>.json` sidecar.
+
+**Projection.** StatCan publishes the boundary files only in Statistics Canada Lambert (EPSG:3347,
+NAD83), never in longitude/latitude, and `placewise.io.read_shapefile` refuses projected files.
+`packbuild/projection.py` implements Lambert conformal conic (2SP, IOGP Guidance Note 7-2) on GRS 1980;
+it is tested against the guidance note's worked example and against vertices StatCan's map service
+returns in both EPSG:3347 and EPSG:4269 (agreement to ~1e-9°). The `.prj` of each shapefile is
+checked against the EPSG:3347 parameters. NAD83(CSRS) is used as WGS84 without a datum shift: they
+differ by 1-2 m in Canada, below the simplification.
+
+**Simplification.** The cartographic files are clipped to the shoreline but not generalised (a
+vertex every few metres), so rings are simplified with Douglas-Peucker at 10 m, in Lambert metres,
+before unprojecting (`--tolerance-m`, 0 to keep everything). Each feature is simplified on its own,
+so neighbours' shared borders can differ by up to the tolerance; rings smaller than it (rocks,
+islets) are dropped, but a feature never loses its last ring.
+
+**Not here:**
+
+- *Metro regions.* CMAs are StatCan's commuting-based units and a basis for metro regions, but the
+  GTHA (Greater Toronto and Hamilton Area) is not a CMA: Toronto, Hamilton and Oshawa are separate
+  CMAs, Burlington (Halton) is in the Hamilton CMA and the Toronto CMA takes in part of Simcoe
+  County. A GTHA region needs to be curated later, e.g. as the CDs Toronto, Durham, York, Peel,
+  Halton and Hamilton.
+- *Postal codes.* FSAs are the first three characters of the postal code; these are StatCan's
+  census FSAs (one per dissemination area, from the postal codes respondents reported), which can
+  differ from Canada Post's delivery areas (the CN Tower is in census FSA M5J although its postal
+  code is M5V). Full six-character postal codes and their coordinates are Canada Post data and are
+  not open data in Canada; placewise uses no postal-code-to-coordinate dataset.

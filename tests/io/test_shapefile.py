@@ -2,6 +2,7 @@ import pytest
 import shapefile  # pyshp: an independent writer, used only to build fixtures
 
 from placewise.io import read_shapefile
+from placewise.io.shapefile import prj_datum
 
 WGS84_PRJ = (
     'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],'
@@ -54,3 +55,48 @@ def test_strips_nul_padding_in_text_fields(tmp_path):
     assert padded in data
     dbf.write_bytes(data.replace(padded, b"Two islands".ljust(50, b"\x00")))
     assert read_shapefile(shp)[1].properties["name"] == "Two islands"
+
+
+NAD83_PRJ = (
+    'GEOGCS["GCS_North_American_1983",DATUM["D_North_American_1983",SPHEROID["GRS_1980",6378137,'
+    '298.257222101]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]'
+)
+NAD27_PRJ = (
+    'GEOGCS["GCS_North_American_1927",DATUM["D_North_American_1927",SPHEROID["Clarke_1866",6378206.4,'
+    '294.9786982]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]'
+)
+
+
+def test_nad83_is_refused_unless_accepted_and_then_read_unchanged(tmp_path):
+    # NAD83 and WGS84 differ by 1-2 m in North America: below the generalisation of most boundary files
+    shp = _write(tmp_path, prj=NAD83_PRJ)
+    with pytest.raises(ValueError, match="not WGS84"):
+        read_shapefile(shp)
+    square, _ = read_shapefile(shp, accept_nad83=True)
+    assert square.outlines[0].rings[0][1] == (10.0, 0.0)  # coordinates pass through untransformed
+    other = tmp_path / "nad27"
+    other.mkdir()
+    with pytest.raises(ValueError, match="datum"):  # other datums would need a real datum shift
+        read_shapefile(_write(other, prj=NAD27_PRJ), accept_nad83=True)
+
+
+@pytest.mark.parametrize(
+    ("prj", "datum"),
+    [
+        (WGS84_PRJ, "wgs84"),
+        (NAD83_PRJ, "nad83"),
+        ('GEOGCS["NAD83",DATUM["North_American_Datum_1983",SPHEROID["GRS 1980"]]]', "nad83"),
+        ('GEOGCS["NAD83(2011)",DATUM["NAD83_National_Spatial_Reference_System_2011"]]', "nad83"),
+        ('GEOGCS["NAD83(CSRS)",DATUM["D_North_American_1983_CSRS"]]', "nad83"),
+    ],
+)
+def test_prj_datum(prj, datum):
+    assert prj_datum(prj) == datum
+
+
+@pytest.mark.parametrize(
+    ("prj", "message"), [(NAD27_PRJ, "datum"), (UTM_PRJ, "projected"), ("junk", "datum")]
+)
+def test_prj_datum_refuses_anything_else(prj, message):
+    with pytest.raises(ValueError, match=message):
+        prj_datum(prj)
