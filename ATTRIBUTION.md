@@ -16,10 +16,11 @@ should still read each licence for its own obligations.
 | [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/country_facts |
 | [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | usa/states, usa/counties, usa/places, usa/cbsa, usa/csa, usa/zcta, usa/regions |
 | [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/regions |
-| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated) |
+| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated), usa/zcta |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
 | [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts |
 | [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
+| [Canadian Geographical Names Database (CGNDB), Natural Resources Canada](https://open.canada.ca/data/en/dataset/e27c6eba-3c5d-4051-9db2-082dc6411c2c) | OGL-Canada-2.0 | can/populated_places |
 | [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/pincodes, ind/regions |
 | [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/pincodes, ind/post_offices, ind/regions |
@@ -36,11 +37,11 @@ should still read each licence for its own obligations.
 | boundaries | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 | countries | world | GeoNames, Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0, Wikidata, Natural Earth 1:10m Cultural Vectors |
 | places | world | GeoNames |
-| places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts |
+| places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts, Canadian Geographical Names Database (CGNDB), Natural Resources Canada |
 | places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 | postal | can | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
 | postal | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India) |
-| postal | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| postal | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations, GeoNames |
 | regions | can | Statistics Canada, 2021 Census Boundary Files (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts, placewise curated datasets: regions (datasets/regions) |
 | regions | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India), placewise curated datasets: regions (datasets/regions) |
 | regions | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations, placewise curated datasets: regions (datasets/regions) |
@@ -69,7 +70,7 @@ country_facts uses each country's label point (LABEL_X, LABEL_Y) where GeoNames 
 - Licence: LicenseRef-public-domain
 - Website: https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html
 
-Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025), which cover incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places) but not other census-designated places. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01). The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files.
+Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025) for incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places), and the American Community Survey 2020-2024 5-year estimates (table B01003, total population, from the table-based summary file, which needs no API key) for census-designated places and any place SUB-EST lacks; ZCTA populations are ACS too. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01): list 1 for counties, list 2 for principal cities. Each ZCTA's postal city name is the city ZIP Code Business Patterns 2023 (County Business Patterns program) gives its ZIP Code, matched to a census place by name within the state, preferring places the 2020 ZCTA-to-place relationship file says overlap the ZCTA; ZIP Codes Business Patterns lacks are named from the other US postal source in postal.json. The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files.
 
 ## Statistics Canada, 2021 Census Boundary Files (cartographic)
 
@@ -88,6 +89,8 @@ Statistics Canada Open Licence (statcan.gc.ca/en/terms-conditions/open-licence);
 The world pack's country_facts layer takes capital, area, population, top-level domain, calling code, postal code format, languages and neighbours from countryInfo.txt, each country's IANA time zones from timeZones.txt, and the capital's coordinates from cities1000 (the PPLC city). countryInfo gives no reference year for its population and area figures, so the layer carries none.
 
 Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists.
+
+GeoNames postal codes for the United States (export/zip/US.zip: 41,490 ZIP Codes with the USPS default city name, state, county and a centroid), under CC BY 4.0 per its readme. The US pack takes a ZCTA's postal city from it only where ZIP Code Business Patterns has no row for the ZIP Code (about 2,700 of 33,791 ZCTAs, mostly rural residential ones); the readme does not name the upstream source of the US file.
 
 ## Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0
 
@@ -112,6 +115,14 @@ Driving side (property P1622, values Q11920728 left and Q14565199 right) of ever
 - Website: https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201
 
 Full-table CSV downloads. 98-10-0002-01 covers Canada, provinces and territories, census divisions and census subdivisions; 98-10-0005-01 CMAs and CAs (whole and by provincial part); 98-10-0019-01 forward sortation areas. Joined to the boundaries on DGUID. 63 CSDs (incompletely enumerated Indian reserves and settlements) have no count (symbol '..'); they are stored as null, not zero.
+
+## Canadian Geographical Names Database (CGNDB), Natural Resources Canada
+
+- Credit: Contains information licensed under the Open Government Licence – Canada (Canadian Geographical Names Database, Natural Resources Canada).
+- Licence: OGL-Canada-2.0
+- Website: https://open.canada.ca/data/en/dataset/e27c6eba-3c5d-4051-9db2-082dc6411c2c
+
+Official geographical names approved by the Geographical Names Board of Canada and its provincial and territorial members, refreshed weekly (the national English-format CSV; names keep the language they were decided in, English or French, and are not translated). The Canada pack keeps generic category 'Populated Place' (hamlets, communities, towns, urban communities, neighbourhoods, Montreal's boroughs: about 26,000 points) without railway points, post offices, stations and former or vacated places, with the 'Relevance at Scale' field as a prominence. Coordinates are NAD83, used as WGS84. Points only, no boundaries or populations.
 
 ## Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)
 

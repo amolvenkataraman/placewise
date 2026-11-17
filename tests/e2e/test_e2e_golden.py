@@ -3,7 +3,7 @@ legislatures, airports, campuses, park visitor centres): country, admin1, locali
 the real packs. None means "no locality" (unincorporated or unorganised land)."""
 
 import pytest
-from e2e_kit import geocoder
+from e2e_kit import naming_geocoder
 
 # name, (lat, lon), country, admin1 id, locality, city
 GOLDEN = [
@@ -36,7 +36,33 @@ GOLDEN = [
      "Yosemite Valley"),
     ("Grand Canyon Visitor Center", (36.0590, -112.1090), "US", "iso:US-AZ", "Grand Canyon Village",
      "Grand Canyon Village"),
-    ("SFO", (37.6155, -122.39), "US", "iso:US-CA", None, "San Francisco"),
+    # census-designated places and unincorporated land: the ZIP Code's postal city when it is an
+    # incorporated city (or the land has no place), else the CDP (docs/naming.md)
+    ("SFO", (37.6155, -122.39), "US", "iso:US-CA", "San Francisco", "San Francisco"),
+    ("Harry Reid Airport", (36.0840, -115.1537), "US", "iso:US-NV", "Las Vegas", "Las Vegas"),
+    ("South Point, Enterprise NV", (36.0122, -115.1747), "US", "iso:US-NV", "Las Vegas", "Las Vegas"),
+    ("UNLV", (36.1075, -115.1440), "US", "iso:US-NV", "Las Vegas", "Las Vegas"),
+    ("East LA Civic Center", (34.0232, -118.1706), "US", "iso:US-CA", "East Los Angeles", "Los Angeles"),
+    ("Arlington National Cemetery", (38.8783, -77.0687), "US", "iso:US-VA", "Arlington", "Arlington"),
+    ("The Woodlands Pavilion", (30.1617, -95.4659), "US", "iso:US-TX", "The Woodlands", "The Woodlands"),
+    ("Tysons Corner Center", (38.9176, -77.2205), "US", "iso:US-VA", "Tysons", "Tysons"),
+    ("Reston Town Center", (38.9586, -77.3570), "US", "iso:US-VA", "Reston", "Reston"),
+    ("NIH Clinical Center", (39.0003, -77.1036), "US", "iso:US-MD", "Bethesda", "Bethesda"),
+    ("Silver Spring Metro", (38.9937, -77.0311), "US", "iso:US-MD", "Silver Spring", "Silver Spring"),
+    ("Merriweather Post Pavilion", (39.2093, -76.8628), "US", "iso:US-MD", "Columbia", "Columbia"),
+    ("Towson University", (39.3929, -76.6094), "US", "iso:US-MD", "Towson", "Towson"),
+    ("Dadeland Mall, Kendall", (25.6897, -80.3133), "US", "iso:US-FL", "Miami", "Miami"),
+    ("Westfield Brandon", (27.9286, -82.3245), "US", "iso:US-FL", "Brandon", "Brandon"),
+    ("Kennedy Space Center Visitor Complex", (28.5244, -80.6820), "US", "iso:US-FL", "Merritt Island",
+     "Merritt Island"),
+    ("Lakeside Shopping Center, Metairie", (30.0089, -90.1561), "US", "iso:US-LA", "Metairie", "Metairie"),
+    ("Marina del Rey", (33.9802, -118.4517), "US", "iso:US-CA", "Marina del Rey", "Marina del Rey"),
+    ("Universal Studios Hollywood", (34.1381, -118.3534), "US", "iso:US-CA", None, "Los Angeles"),
+    ("Hollywood Bowl", (34.1122, -118.3391), "US", "iso:US-CA", "Los Angeles", "Los Angeles"),
+    ("MSP Airport", (44.8848, -93.2223), "US", "iso:US-MN", "Minneapolis", "Minneapolis"),
+    ("Mall of America", (44.8549, -93.2422), "US", "iso:US-MN", "Bloomington", "Bloomington"),
+    ("Mount Rushmore", (43.8791, -103.4591), "US", "iso:US-SD", "Keystone", "Keystone"),
+    ("Hershey's Chocolate World", (40.2859, -76.6502), "US", "iso:US-PA", "Hershey", "Hershey"),
     # Canada
     ("CN Tower", (43.6426, -79.3871), "CA", "iso:CA-ON", "Toronto", "Toronto"),
     ("Parliament Hill", (45.4236, -75.7009), "CA", "iso:CA-ON", "Ottawa", "Ottawa"),
@@ -87,7 +113,7 @@ GOLDEN = [
 
 @pytest.fixture(scope="module")
 def geo():
-    return geocoder("world", "usa", "can", "ind")
+    return naming_geocoder()
 
 
 @pytest.mark.parametrize(

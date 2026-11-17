@@ -61,16 +61,17 @@ Plan:
 uv run python -m packbuild.us --version 2026.11        # writes ~/.placewise/packbuild/out/usa-2026.11/
 ```
 
-Everything comes from the US Census Bureau (registry id `uscensus`, public domain):
+Everything comes from the US Census Bureau (registry id `uscensus`, public domain), except the
+postal city names of the ZIP Codes the Census files lack (GeoNames, `geonames`, CC BY 4.0):
 
 | Layer | Kind | Source | Key columns |
 |---|---|---|---|
 | `states` | polygon | CB 2025 state 1:500k | `usps`, `statefp` |
 | `counties` | polygon | CB 2025 county 1:500k + delineation list 1 (2023) | `name` with LSAD, `state`, `cbsa`, `csa`, `central` |
-| `places` | polygon | CB 2025 place 1:500k + 2025 gazetteer + SUB-EST2025 | `lsad`, `class` (incorporated / cdp), `funcstat`, `state`, `population`, `intpt_lat/lon` |
-| `cbsa` | polygon | CB 2025 CBSA 1:500k + delineation list 1 | `type` (metro / micro), `csa`, `counties` |
+| `places` | polygon | CB 2025 place 1:500k + 2025 gazetteer + SUB-EST2025 + ACS 2020-2024 B01003 + delineation list 2 | `lsad`, `class` (incorporated / cdp), `funcstat`, `state`, `population`, `population_source`, `principal`, `intpt_lat/lon` |
+| `cbsa` | polygon | CB 2025 CBSA 1:500k + delineation lists 1 and 2 | `type` (metro / micro), `csa`, `counties`, `principal_cities` |
 | `csa` | polygon | CB 2025 CSA 1:500k + delineation list 1 | `cbsas`, `counties` |
-| `zcta` | polygon | CB 2020 ZCTA5 1:500k + 2025 gazetteer | `aland`, `intpt_lat/lon` |
+| `zcta` | polygon | CB 2020 ZCTA5 1:500k + 2025 gazetteer + ACS B01003 + ZIP Code Business Patterns 2023 + GeoNames US postal codes + 2020 ZCTA-to-place relationship | `aland`, `intpt_lat/lon`, `population`, `postal_city`, `postal_place`, `postal_source` |
 | `regions` | polygon | curated regions as unions of counties (see [Regions layer](#regions-layer-us-canada-and-india-packs)) | `kind`, `members`, `aliases`, `area_km2` |
 
 Ids: `census:<GEOID>` for places and counties; `census:cbsa:<code>`, `census:csa:<code>` and
@@ -84,9 +85,39 @@ same id as the world pack's admin1. Member lists (`counties`, `cbsas`) are comma
   WGS84 unchanged. Other datums (NAD27) and projected files are still refused.
 - **Places** are incorporated places first, then CDPs (and Puerto Rico's comunidades and zonas
   urbanas, `class` "cdp"), so an incorporated place would win where both cover a point (none was
-  found in 2025). `population` is the newest SUB-EST estimate, which covers incorporated places
-  (and Urban Honolulu CDP) only: other CDPs, inactive places and the Island Areas are null. The
-  Las Vegas Strip is in Paradise CDP, not Las Vegas city: names people use and Census names differ.
+  found in 2025). `population` is the newest SUB-EST estimate where there is one (incorporated
+  places and Urban Honolulu CDP, `population_source` "sub-est2025"), else the ACS 5-year estimate
+  of table B01003 ("acs5y2024": every CDP, Paradise 185,913); 32,316 of 32,629 places have one
+  (the Island Areas and a few inactive places don't). The Las Vegas Strip is in Paradise CDP, not
+  Las Vegas city: names people use and Census names differ (`docs/naming.md`).
+- **Populations** come from the ACS table-based summary file (`acsdt5y2024-b01003.dat`, 18 MB,
+  every geography in one pipe-separated file keyed by GEO_ID), which needs no API key, unlike
+  api.census.gov. Vintage 2020-2024; the 2021-2025 file is due in December 2026 (bump the URL).
+- **Principal cities** are OMB delineation list 2 (July 2023, `list2_2023.xlsx`): 1,294 cities of
+  935 CBSAs, CDPs among them (Paradise, Arlington VA, The Woodlands). `places.principal` is the
+  CBSA code a place is a principal city of; `cbsa.principal_cities` lists the CBSA's place ids
+  largest first (the file is alphabetical; OMB titles a CBSA by its largest principal city, so the
+  first is the title's), leaving out the few not in the places layer. The naming rules read these
+  instead of parsing CBSA titles.
+- **Postal cities.** `zcta.postal_city` is the city USPS gives the ZIP Code's addresses (89109 Las
+  Vegas, 94128 San Francisco, 11201 Brooklyn). USPS's City State file is copyrighted and sold per
+  copy, and the HUD crosswalk needs a login, so the names come from ZIP Code Business Patterns
+  2023 (`zbp23totals.zip`, public domain: the USPS city of the 34,954 ZIP Codes with a business,
+  upper case without punctuation) and, for the ZIP Codes it lacks, GeoNames' US postal codes
+  (`US.zip`, CC BY 4.0, 41,490 ZIP Codes, cached in `geonames-postal/` beside the others since
+  GeoNames' dump has a `US.zip` too). Compared on the 33,791 ZCTAs: Business Patterns has 30,917,
+  GeoNames 33,642; where both have one they agree on 30,876 (99.9%) once case and punctuation are
+  ignored, and most of the 41 differences are newer names in Business Patterns (92509 Jurupa
+  Valley, incorporated 2011, where GeoNames says Riverside; 33460 Lake Worth Beach). Public domain
+  is preferred, so Business Patterns goes first: 30,917 ZCTAs take its name, 2,725 GeoNames', 149
+  have none. `postal_place` is the census place the name means: a place of that name in the
+  ZIP Code's state, preferring one the 2020 ZCTA-to-place relationship file
+  (`tab20_zcta520_place20_natl.txt`) says overlaps the ZCTA (a state can have two places of a
+  name), then incorporated, then the most people; names compare without case, accents, spacing or
+  punctuation and with Saint/Mount/Fort as St/Mt/Ft ("MC LEAN" is McLean). 27,038 ZCTAs match a
+  place; a matched name is shown in the place's spelling, else GeoNames' or title case.
+  `postal_source` says which file named it. The `zcta` layer's sources are `uscensus` and
+  `geonames`.
 - **ZCTAs** are the Census Bureau's areal approximation of USPS ZIP Codes. USPS publishes ZIP Codes
   as delivery routes, not areas; most addresses' ZIP matches their ZCTA but not all, PO-box-only
   ZIPs have no ZCTA, and unpopulated land is in none. ZCTAs are defined once a decade, so the
@@ -112,6 +143,7 @@ uv run python -m packbuild.ca --version 2026.11 --via service   # writes ~/.plac
 | `csd` | polygon | ... census subdivisions (`lcsd000b21a_e`): municipalities (Milton, Toronto), reserves, unorganised areas | StatCan Open Licence |
 | `cma` | polygon | ... census metropolitan areas and agglomerations (`lcma000b21a_e`) | StatCan Open Licence |
 | `fsa` | polygon | 2021 Census forward sortation area boundary file (`lfsa000b21a_e`) | StatCan Open Licence, with Canada Post's notice |
+| `populated_places` | point | Canadian Geographical Names Database (NRCan), generic category "Populated Place" | OGL-Canada 2.0 |
 | `regions` | polygon | curated regions as unions of CDs, CSDs or CMAs (see [Regions layer](#regions-layer-us-canada-and-india-packs)) | CC BY 4.0 + StatCan Open Licence |
 
 Populations (`population`, null when StatCan suppresses the count) come from the census population
@@ -154,6 +186,16 @@ vertex every few metres), so rings are simplified with Douglas-Peucker at 10 m, 
 before unprojecting (`--tolerance-m`, 0 to keep everything). Each feature is simplified on its own,
 so neighbours' shared borders can differ by up to the tolerance; rings smaller than it (rocks,
 islets) are dropped, but a feature never loses its last ring.
+
+**Named places.** `populated_places` is CGNDB's national CSV (`cgn_canada_csv_eng.zip`, 16 MB,
+refreshed weekly; registry `nrcan-cgndb`) cut to populated places: hamlets (Lake Louise), rural
+communities (Field), towns, and the urban communities, neighbourhoods and boroughs inside
+amalgamated cities (Scarborough, Kanata, Malton, Port Credit, Ville-Marie), without railway
+points, post offices, stations and former or vacated places (`cgndb.DROPPED`): 26,123 of 29,780.
+Columns: `id` (`cgndb:<CGNDB ID>`), `name` (as decided, English or French), `generic` (the generic
+term), `province`, `scale` ("Relevance at Scale", the map scale from which the name shows: a
+prominence). It comes from NRCan, not StatCan, so the www12 browser check doesn't block it.
+StatCan's population centres and designated places were checked and contain no Lake Louise.
 
 **Metro regions.** CMAs are StatCan's commuting-based units, but the GTHA (Greater Toronto and
 Hamilton Area) is not a CMA: Toronto, Hamilton and Oshawa are separate CMAs, Burlington (Halton) is
