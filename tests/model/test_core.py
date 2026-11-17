@@ -140,3 +140,18 @@ def test_entity_contains_uses_the_outline_or_falls_back_to_the_radius():
     circle = Entity(park, point=Point(0.0, -20.0), bbox=BBox(-1, -21, 1, -19), radius_km=100.0)
     assert circle.contains(0.8, -20.0) and not circle.contains(1.0, -20.0)
     assert list(circle.contains(np.array([0.0, 2.0]), np.array([-20.0, -20.0]))) == [True, False]
+
+
+def test_from_dict_resolves_each_class_schema_once(monkeypatch):
+    # clients rebuild thousands of Results per batch; resolving type hints per call made that slow
+    import typing
+
+    calls = []
+    real = typing.get_type_hints
+    monkeypatch.setattr(
+        typing, "get_type_hints", lambda cls, *a, **k: calls.append(cls) or real(cls, *a, **k)
+    )
+    doc = Result(43.6426, -79.3871, label="Toronto").to_dict()
+    for _ in range(50):
+        assert Result.from_dict(doc).label == "Toronto"
+    assert calls.count(Result) <= 1

@@ -6,6 +6,7 @@ caches rebuild them with `from_dict`, so all three shapes stay identical.
 
 import dataclasses
 import datetime as dt
+import functools
 import types
 import typing
 from enum import Enum
@@ -31,8 +32,7 @@ class Model:
         """Rebuild from `to_dict` output or a TOML / JSON document; unknown keys are an error."""
         if not isinstance(data, dict):
             raise ValueError(f"{cls.__name__} expects a mapping, got {type(data).__name__}")
-        hints = typing.get_type_hints(cls)
-        known = {f.name for f in dataclasses.fields(cls) if f.init}
+        hints, known = _schema(cls)
         if unknown := sorted(set(data) - known):
             raise ValueError(f"{cls.__name__}: unknown field(s) {', '.join(unknown)}")
         return cls(**{k: _build(hints[k], v) for k, v in data.items()})
@@ -92,3 +92,10 @@ def _build(tp, value):
                 raise ValueError(f"expected {tp.__name__}, got text {value!r}")
             return tp(value)
     return value
+
+
+@functools.cache
+def _schema(cls):
+    """Type hints and init field names of a model class, resolved once: resolving them per call
+    dominated rebuilding large batches of results."""
+    return typing.get_type_hints(cls), frozenset(f.name for f in dataclasses.fields(cls) if f.init)
