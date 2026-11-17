@@ -38,6 +38,7 @@ __all__ = [
     "wgs84",
     "work_modes",
     "world",
+    "worldviews",
 ]
 
 

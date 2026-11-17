@@ -8,7 +8,7 @@ from packbuild import world
 from packbuild.sources import SOURCES
 
 DATA = Path(__file__).parent / "data"
-LAYERS = ["countries", "admin1", "cities", "airports", "country_facts"]
+LAYERS = ["countries", "admin1", "worldviews", "cities", "airports", "country_facts"]
 
 
 def _zip(path, members):
@@ -26,6 +26,7 @@ def offline(tmp_path, monkeypatch):
     ne = {
         "ne_10m_admin_0_countries": "ne_countries",
         "ne_10m_admin_1_states_provinces": "ne_admin1",
+        "ne_10m_admin_0_disputed_areas": "ne_disputed_areas",
     }
     files = {}
     for real, fixture in ne.items():
@@ -47,7 +48,7 @@ def offline(tmp_path, monkeypatch):
     return requested
 
 
-def test_build_world_fetches_every_source_and_hands_five_layers_to_the_writer(tmp_path, offline, monkeypatch):
+def test_build_world_fetches_every_source_and_hands_six_layers_to_the_writer(tmp_path, offline, monkeypatch):
     calls = []
 
     def fake_write_pack(out_dir, name, version, layers, created=None):
@@ -57,14 +58,16 @@ def test_build_world_fetches_every_source_and_hands_five_layers_to_the_writer(tm
     monkeypatch.setattr(world, "write_pack", fake_write_pack)
     out = world.build_world(tmp_path / "cache", tmp_path / "out", "2026.11")
     assert out == tmp_path / "out" / "world-2026.11"
-    # 2 Natural Earth zips, 3 GeoNames files, 1 OurAirports csv; then for the country facts
+    # 3 Natural Earth zips, 3 GeoNames files, 1 OurAirports csv; then for the country facts
     # countryInfo again (cached), timeZones, 6 CLDR files, 1 Wikidata query and 2 CLDR date files
-    assert len(offline) == 6 + 11
+    assert len(offline) == 7 + 11
     [(out_dir, name, version, layers)] = calls
     assert (out_dir, name, version) == (tmp_path / "out", "world", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
     counts = {layer.name: len(layer.columns["id"]) for layer in layers}
-    assert counts == {"countries": 3, "admin1": 5, "cities": 5, "airports": 5, "country_facts": 1}
+    assert counts == {
+        "countries": 3, "admin1": 5, "worldviews": 2, "cities": 5, "airports": 5, "country_facts": 1,
+    }  # fmt: skip
     for layer in layers:
         assert set(layer.sources) <= set(SOURCES)
         assert all(len(column) == counts[layer.name] for column in layer.columns.values())
@@ -78,7 +81,7 @@ def test_build_world_writes_a_real_pack_that_reopens(tmp_path, offline):
     path = world.build_world(tmp_path / "cache", tmp_path / "out", "2026.11")
     pack = open_pack(path, verify=True)
     assert [layer.name for layer in pack] == LAYERS
-    assert [len(pack[name]) for name in LAYERS] == [3, 5, 5, 5, 1]  # facts: Ottawa is the one capital
+    assert [len(pack[name]) for name in LAYERS] == [3, 5, 2, 5, 5, 1]  # facts: Ottawa is the one capital
     cities = pack["cities"]
     assert cities.row(int(cities.find("id", "geonames:7262586")[0]))["elevation"] is None
     countries = pack["countries"]

@@ -11,13 +11,15 @@
         "credit": "Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.",
         "used_in": [
           "world/countries",
-          "world/admin1"
+          "world/admin1",
+          "world/worldviews"
         ],
         "downloads": {
           "countries": "https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip",
-          "admin1": "https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_1_states_provinces.zip"
+          "admin1": "https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_1_states_provinces.zip",
+          "disputed_areas": "https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_disputed_areas.zip"
         },
-        "notes": "Public domain (naturalearthdata.com/about/terms-of-use). Borders are de facto; per-country ADM0_A3_XX and FCLASS_XX columns describe other worldviews and are kept for the worldview setting. Text fields are NUL-padded."
+        "notes": "Public domain (naturalearthdata.com/about/terms-of-use). Borders are de facto; per-country ADM0_A3_XX and FCLASS_XX columns describe other worldviews and are kept for the worldview setting; the disputed-areas file (99 polygons with every view's ADM0_A3_XX) is the world pack's worldviews layer. Text fields are NUL-padded."
       }
     ],
     "usa": [

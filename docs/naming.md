@@ -29,7 +29,7 @@ public places in `tests/e2e/test_e2e_golden.py` and `tests/e2e/test_e2e_naming.p
 ## Where the rules apply
 
 A country pack names a point only when the world pack places the point in that country (after
-the worldview order) and the ground isn't disputed in the data; everywhere else, and with no
+the worldview order, `docs/worldviews.md`) and its admin1 isn't coded for another country; everywhere else, and with no
 country pack installed, the answer is the world one: `locality` and `city` are both the GeoNames
 city score (`placewise.engine._cities`), with no sublocality. So a US county that spills across
 the Niagara River never names a point on the Canadian side.

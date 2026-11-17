@@ -36,7 +36,8 @@ Ids: `iso:CA`, `iso:CA-ON` where the ISO code is real and unique, otherwise Natu
 code (`ne:SOL`, `ne:BIH-4801`); `geonames:<id>`; `ourairports:<ident>`.
 
 Natural Earth's default files draw borders de facto. Its per-worldview attributes (`ADM0_A3_XX`,
-`FCLASS_XX`) are kept as str columns so a worldview choice can be offered later.
+`FCLASS_XX`) are kept as str columns, and its 99 disputed areas, with every view's `ADM0_A3_XX`,
+are the `worldviews` polygon layer (0.95 MB); see `docs/worldviews.md`.
 
 ## Time zones
 

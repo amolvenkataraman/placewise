@@ -2,10 +2,12 @@
 
 - country: the containing polygon; outside every polygon, the nearest country within
   TERRITORIAL_KM (12 nmi; Natural Earth's 1:10m coast misses some coastal points), rule "offshore".
-  The polygon's country is then mapped through the worldview order.
+  The point's disputed area (the world pack's worldviews layer; offshore, the nearest one of the
+  same country within TERRITORIAL_KM) and the polygon are then mapped through the worldview order.
 - admin1: the containing polygon if it belongs to that country, else the nearest of that country's
-  admin1 features within TERRITORIAL_KM ("nearest" on land, "offshore" at sea). Country packs may
-  then correct it (placewise.engine.naming).
+  admin1 features within TERRITORIAL_KM ("nearest" on land, "offshore" at sea); in a disputed area,
+  the admin1 the view's table gives it (rule "worldview", placewise.constants.worldviews). Country
+  packs may then correct it (placewise.engine.naming).
 """
 
 from functools import cached_property
@@ -13,6 +15,7 @@ from functools import cached_property
 import numpy as np
 
 from placewise.constants import lookup as const
+from placewise.constants import worldviews as wv_const
 from placewise.model import Disputed
 
 from ._index import best_per_query
@@ -25,10 +28,18 @@ class Admin:
         self.countries = layers.layer(const.COUNTRIES)
         self.admin1 = layers.layer(const.ADMIN1)
         self._disputes = {}
+        self._view_admin1 = {}
+        self._flags = {}
+
+    @cached_property
+    def areas(self):
+        """The disputed areas (the worldviews layer of the first pack that has one), or None."""
+        pack = next((p for p in self.layers.packs if wv_const.WORLDVIEWS in p), None)
+        return self.layers.layer(self.layers.add(pack, wv_const.WORLDVIEWS)) if pack is not None else None
 
     @cached_property
     def worldviews(self):
-        return Worldviews(self.countries) if self.countries is not None else None
+        return Worldviews(self.countries, self.areas) if self.countries is not None else None
 
     # -- per-feature tables -----------------------------------------------------------------------
 
@@ -45,6 +56,13 @@ class Admin:
         if self.worldviews is None:
             return np.full(self.admin1.count, -1, dtype=np.int64)
         return self.worldviews.foreign_rows(self.admin1)
+
+    @cached_property
+    def admin1_unanswered(self):
+        """Per admin1 feature: in a unit that is nobody's country (constants.worldviews.DE_FACTO_UNITS),
+        so never reported as it stands."""
+        units = {self.worldviews.row_of_adm0.get(u, -2) for u in wv_const.DE_FACTO_UNITS}
+        return np.isin(self.admin1_country, list(units))
 
     @cached_property
     def admin1_row_of_id(self):
@@ -88,19 +106,20 @@ class Admin:
     # -- the vectorised answer --------------------------------------------------------------------
 
     def answer(self, a, lat, lon, order):
-        """Fill a["cidx", "cmode", "aidx", "amode", "view", "applied", "foreign"]."""
+        """Fill a["cidx", "cmode", "area", "aidx", "amode", "view", "applied", "foreign"]: "area" is
+        the disputed area or -1, "applied" the order entry that decided each point's country."""
         n = len(lat)
         a["cidx"], a["cmode"] = np.full(n, -1, dtype=np.int64), np.full(n, "", dtype=object)
         if self.countries is not None:
             self._countries(a, lat, lon)
-        self._admin1(a, lat, lon)
-        land = a["cidx"] >= 0
+        a["area"] = self._areas(a, lat, lon)
         if self.worldviews is not None:
-            rows, applied = self.worldviews.resolve(order)
-            a["view"] = np.where(land, rows[np.maximum(a["cidx"], 0)], -1)
-            a["applied"] = applied
+            a["view"], a["applied"] = self.worldviews.answer(order, a["cidx"], a["area"])
         else:
             a["view"] = np.full(n, -1, dtype=np.int64)
+            a["applied"] = np.full(n, const.DE_FACTO, dtype=object)
+        self._admin1(a, lat, lon)
+        self._admin1_of_view(a)
         a["foreign"] = (
             np.where(a["aidx"] >= 0, self.admin1_foreign[np.maximum(a["aidx"], 0)], -1)
             if self.admin1 is not None
@@ -118,6 +137,43 @@ class Admin:
             cidx[miss[hit]] = f[best[hit]]
             a["cmode"][miss[hit]] = const.OFFSHORE
         a["cidx"] = cidx
+
+    def _areas(self, a, lat, lon):
+        out = np.full(len(lat), -1, dtype=np.int64)
+        wv = self.worldviews
+        if wv is None or wv.areas is None:
+            return out
+        land = np.flatnonzero(a["cmode"] == const.POLYGON)
+        if len(land):
+            out[land] = np.atleast_1d(self.areas.query(lat[land], lon[land]))
+        off = np.flatnonzero(a["cmode"] == const.OFFSHORE)
+        if len(off):
+            q, f, d = self.areas.near_boundary(lat[off], lon[off], const.TERRITORIAL_KM)
+            keep = wv.areas.holder[f] == wv.de_facto_row[a["cidx"][off[q]]]
+            best = best_per_query(q[keep], d[keep], len(off))
+            hit = best >= 0
+            out[off[hit]] = f[keep][best[hit]]
+        return out
+
+    def _admin1_of_view(self, a):
+        """In a disputed area, the admin1 the deciding view's table gives it; admin1 features of
+        units that are nobody's country are never reported as they stand."""
+        if self.admin1 is None or self.worldviews is None:
+            return
+        aidx, area, applied = a["aidx"], a["area"], a["applied"]
+        inside = np.flatnonzero(area >= 0)
+        for entry in set(applied[inside].tolist()):
+            if entry not in self._view_admin1:
+                self._view_admin1[entry] = self.worldviews.admin1_rows(entry, self.admin1_row_of_id)
+            rows = self._view_admin1[entry]
+            if rows is None:
+                continue
+            pts = inside[applied[inside] == entry]
+            found = rows[area[pts]]
+            pts, found = pts[found >= 0], found[found >= 0]
+            aidx[pts], a["amode"][pts] = found, wv_const.WORLDVIEW_RULE
+        drop = (aidx >= 0) & self.admin1_unanswered[np.maximum(aidx, 0)]
+        aidx[drop], a["amode"][drop] = -1, wv_const.WORLDVIEW_RULE  # a country pack may still fill it
 
     def _admin1(self, a, lat, lon):
         n = len(lat)
@@ -166,11 +222,22 @@ class Admin:
         return np.concatenate([base, extra], axis=1)
 
     def undisputed(self, a):
-        """Per point: on land whose data agrees (no disputed polygon, no admin1 of another country)."""
-        cidx = a["cidx"]
-        if self.worldviews is None:
-            return cidx >= 0
-        return (cidx >= 0) & ~self.worldviews.disputed[np.maximum(cidx, 0)] & (a["foreign"] < 0)
+        """Per point: on land where a country pack may name the country reported (after the
+        worldview): no admin1 coded for another country under it (Crimea's iso:UA-43 in Russia)."""
+        return (a["cidx"] >= 0) & (a["foreign"] < 0)
+
+    def view_only(self, a, pts, rows, flags, view):
+        """`rows` (features of a country pack's layer, per point of `pts`) with -1 where the
+        feature is flagged in `flags` (a column: true for ground only `view` gives that country,
+        such as the India pack's `india_view_only`) and the point's country wasn't decided by `view`."""
+        if flags is None:
+            return rows
+        key = id(flags)
+        if key not in self._flags or self._flags[key][0] is not flags:
+            self._flags[key] = (flags, np.array([_truthy(v) for v in flags], dtype=bool))
+        flagged = self._flags[key][1]
+        hide = (rows >= 0) & flagged[np.maximum(rows, 0)] & (a["applied"][pts] != view)
+        return np.where(hide, -1, rows)
 
     def iso2_of_view(self, a):
         """Per point, the ISO alpha-2 code of the country reported (after the worldview), or ""."""
@@ -179,21 +246,36 @@ class Admin:
         iso2 = np.array([*self.worldviews.iso2, ""], dtype=object)
         return iso2[np.where(a["view"] >= 0, a["view"], len(iso2) - 1)]
 
-    def disputed(self, ci, ai, foreign, applied, locked):
-        """Disputed for a point in polygon ci (and admin1 ai), or None when the data agrees."""
-        key = (ci, ai if foreign >= 0 else -1, applied[ci] if applied else None, locked)
+    def disputed(self, a, i, locked):
+        """Disputed for point i of the answer `a` (on land or in territorial waters), or None
+        when it is in no disputed area and its admin1 is coded for its own country."""
+        ci, area, ai, foreign = (int(a[k][i]) for k in ("cidx", "area", "aidx", "foreign"))
+        applied = a["applied"][i]
+        key = (ci, area, ai if foreign >= 0 else -1, applied, locked)
         if key in self._disputes:
             return self._disputes[key]
         wv = self.worldviews
         out = None
-        if wv is not None and (wv.disputed[ci] or foreign >= 0):
-            claimants = {wv.code[r] for r in wv.claimant_rows[ci]}
+        found = wv.dispute(ci, area, applied) if wv is not None else None
+        if found is None and wv is not None and foreign >= 0:
+            legacy = wv.areas is None
+            claimants = {wv.code[r] for r in wv.claimant_rows[ci]} if legacy else {wv.code[ci]}
+            views = wv.views(ci) if legacy else {const.DE_FACTO: wv.code[ci]}
+            found = (self.layers.place(const.ADMIN1, ai).name, claimants, wv.code[ci], views)
+        if found is not None:
+            name, claimants, by, views = found
             if foreign >= 0:
                 claimants.add(wv.code[foreign])
-            name = wv.names[ci] if wv.disputed[ci] else self.layers.place(const.ADMIN1, ai).name
             out = Disputed(
-                name=name, claimants=tuple(sorted(claimants)), administered_by=wv.code[ci],
-                applied_view=applied[ci] if applied else const.DE_FACTO, views=wv.views(ci), locked=locked,
+                name=name, claimants=tuple(sorted(claimants)), administered_by=by, applied_view=applied,
+                views=views, locked=locked,
             )  # fmt: skip
         self._disputes[key] = out
         return out
+
+
+def _truthy(value):
+    """A pack column's flag: a non-zero number, or text other than "", "0", "false", "no"."""
+    if isinstance(value, str):
+        return value.strip().lower() not in ("", "0", "false", "no")
+    return bool(value)
