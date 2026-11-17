@@ -43,3 +43,14 @@ def test_without_prj_is_assumed_wgs84(tmp_path):
 def test_rejects_projected_shapefiles(tmp_path):
     with pytest.raises(ValueError, match="WGS84"):
         read_shapefile(_write(tmp_path, prj=UTM_PRJ))
+
+
+def test_strips_nul_padding_in_text_fields(tmp_path):
+    # Natural Earth pads .dbf text with NUL bytes instead of the spaces the format specifies
+    shp = _write(tmp_path)
+    dbf = shp.with_suffix(".dbf")
+    data = dbf.read_bytes()
+    padded = b"Two islands".ljust(50)
+    assert padded in data
+    dbf.write_bytes(data.replace(padded, b"Two islands".ljust(50, b"\x00")))
+    assert read_shapefile(shp)[1].properties["name"] == "Two islands"

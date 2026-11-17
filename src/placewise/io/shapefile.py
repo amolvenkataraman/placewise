@@ -97,7 +97,8 @@ def _read_dbf(path, encoding):
         record = data[header_len + r * record_len : header_len + (r + 1) * record_len]
         values, cursor = {}, 1  # byte 0 is the deletion flag
         for name, kind, length, decimals in fields:
-            raw = record[cursor : cursor + length].decode(encoding, errors="replace").strip()
+            # some writers (Natural Earth) pad text with NUL bytes rather than the spaces dBASE specifies
+            raw = record[cursor : cursor + length].decode(encoding, errors="replace").strip(" \t\r\n\x00")
             cursor += length
             values[name] = _dbf_value(raw, kind, decimals)
         yield values
