@@ -44,7 +44,7 @@ def parse(text):
 
 
 def from_e7(lat_e7, lon_e7):
-    """Degrees from integer degrees x 1e7 (Google Takeout, Atlas)."""
+    """Degrees from integer degrees x 1e7 (as in Google Takeout location history)."""
     lat, lon = as_floats(lat_e7, lon_e7)
     return out(lat / 1e7), out(lon / 1e7)
 
