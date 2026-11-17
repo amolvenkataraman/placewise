@@ -238,6 +238,56 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
 - *Census 2011 towns.* The Town Directory has no coordinates; GeoNames in the world pack covers
   towns.
 
+## COD-AB packs (`lka`, `npl`, `bgd`, `tha`, ...)
+
+```
+uv run python -m packbuild.codab lka npl bgd tha --version 2026.11   # one pack per country
+```
+
+OCHA's Common Operational Datasets for administrative boundaries (COD-AB), published on HDX under
+CC BY 3.0 IGO, each from the country's own agency (Survey Department of Sri Lanka, Royal Thai
+Survey Department, INEGI ...). One generic builder (`packbuild/codab.py`, reader
+`packbuild/sources/ocha.py`) makes a pack per country, named by its lower-case alpha-3 code, with
+one polygon layer per level: `admin1`, `admin2`, ... (COD-AB ADM1, ADM2, ...). The countries and
+their depth are `placewise.constants.codab.COUNTRIES`; each has a registry entry
+`ocha-cod-ab-<iso3>` in `sources/boundaries.json` whose credit line names its agency.
+
+| Column | |
+|---|---|
+| `id` | `codab:<P-code>` (`codab:NP0327301`); P-codes are unique across levels and join COD-PS population tables |
+| `name` | the English or romanised name (`adm<n>_name`); "" for the 65 Sri Lankan Grama Niladhari divisions that have none |
+| `pcode`, `parent` | the unit's P-code and the id of the unit one level up ("" for ADM1) |
+| `type` | the unit type where the package has one (Viet Nam: Province, City) |
+| `valid_on` | the boundaries' reference date |
+
+No population: the COD-AB packages carry none (COD-PS tables are separate datasets, not joined yet).
+
+- **Downloads.** Packages hold every level in one zip (Thailand's 377 MB; the GeoJSON is bigger
+  and the GDB needs GDAL), so the build reads just the level shapefiles it needs by HTTP range
+  requests (`packbuild/zipranges.py`: the zip's central directory, then those members, CRC-checked;
+  sidecar `<zip stem>.members.json`). The edge-matched `_em` layers (fitted to the UN international
+  boundary, so neighbours don't overlap) are used where a package has them (Nepal, UAE).
+- **Simplification.** Douglas-Peucker at 10 m (`--tolerance-m`), each feature on its own, in a
+  plate carrée centred on the feature (x scaled by the cosine of its middle latitude): metres on
+  the ground, within about 2% across a unit a few degrees tall. A feature never loses its last
+  ring; shared borders can differ by up to the tolerance.
+- **Areas India claims.** No pack carries ground whose sovereignty India disputes inside another
+  country (`packbuild/claims.py`). Nepal's COD-AB draws Nepal's view of the Kalapani sector (about
+  35 km2 that Natural Earth marks "administered by India, claimed by Nepal") and of Susta (about
+  15 km2); in those sector boxes every Nepal unit is cut back to India's polygon in Natural Earth's
+  India point-of-view edition (Greiner-Hormann clipping, `packbuild/clip.py`), and the build fails
+  if any grid point (200 m) of the claimed ground is still inside a unit. Limpiyadhura, on Nepal's
+  2020 map, is not in the COD-AB; the first box covers it anyway. Elsewhere on the border the two
+  datasets differ only by Natural Earth's 1:10m generalisation and the units are as surveyed; the
+  lookup uses a COD-AB pack only where the world pack puts the point in that country.
+  Pakistan's COD-AB (Azad Kashmir and Gilgit-Baltistan as Pakistani units) is not built.
+- **Viet Nam** is the September 2025 edition, after the July 2025 reform (63 provinces merged
+  into 34, districts abolished): ADM1 only; Natural Earth's world admin1 still has the old 63.
+- **Not here.** Thailand and Indonesia's deeper levels beyond what's configured, the Philippines
+  (each level of its shapefile zip is ~140 MB compressed, past the download budget), Colombia (its
+  COD-AB is DANE's own zips in the older schema), South Africa's wards (numbered, and the
+  Demarcation Board restricts their commercial use), Egypt's ADM3 (Arabic names only).
+
 ## Regions layer (US, Canada and India packs)
 
 Each country pack ends with a `regions` polygon layer: the curated regions of

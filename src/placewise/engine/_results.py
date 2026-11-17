@@ -13,7 +13,7 @@ from placewise.model import Nearby, PlaceKind, Relation, Result
 
 from . import _nearby as nearby
 
-NAMED = ("sublocality", "locality", "city", "borough", "admin2", "postal")
+NAMED = ("sublocality", "locality", "city", "borough", "admin2", "postal", "admin1")
 
 
 def build(geo, lat, lon, a, named, order, locked):
@@ -54,7 +54,7 @@ def build(geo, lat, lon, a, named, order, locked):
     country_places, admin1_places, city_places = (layers.cache(r) for r in _ROLES[:3])
     named_lists = {k: v.tolist() for k, v in named.items()}
     empty = [None] * n
-    sub_l, loc_l, city_l, bor_l, adm2_l, post_l = (named_lists.get(k, empty) for k in NAMED)
+    sub_l, loc_l, city_l, bor_l, adm2_l, post_l, adm1_l = (named_lists.get(k, empty) for k in NAMED)
     regions_l, sources_l = named_lists.get("regions", empty), named_lists.get("sources", empty)
     results = []
     for i in range(n):
@@ -89,6 +89,7 @@ def build(geo, lat, lon, a, named, order, locked):
             for field in ("city", "locality"):
                 sources.pop(field, None)
             sources.update(sources_l[i])
+            admin1 = adm1_l[i] or admin1  # a country pack's own admin1 (COD-AB), where it has one
         if airport[i] >= 0:
             km = airport_km[i]
             rel = Relation.AT if km <= const.AIRPORT_AT_KM else Relation.NEAR
