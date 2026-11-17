@@ -1,6 +1,6 @@
 """Data sources and packs. Constructing a Source is the licence gate: denied or unusable sources fail here."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from placewise.constants import licences
 
@@ -18,6 +18,8 @@ class Source(Model):
     changes: str | None = None  # what the build did to it
     used_in: tuple[str, ...] = ()  # pack files containing it
     derived_database: str | None = None  # ODbL: where the derived data and recipe are offered
+    downloads: dict[str, str] = field(default_factory=dict)  # name -> URL the build fetches
+    notes: str | None = None  # terms worth knowing, quirks, why it was chosen
 
     def __post_init__(self):
         if not all((self.id, self.name, self.url, self.credit)):
