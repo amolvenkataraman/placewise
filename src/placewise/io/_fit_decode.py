@@ -6,6 +6,7 @@ of any activity file, are found by their repeated header byte and copied as one 
 per-message work in Python is a byte comparison.
 """
 
+import functools
 import struct
 
 import numpy as np
@@ -221,7 +222,8 @@ def _read_definition(data, pos, developer):
     return _Definition(mesg_num, offset - 1, tuple(fields), tuple(bases), dtype, stamp, time_index), pos
 
 
-def _make_crc_table():
+@functools.cache
+def _crc_table():
     # CRC-16/ARC (reflected polynomial 0x8005): the FIT SDK's nibble table describes the same CRC
     table = []
     for byte in range(256):
@@ -230,9 +232,6 @@ def _make_crc_table():
             crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
         table.append(crc)
     return np.array(table, dtype=np.uint16)
-
-
-_CRC_TABLE = _make_crc_table()
 
 
 def crc16(data):
@@ -255,8 +254,9 @@ def crc16(data):
     basis = np.concatenate([np.arange(256), np.arange(256) << 8]).astype(np.uint16)
     crc = np.concatenate([np.zeros(lanes, dtype=np.uint16), basis])
     zeros = np.zeros(len(basis), dtype=np.uint8)
+    table = _crc_table()
     for column in columns:
-        crc = (crc >> 8) ^ _CRC_TABLE[(crc ^ np.concatenate([column, zeros])) & 0xFF]
+        crc = (crc >> 8) ^ table[(crc ^ np.concatenate([column, zeros])) & 0xFF]
     lane_crcs = crc[:lanes].tolist()
     shift_low, shift_high = crc[lanes : lanes + 256].tolist(), crc[lanes + 256 :].tolist()
     total = 0

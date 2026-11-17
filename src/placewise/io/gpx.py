@@ -33,7 +33,6 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from itertools import pairwise, repeat
 from pathlib import Path
-from xml.sax.saxutils import escape
 
 import numpy as np
 
@@ -455,9 +454,9 @@ def write_gpx(tracks, path_or_none, waypoints=(), creator="placewise"):
         if w.time is not None and math.isfinite(w.time):
             parts.append(f"<time>{_format_time(w.time)}</time>")
         if w.name:
-            parts.append(f"<name>{escape(w.name)}</name>")
+            parts.append(f"<name>{_escape(w.name)}</name>")
         if w.desc:
-            parts.append(f"<desc>{escape(w.desc)}</desc>")
+            parts.append(f"<desc>{_escape(w.desc)}</desc>")
         parts.append("</wpt>\n")
     for track in tracks:
         _write_track(track, parts)
@@ -483,9 +482,9 @@ _INTEGER_COLUMNS = frozenset(("hr", "cadence", "satellites"))  # unsignedByte / 
 def _write_track(track, parts):
     parts.append("<trk>")
     if track.meta.name:
-        parts.append(f"<name>{escape(track.meta.name)}</name>")
+        parts.append(f"<name>{_escape(track.meta.name)}</name>")
     if track.meta.activity:
-        parts.append(f"<type>{escape(track.meta.activity)}</type>")
+        parts.append(f"<type>{_escape(track.meta.activity)}</type>")
     parts.append("\n")
     n = len(track)
     present = set(track.columns)
@@ -583,8 +582,16 @@ def _nan_to_none(texts, values):
     return texts
 
 
+def _escape(text, entities=None):
+    """xml.sax.saxutils.escape, without importing xml.sax (which pulls in urllib, http and ssl)."""
+    text = text.replace("&", "&amp;").replace(">", "&gt;").replace("<", "&lt;")
+    for key, value in (entities or {}).items():
+        text = text.replace(key, value)
+    return text
+
+
 def _attribute(text):
-    return f'"{escape(text, {chr(34): "&quot;"})}"'
+    return f'"{_escape(text, {chr(34): "&quot;"})}"'
 
 
 def _decimal(value):
