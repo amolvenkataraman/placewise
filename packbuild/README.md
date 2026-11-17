@@ -273,8 +273,8 @@ of a point (CN Tower: GTA, GTHA, Golden Horseshoe). Regions overlap freely.
   rings would, without the internal borders. Census and India Post boundaries share their borders'
   vertices, so their unions come out clean (the NCR's 520 PIN areas make 11 rings). StatCan layers
   are simplified per feature, so simplified neighbours overlap or gap by up to 10 m, and under
-  even-odd an overlap would fall outside the region; the Canada build therefore reads the members'
-  rings again unsimplified (`statcan.raw_rings`), dissolves them and simplifies the union once.
+  even-odd an overlap would fall outside the region; the Canada build therefore keeps the members'
+  rings unsimplified as it reads them (statcan's `raw`), dissolves them and simplifies the union once.
 - **Location search.** `packbuild.regions` also generates `constants/countries/regions.py` from the
   same files. A region with `search_as` (the GTHA, the Delhi NCR core, the Bengaluru Metropolitan
   Region) has no entry there: location search reads its names as the region it names.

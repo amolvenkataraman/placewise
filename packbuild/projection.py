@@ -81,6 +81,35 @@ class LambertConformalConic:
         lon = np.degrees(theta / self._n) + self.lon_origin
         return lon, np.degrees(phi)
 
+    def inverse_rings(self, x, y, offsets, tol=1e-12, max_iter=15):
+        """`inverse` of many rings at once, ring k being x[offsets[k]:offsets[k + 1]]: the same
+        numbers as calling `inverse` on each ring, since each ring stops iterating when its own
+        largest step is below tol, as a call on it alone would."""
+        x, y = np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)
+        offsets = np.asarray(offsets, dtype=np.int64)
+        dx = x - self.false_easting
+        dy = self._r0 - (y - self.false_northing)
+        sign = 1.0 if self._n > 0 else -1.0
+        r = sign * np.hypot(dx, dy)
+        t = (r / self._af) ** (1 / self._n)
+        theta = np.arctan2(sign * dx, sign * dy)
+        e = self._e
+        phi = np.pi / 2 - 2 * np.arctan(t)
+        active = np.flatnonzero(np.diff(offsets) > 0)  # an empty ring is done at once
+        for _ in range(max_iter):
+            if not len(active):
+                break
+            sizes = offsets[active + 1] - offsets[active]
+            first = np.cumsum(sizes) - sizes  # each active ring's start among the active vertices
+            idx = np.repeat(offsets[active] - first, sizes) + np.arange(int(sizes.sum()))
+            es = e * np.sin(phi[idx])
+            nxt = np.pi / 2 - 2 * np.arctan(t[idx] * ((1 - es) / (1 + es)) ** (e / 2))
+            step = np.maximum.reduceat(np.abs(nxt - phi[idx]), first)
+            phi[idx] = nxt
+            active = active[~(step < tol)]
+        lon = np.degrees(theta / self._n) + self.lon_origin
+        return lon, np.degrees(phi)
+
 
 # EPSG:3347 "NAD83 / Statistics Canada Lambert": the projection of every 2021 Census boundary file
 # (Boundary Files Reference Guide 2021, 92-160-G, "Geographic representation"). The central

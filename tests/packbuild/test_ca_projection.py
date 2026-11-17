@@ -1,5 +1,7 @@
 """Lambert Conformal Conic (2SP) maths, checked against published and authoritative control points."""
 
+import itertools
+
 import numpy as np
 import pytest
 
@@ -79,3 +81,16 @@ def test_matches_pyproj_when_it_is_installed():
     got_lon, got_lat = STATCAN_LAMBERT.inverse(x, y)
     np.testing.assert_allclose(got_lon, want_lon, atol=1e-9)
     np.testing.assert_allclose(got_lat, want_lat, atol=1e-9)
+
+
+def test_inverse_rings_gives_the_numbers_of_ring_by_ring_inverse():
+    rng = np.random.default_rng(3)
+    sizes = rng.integers(0, 50, 200)
+    x = rng.uniform(3.5e6, 9e6, sizes.sum())
+    y = rng.uniform(0.5e6, 4.5e6, sizes.sum())
+    offsets = np.concatenate([[0], np.cumsum(sizes)])
+    lon, lat = STATCAN_LAMBERT.inverse_rings(x, y, offsets)
+    for a, b in itertools.pairwise(offsets):
+        want_lon, want_lat = STATCAN_LAMBERT.inverse(x[a:b], y[a:b])
+        np.testing.assert_array_equal(lon[a:b], want_lon)
+        np.testing.assert_array_equal(lat[a:b], want_lat)
