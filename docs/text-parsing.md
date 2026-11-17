@@ -9,7 +9,7 @@ Reference data lives in `placewise.constants`; `placewise.text` holds only the c
 | --- | --- | --- |
 | ISO 3166-1 countries | `constants/countries/countries.py` | hand, checked against ISO (Debian iso-codes) |
 | States, provinces, UK nations | `constants/countries/{usa,can,ind,gbr}/subregions.py` | hand, from USPS / Census, Statistics Canada, ISO 3166-2 |
-| Metro and vernacular regions | `datasets/regions/*.json` → `constants/countries/regions.py` | curated dataset; `python -m packbuild.regions` |
+| Metro and vernacular regions | `datasets/regions/*.json` → `constants/countries/regions.py` (and the packs' `regions` polygons) | curated dataset (CC BY 4.0); `python -m packbuild.regions`; regions with `search_as` (GTHA) are read as the region they name |
 | City aliases (YYZ, Philly, Saigon) | `datasets/cities/aliases.json` → `constants/countries/city_aliases.py` | curated, checked against GeoNames; `python -m packbuild.cities` |
 | Known cities (100k+ people, admin1 seats) | `constants/countries/{usa,can,ind,gbr}/cities.py` | GeoNames cities1000 (CC BY 4.0); `python -m packbuild.cities` |
 | Names several places share | `constants/countries/ambiguous.py` | hand |

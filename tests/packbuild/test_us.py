@@ -3,12 +3,13 @@ from pathlib import Path
 
 import pytest
 import us_fixtures as fx
+from regions_kit import US_REGIONS, use_regions
 
 from packbuild import us
 from packbuild.sources import SOURCES, url
 
-LAYERS = ["states", "counties", "places", "cbsa", "csa", "zcta"]
-COUNTS = {"states": 3, "counties": 5, "places": 6, "cbsa": 4, "csa": 3, "zcta": 3}
+LAYERS = ["states", "counties", "places", "cbsa", "csa", "zcta", "regions"]
+COUNTS = {"states": 3, "counties": 5, "places": 6, "cbsa": 4, "csa": 3, "zcta": 3, "regions": 2}
 
 
 def _zip_shapefile(dest, shp):
@@ -48,6 +49,7 @@ def offline(tmp_path, monkeypatch):
         return files[source_url.rsplit("/", 1)[1]]
 
     monkeypatch.setattr(us, "fetch", fake_fetch)
+    use_regions(monkeypatch, US_REGIONS)
     return requested
 
 
@@ -56,7 +58,7 @@ def test_every_download_is_in_the_registry():
     assert SOURCES["uscensus"].licence == "LicenseRef-public-domain"
 
 
-def test_build_us_fetches_every_registry_url_and_hands_six_layers_to_the_writer(
+def test_build_us_fetches_every_registry_url_and_hands_seven_layers_to_the_writer(
     tmp_path, offline, monkeypatch
 ):
     calls = []
@@ -74,7 +76,9 @@ def test_build_us_fetches_every_registry_url_and_hands_six_layers_to_the_writer(
     assert [layer.name for layer in layers] == LAYERS
     assert {layer.name: len(layer.columns["id"]) for layer in layers} == COUNTS
     for layer in layers:
-        assert layer.sources == ("uscensus",)
+        assert layer.sources == (
+            ("placewise-regions", "uscensus") if layer.name == "regions" else ("uscensus",)
+        )
         assert all(len(column) == COUNTS[layer.name] for column in layer.columns.values())
         assert set(layer.columns) == set(layer.types)
 
@@ -86,7 +90,7 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     pack = open_pack(path, verify=True)
     assert [layer.name for layer in pack] == LAYERS
     assert {layer.name: len(layer) for layer in pack} == COUNTS
-    assert pack.sources == ("uscensus",)
+    assert set(pack.sources) == {"uscensus", "placewise-regions"}
 
     def at(layer, lat, lon):
         i = pack[layer].query(lat, lon)
@@ -105,6 +109,22 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     assert (reno["name"], reno["population"], reno["state"]) == ("Reno", 283621, "NV")
     assert at("places", 37.7456, -119.5936) is None  # Yosemite Valley: no incorporated place or CDP
     assert at("counties", 37.7456, -119.5936)["name"] == "Mariposa County"
+
+    regions = pack["regions"]
+    bay = at("regions", *park)
+    assert (bay["id"], bay["members"], bay["kind"], bay["country"]) == (
+        "region:test-bay", "census:06075,census:06001", "metro", "US",
+    )  # fmt: skip
+    assert at("regions", 37.80, -121.6)["id"] == "region:test-bay"  # Alameda's part
+    assert at("regions", 36.1147, -115.1728)["id"] == "region:test-vegas"
+    assert at("regions", 37.7456, -119.5936) is None  # Mariposa is in no region
+    assert regions.column("area_km2")[0] < regions.column("area_km2")[1]  # smallest first
+
+
+def test_a_region_member_missing_from_the_counties_fails_the_build(tmp_path, offline, monkeypatch):
+    use_regions(monkeypatch, [*US_REGIONS, {**US_REGIONS[0], "id": "region:x", "members": ["census:06085"]}])
+    with pytest.raises(ValueError, match="region:x: census:06085"):
+        us.build_us(tmp_path / "cache", tmp_path / "out", "2026.11")
 
 
 def test_main_builds_into_the_given_directories(tmp_path, offline, capsys):

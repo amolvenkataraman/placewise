@@ -39,12 +39,12 @@ def test_city_rule_by_area():
 
 
 def test_region_rule_adds_members_and_leaves_others():
-    eng = engine(repo={"region": [{"id": "placewise:region/gta", "label": "GTA", "members": GTA_MEMBERS}]})
+    eng = engine(repo={"region": [{"id": "region:gta", "label": "GTA", "members": GTA_MEMBERS}]})
     out = apply(eng, mississauga_result())
     assert [r.name for r in out.regions] == ["GTA"]
-    assert out.regions[0].id == "placewise:region/gta" and out.regions[0].kind.value == "region"
+    assert out.regions[0].id == "region:gta" and out.regions[0].kind.value == "region"
     assert out.sources["regions"] == "override:repo:repo.toml#1"
-    assert apply(eng, toronto_result()).regions[0].id == "placewise:region/gta"
+    assert apply(eng, toronto_result()).regions[0].id == "region:gta"
     assert apply(eng, oakland_result()) == oakland_result()
 
 

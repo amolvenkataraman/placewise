@@ -80,6 +80,22 @@ England, Scotland and Wales are ISO "country", Northern Ireland "province"). Oth
 world.regions("CA")   # curated metro and vernacular regions (GTA, Greater Vancouver ...), by name
 ```
 
+These are the regions location search knows by name. The same dataset (`datasets/regions/`,
+CC BY 4.0) also draws every region as a polygon in its country pack's `regions` layer (US, Canada,
+India): the union of official units, each region with a `kind` (`metro`, `official-planning`,
+`vernacular`) and a cited definition. Regions overlap: the CN Tower is in the GTA, the GTHA and
+the Golden Horseshoe. A few are polygons only (`search_as` in the dataset: the GTHA, the Delhi NCR
+core, the Bengaluru Metropolitan Region), which location search reads as the larger or better-known
+region they name. See `packbuild/README.md`, "Regions layer".
+
+```python
+from placewise.packs import open_pack
+
+regions = open_pack("ca-2026.11")["regions"]
+[regions.value("id", i) for i in regions.query_all(43.2557, -79.8711)]
+# ["region:gtha", "region:golden-horseshoe"]: Hamilton is in the GTHA, not the GTA
+```
+
 ## Profiles
 
 ```python
