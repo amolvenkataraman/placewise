@@ -3,16 +3,19 @@
 import json
 
 import pytest
+from datasets_kit import needs_datasets
 
 from packbuild import regions
 
 
+@needs_datasets
 def test_generated_module_matches_the_dataset():
     assert regions.MODULE.read_text(encoding="utf-8") == regions.render(regions.load()), (
         "constants/countries/regions.py is out of date: run python -m packbuild.regions"
     )
 
 
+@needs_datasets
 def test_check_flag(capsys):
     assert regions.main(["--check"]) == 0
 
@@ -80,6 +83,7 @@ def test_validation(tmp_path, overrides, message):
         regions.load(_write(tmp_path, _region(**overrides)))
 
 
+@needs_datasets
 def test_every_dataset_region_has_a_kind_and_a_cited_definition():
     for r in regions.load():
         assert r["kind"] in regions.KINDS

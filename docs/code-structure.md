@@ -42,11 +42,14 @@ loaders, `packbuild/packs/` one builder per pack, release tooling); `tests/` mir
   default import mode needs it); shared fixtures live in a `*_kit.py` beside the tests that use them.
 - **Country naming:** anything named after a country (folders, files, registry region keys, pack
   names) uses the lower-case ISO 3166-1 alpha-3 code: `constants/countries/usa/`,
-  `datasets/regions/can.json`, `ind`. Alpha-3 codes are never Python keywords (alpha-2 `in` is).
+  placewise-data's `datasets/regions/can.json`, `ind`. Alpha-3 codes are never Python keywords (alpha-2 `in` is).
   Data values keep the standard alpha-2 (`iso2`, ids like `iso:IN-KA`).
 - **No app names:** placewise is general-purpose; features are described by what they do
   ("location search"), never by an app that uses them.
 - **Data lives with its purpose:** reference tables in `constants/countries/`, the source registry
   in `attribution/sources/`, override rules in `overrides/repo/`, curated datasets we maintain
-  ourselves (regions, naming rules, aliases) in `datasets/` at the repo root, with any copy the
-  package needs offline generated from them; never inside logic packages.
+  ourselves (country groups, regions, naming rules, aliases) in the **placewise-data** repository's
+  `datasets/` folder (CC BY 4.0), read by `packbuild` from a checkout beside this one
+  (`../placewise-data/datasets`, or `$PACKBUILD_DATASETS`; `packbuild/datasets.py`), with any copy
+  the package needs offline generated from them and committed here; never inside logic packages.
+  Tests that read the real datasets skip when no checkout is present.

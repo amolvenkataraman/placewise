@@ -16,8 +16,10 @@ import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from . import datasets
+
 REPO = Path(__file__).resolve().parents[1]
-DATASETS = REPO / "datasets" / "country_groups"
+DATASETS = datasets.path("country_groups")  # in the placewise-data checkout (packbuild.datasets)
 MODULE = REPO / "src" / "placewise" / "constants" / "countries" / "groups.py"
 
 GEOGRAPHIC_KINDS = frozenset({"continent", "un-m49-region", "un-m49-subregion", "custom", "business"})

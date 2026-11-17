@@ -9,6 +9,7 @@ from functools import cache
 import pytest
 from e2e_kit import require_packs
 
+from packbuild import datasets
 from packbuild import regions as dataset
 from placewise.packs import open_pack
 
@@ -99,6 +100,8 @@ def test_open_ocean_is_in_no_region(pack):
 
 @pytest.mark.parametrize(("pack", "country"), [("usa", "US"), ("can", "CA"), ("ind", "IN")])
 def test_every_curated_region_of_the_country_is_drawn_smallest_first(pack, country):
+    if not datasets.root().is_dir():
+        pytest.skip(f"curated datasets not found at {datasets.root()}")
     layer = _layer(pack)
     ids = [layer.value("id", i) for i in range(len(layer))]
     assert sorted(ids) == sorted(r["id"] for r in dataset.load() if r["country"] == country)

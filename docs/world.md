@@ -8,10 +8,12 @@ country's profile (currency, calling code, conventions ...). It holds no data it
 |---|---|
 | ISO 3166-1 countries | `constants/countries/countries.py` (all 249 codes) |
 | Subdivisions (ISO 3166-2) | `constants/countries/{usa,can,ind,gbr}/subregions.py` |
-| Country groups, memberships with dates | `datasets/country_groups/*.json` → `constants/countries/groups.py` (`python -m packbuild.country_groups`) |
-| Metro regions | `datasets/regions/*.json` → `constants/countries/regions.py` |
+| Country groups, memberships with dates | placewise-data `datasets/country_groups/*.json` → `constants/countries/groups.py` (`python -m packbuild.country_groups`) |
+| Metro regions | placewise-data `datasets/regions/*.json` → `constants/countries/regions.py` |
 | Profiles | the world pack's `country_facts` layer (GeoNames, Unicode CLDR, Wikidata; `packbuild.country_profiles`) |
 
+The curated datasets live in the [placewise-data](https://github.com/amolvenkataraman/placewise-data)
+repository (CC BY 4.0); the package ships generated copies, so nothing here needs that checkout.
 Everything but profiles works offline from the package; profiles need the world data pack
 (`placewise data install world`).
 

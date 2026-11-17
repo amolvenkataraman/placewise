@@ -7,6 +7,13 @@ the wheel. Tests live in `tests/packbuild/` and never touch the network.
 uv run python -m packbuild.world --version 2026.11     # writes .cache/packbuild/out/world-2026.11/
 ```
 
+**Curated datasets** (country groups, regions, city aliases) live in the
+[placewise-data](https://github.com/amolvenkataraman/placewise-data) repository's `datasets/`
+folder (CC BY 4.0). Clone it beside this repository (`../placewise-data`) or point
+`$PACKBUILD_DATASETS` at its `datasets/` folder; `packbuild/datasets.py` resolves the path. The
+generators (`python -m packbuild.country_groups`, `packbuild.regions`, `packbuild.cities`) write the
+offline copies the package ships into `src/placewise/constants/countries/`.
+
 Downloads are cached once in `.cache/packbuild/` (gitignored) with a `<file>.json` sidecar holding
 the URL, SHA-256, size and retrieval date; `--refresh` downloads again. Nothing downloaded is
 committed.
@@ -233,7 +240,8 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
 ## Regions layer (US, Canada and India packs)
 
 Each country pack ends with a `regions` polygon layer: the curated regions of
-`datasets/regions/{usa,can,ind}.json` (CC BY 4.0, `datasets/LICENSE.md`; registry id
+placewise-data's `datasets/regions/{usa,can,ind}.json` (CC BY 4.0, `datasets/LICENSE.md` there; read
+from a checkout beside this repository or `$PACKBUILD_DATASETS`, see `packbuild/datasets.py`; registry id
 `placewise-regions`), each drawn as the union of its `members`, which are features of the same
 pack. `packbuild/regions_layer.py` builds it; every country builder calls it last.
 

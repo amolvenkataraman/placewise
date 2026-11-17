@@ -1,6 +1,7 @@
 """packbuild.cities: GeoNames cities and datasets/cities/aliases.json -> generated modules."""
 
 import pytest
+from datasets_kit import needs_datasets
 
 from packbuild import cities
 from packbuild.fetch import DEFAULT_CACHE
@@ -10,6 +11,7 @@ CACHED = DEFAULT_CACHE / "cities1000" / "cities1000.txt"
 ADMIN1 = DEFAULT_CACHE / "admin1CodesASCII.txt"
 
 
+@needs_datasets
 def test_city_aliases_module_matches_the_dataset():
     path = cities.PACKAGE / "city_aliases.py"
     assert path.read_text(encoding="utf-8") == cities.render_aliases(cities.load_aliases()), (
@@ -18,6 +20,7 @@ def test_city_aliases_module_matches_the_dataset():
 
 
 @pytest.mark.skipif(not (CACHED.exists() and ADMIN1.exists()), reason="GeoNames files not downloaded")
+@needs_datasets
 def test_city_modules_match_geonames():
     for path, text in cities.outputs(CACHED, ADMIN1).items():
         assert path.read_text(encoding="utf-8") == text, (

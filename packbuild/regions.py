@@ -20,8 +20,10 @@ from pathlib import Path
 from placewise.constants import countries
 from placewise.constants._keys import city_key
 
+from . import datasets
+
 ROOT = Path(__file__).resolve().parent.parent
-DATASET = ROOT / "datasets" / "regions"
+DATASET = datasets.path("regions")  # in the placewise-data checkout (packbuild.datasets)
 MODULE = ROOT / "src" / "placewise" / "constants" / "countries" / "regions.py"
 FIELDS = {
     "id",

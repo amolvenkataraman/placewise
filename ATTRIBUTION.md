@@ -23,7 +23,7 @@ should still read each licence for its own obligations.
 | [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/pincodes, ind/regions |
 | [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/pincodes, ind/post_offices, ind/regions |
-| [placewise curated datasets: regions (datasets/regions)](https://github.com/amolvenkataraman/placewise/tree/master/datasets) | CC-BY-4.0 | usa/regions, can/regions, ind/regions |
+| [placewise curated datasets: regions (datasets/regions)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | usa/regions, can/regions, ind/regions |
 
 ## Coverage
 
@@ -145,6 +145,6 @@ The directory's district column decides which PIN areas make up a district.
 
 - Credit: placewise curated datasets, CC BY 4.0
 - Licence: CC-BY-4.0
-- Website: https://github.com/amolvenkataraman/placewise/tree/master/datasets
+- Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
 
-Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.
+Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.

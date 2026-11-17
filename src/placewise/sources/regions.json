@@ -28,10 +28,10 @@
       {
         "id": "placewise-regions",
         "name": "placewise curated datasets: regions (datasets/regions)",
-        "url": "https://github.com/amolvenkataraman/placewise/tree/master/datasets",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
         "licence": "CC-BY-4.0",
         "credit": "placewise curated datasets, CC BY 4.0",
-        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
         "used_in": [
           "usa/regions"
         ]
@@ -78,10 +78,10 @@
       {
         "id": "placewise-regions",
         "name": "placewise curated datasets: regions (datasets/regions)",
-        "url": "https://github.com/amolvenkataraman/placewise/tree/master/datasets",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
         "licence": "CC-BY-4.0",
         "credit": "placewise curated datasets, CC BY 4.0",
-        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
         "used_in": [
           "can/regions"
         ]
@@ -113,10 +113,10 @@
       {
         "id": "placewise-regions",
         "name": "placewise curated datasets: regions (datasets/regions)",
-        "url": "https://github.com/amolvenkataraman/placewise/tree/master/datasets",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
         "licence": "CC-BY-4.0",
         "credit": "placewise curated datasets, CC BY 4.0",
-        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
         "used_in": [
           "ind/regions"
         ]
