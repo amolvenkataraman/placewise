@@ -206,10 +206,9 @@ class Usa:
         Islands)."""
         layer, out = self.layers.layer(self.place), rows.copy()
         out[~common.near_bbox(layer.bboxes(), out, lat, lon, km)] = -1  # cheap test first
-        for row in np.unique(out[out >= 0]).tolist():
-            group = np.flatnonzero(out == row)
-            km_away = np.atleast_1d(layer.nearest_edge_km(lat[group], lon[group], row))
-            out[group[km_away > km]] = -1
+        group = np.flatnonzero(out >= 0)  # each point to its own place's boundary, at once
+        km_away = np.atleast_1d(layer.nearest_edge_km(lat[group], lon[group], out[group]))
+        out[group[km_away > np.broadcast_to(km, out.shape)[group]]] = -1
         return out
 
     def _borough(self, out, county):

@@ -23,12 +23,15 @@ from placewise.model import BBox, Feature, Outline
 
 from . import _geometry as gm
 from ._boundary import Boundary
+from ._edges import EdgeCaps
 from ._points import PointIndex
 from ._refine import Refinement
 
 # queries x edges handled at once by nearest_edge_km, to bound memory
 _EDGE_BLOCK = 1_000_000
 _EDGE_SLACK_KM = 1e-9  # so rounding in the bound never drops the nearest edge
+# nearest_edge_km measures every edge (cheaper to set up) for one feature up to these query x edges
+_MEASURE_ALL_PAIRS = 65_536
 # latitude bands (degrees) by which each feature's edges are listed for the exact even-odd test
 _SLAB_DEG = consts.REFINE_CELL_DEG
 
@@ -467,13 +470,49 @@ class PolygonLayer(Layer):
 
     def nearest_edge_km(self, lat, lon, i):
         """Distance (km) from each point to feature i's boundary, outer rings and holes, inside or
-        out. Exact on the sphere, treating each edge as a great-circle arc (the containment test
-        treats edges as straight in lat/lon; the two differ by metres on long edges). Edges along
-        ±180, where antimeridian features are cut, are not borders and are skipped."""
-        i = self._row_index(i)
-        lat, lon = np.broadcast_arrays(np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64))
+        out (i: one feature, or one per point). Exact on the sphere, treating each edge as a
+        great-circle arc (the containment test treats edges as straight in lat/lon; the two differ
+        by metres on long edges). Edges along ±180, where antimeridian features are cut, are not
+        borders and are skipped. Keeps the broadcast shape; plain float for a scalar."""
+        lat, lon, feature = np.broadcast_arrays(
+            np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64), np.asarray(i)
+        )
         shape = lat.shape
-        flat_lat, flat_lon = lat.ravel(), lon.ravel()
+        flat_lat, flat_lon, feature = lat.ravel(), lon.ravel(), feature.ravel().astype(np.int64)
+        if len(feature) and (feature.max() >= self.count or feature.min() < -self.count):
+            bad = feature[(feature >= self.count) | (feature < -self.count)][0]
+            raise IndexError(f"row {bad} out of range for layer {self.name!r} with {self.count} rows")
+        feature = feature % max(self.count, 1)
+        best = np.full(flat_lat.shape, np.inf)
+        finite = np.isfinite(flat_lat) & np.isfinite(flat_lon)
+        ok = np.flatnonzero(finite & (np.abs(flat_lat) <= 90))
+        single = len(ok) and (feature[ok] == feature[ok[0]]).all()
+        if single and len(ok) * self._edge_count(feature[ok[0]]) <= _MEASURE_ALL_PAIRS:
+            best[ok] = self._every_edge_km(flat_lat[ok], flat_lon[ok], int(feature[ok[0]]))
+        elif len(ok):
+            best[ok] = self._edge_caps.km(flat_lat[ok], flat_lon[ok], feature[ok])
+        odd = np.flatnonzero(finite & (np.abs(flat_lat) > 90))  # no such point; answered as before
+        for f in np.unique(feature[odd]).tolist():
+            at = odd[feature[odd] == f]
+            best[at] = self._every_edge_km(flat_lat[at], flat_lon[at], f)
+        best = best.reshape(shape)
+        return float(best) if best.ndim == 0 else best
+
+    @cached_property
+    def _edge_caps(self):
+        g = self._geom
+
+        def rings(f):
+            return g["ring"][g["part"][g["feature"][f]] : g["part"][g["feature"][f + 1]] + 1]
+
+        return EdgeCaps(g["lat"], g["lon"], g["lat_b"], g["lon_b"], rings, self.count)
+
+    def _edge_count(self, i):
+        g = self._geom
+        return int(g["vertex"][i + 1] - g["vertex"][i])
+
+    def _every_edge_km(self, flat_lat, flat_lon, i):
+        """nearest_edge_km measuring every edge of the feature (pruned by the nearest vertex)."""
         ya, xa, yb, xb = self._edges(i)
         real = ~((np.abs(xa) == 180) & (np.abs(xb) == 180))
         ya, xa, yb, xb = ya[real], xa[real], yb[real], xb[real]
@@ -494,8 +533,7 @@ class PolygonLayer(Layer):
                 chunk = np.full(len(qlat), np.inf)
                 np.minimum.at(chunk, qi, angle * MEAN_RADIUS_KM)
                 best[q0 : q0 + step] = chunk
-        best = best.reshape(shape)
-        return float(best) if best.ndim == 0 else best
+        return best
 
     @cached_property
     def _boundary(self):
