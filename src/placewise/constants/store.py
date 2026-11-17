@@ -11,6 +11,7 @@ ENV_DATA_DIR = "PLACEWISE_DATA_DIR"
 ENV_INDEX_URL = "PLACEWISE_INDEX_URL"
 
 APP_DIR_NAME = "placewise"
+DEFAULT_DATA_DIR = ".placewise"  # under the home directory, on every platform, unless configured
 PACKS_DIR = "packs"
 INDEX_CACHE = "index.json"
 OVERRIDES_FILE = "overrides.toml"

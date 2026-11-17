@@ -87,6 +87,8 @@ placewise data update                 # newer versions (never automatic, never d
 placewise attribution                 # the sources, licences and credit lines to show
 ```
 
+Everything placewise downloads lives in `~/.placewise/` unless configured otherwise (`--data-dir`,
+`PLACEWISE_DATA_DIR` or `data.data_dir` in `placewise.toml`; `placewise data where` prints it).
 Packs are memory-mapped and checksummed (format: `docs/pack-format.md`). Data sources are listed in
 `src/placewise/sources/`, one JSON file per purpose (boundaries, places, regions, postal codes,
 airports ...) giving the sources used in each region, and `ATTRIBUTION.md` is generated from them,
