@@ -29,7 +29,12 @@ def test_each_file_is_one_purpose_listing_sources_per_region():
     assert [s.id for s in registry["boundaries"]["world"]] == ["naturalearth"]
     assert [s.id for s in registry["airports"]["world"]] == ["ourairports"]
     # a source serves several purposes but only lists that purpose's downloads in each file
-    assert set(registry["postal"]["usa"][0].downloads) == {"zcta", "gazetteer_zcta"}
+    assert set(registry["postal"]["usa"][0].downloads) == {
+        "zcta",
+        "gazetteer_zcta",
+        "zip_cities",
+        "zcta_place",
+    }
 
 
 @pytest.mark.parametrize("region", ["us", "IND", "xyz", "world2"])

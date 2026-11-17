@@ -40,18 +40,34 @@ shape but in none (a pier, Horseshoe Falls) takes the nearest one, with rule `ne
 ## United States (Census Bureau pack)
 
 - **admin1**: the county's state (`usa/counties:state`), finer than Natural Earth's line.
-- **locality**: the census place (incorporated place or CDP) containing the point.
-  - A CDP within `METRO_CDP_KM` (5 km) of its metro's principal city, the CBSA title's first city
-    in the same state, takes that city, unless the CDP is itself named in the title: the Strip
-    (Paradise CDP) is Las Vegas, East Los Angeles is Los Angeles; Arlington VA (in the title) and
-    Stanford (16 km out) stay. The CDP becomes the sublocality. This stands in for the design's
-    "ZIP Code's postal city" rule: the pack has no postal-city names (ZCTAs are areas without
-    names), and an unincorporated suburb next to the principal city is usually addressed by it.
-  - Unincorporated land (no census place) has no locality.
-- **city**: the locality. On unincorporated land, the metro's principal city when its boundary is
-  within `METRO_CITY_KM` (25 km; SFO -> San Francisco), else the GeoNames score. An incorporated
-  place is always its own city (Emeryville stays Emeryville; the design page's "metro principal
-  city" roll-up for small incorporated cities is not applied).
+- **locality**: the census place (incorporated place or CDP) containing the point, corrected
+  inside a metropolitan area by the **postal city**: the city USPS addresses the point's ZIP Code
+  to (the ZCTA's `postal_city`, matched to a census place as `postal_place`; see the US pack),
+  used only when that place's boundary is within `POSTAL_CITY_KM` (20 km) of the point.
+  - An incorporated place is always itself (Emeryville stays Emeryville, Brooklyn's ZIP Codes
+    don't make New York "Brooklyn").
+  - A CDP takes its postal city when that is an incorporated place: the Strip and Harry Reid
+    Airport (Paradise), South Point (Enterprise) and Dadeland (Kendall) are Las Vegas, Las Vegas
+    and Miami. The CDP becomes the sublocality.
+  - Unless the CDP's name extends the postal city's name (`rules.extends`): East Los Angeles
+    (ZIP Code city Los Angeles) stays East Los Angeles, with Los Angeles as its city. Its name
+    already says where it is, and it is a place people name.
+  - A postal city that is another CDP replaces only a CDP of fewer than `CDP_KEEP_POPULATION`
+    (5,000) people (the design's "CDP of 5,000+ people stays"): The Woodlands (121,000, addressed
+    Spring) and Tysons (addressed McLean) stay. Arlington VA, Bethesda, Columbia MD, Reston and
+    Stanford are their own postal cities and stay.
+  - Unincorporated land (no census place) takes its postal city: SFO is San Francisco (94128),
+    MSP is Minneapolis, Mount Rushmore Keystone, the Kennedy Space Center visitor complex Merritt
+    Island. With no postal city (no ZCTA, a name that is no census place such as Universal City,
+    or outside a metro) it has no locality.
+  - Outside metropolitan areas (micropolitan areas and rural counties) the census place stands:
+    a ZIP Code there names a post office that can be a town 30 km away.
+- **city**: the locality; for a CDP that keeps its name, its incorporated postal city (East Los
+  Angeles -> Los Angeles). With no locality, the metro's largest principal city in the point's
+  state (OMB delineation list 2, `cbsa.principal_cities`) when its boundary is within
+  `METRO_CITY_KM` (25 km; Universal Studios Hollywood -> Los Angeles), else the GeoNames score. An
+  incorporated place is always its own city (Emeryville stays Emeryville; the design page's
+  "metro principal city" roll-up for small incorporated cities is not applied).
 - **sublocality**: the nearest GeoNames place within `SUBLOCALITY_KM` (2 km) whose point lies in
   the same census place and isn't named like the locality, city or borough.
 - **borough**: New York City's five counties (Kings -> Brooklyn). **admin2**: the county.
@@ -63,16 +79,25 @@ shape but in none (a pier, Horseshoe Falls) takes the nearest one, with rule `ne
 - **locality**: the census subdivision (CSD), so amalgamated cities come out whole (Rouge Park
   and Scarborough are in Toronto; Pearson is in Mississauga). Rural CSDs (townships, rural
   municipalities, parishes: `CSD_RURAL`) and unorganised ones (improvement districts, unorganised
-  territory: `CSD_UNORGANIZED`) are named by the nearest GeoNames place inside them within
-  `RURAL_PLACE_KM` (8 km); failing that, a rural CSD is named itself and an unorganised one not
-  at all.
+  territory: `CSD_UNORGANIZED`) are named by the nearest CGNDB settlement inside them within
+  `CGNDB_LOCALITY_KM` (4 km; hamlets, communities, villages: `CGNDB_LOCALITY_TERMS`), which names
+  Lake Louise (Improvement District No. 9), else by
+  the nearest GeoNames place inside them within `RURAL_PLACE_KM` (8 km); failing both, a rural
+  CSD is named itself and an unorganised one not at all. A CGNDB place has no population, so it is
+  its own city.
 - **city**: the locality when it has `CITY_KEEP_POPULATION` (100k) people or is named in its CMA
   (Kitchener, Cambridge, Waterloo); otherwise the CMA's first city in the same province when that
   one is `CITY_ROLL_UP_RATIO` (10) times bigger: Pickering (99k) -> Toronto, Fort Erie stays (St.
   Catharines is only 4x bigger). A CMA split by a provincial border (Ottawa - Gatineau) has one
   feature per province, and each part's first city is the first one named in that province.
-- **sublocality**: as in the US, inside the same CSD. **admin2**: the census division (from the
-  CSDUID). **postal**: the FSA. **regions**: curated, and the CMA or CA.
+- **sublocality**: where the locality is the CSD itself, a CGNDB neighbourhood or community
+  inside it (`CGNDB_SUBLOCALITY_TERMS`: urban communities, neighbourhoods, communities, boroughs,
+  former villages), not named like the locality or city: each reaches `CGNDB_SUBLOCALITY_KM` from
+  its point by its map scale (4 km for names shown from 1:700,000, such as Scarborough, Kanata,
+  Etobicoke; 2.5 km from 1:250,000; 1.5 km for a street's few blocks: Malton, Port Credit,
+  Yorkville), and the point takes the one it is deepest inside (distance over reach). Failing
+  that, the nearest GeoNames place as in the US (Rouge). **admin2**: the census division (from
+  the CSDUID). **postal**: the FSA. **regions**: curated, and the CMA or CA.
 
 ## India (India Post pack)
 
@@ -98,11 +123,15 @@ Earth's longer form stays in `country.aliases`.
 
 ## Known gaps
 
-- Lake Louise (in Improvement District No. 9, Banff National Park) gets no locality: GeoNames
-  cities1000 has no place there. A StatCan designated-place or population-centre layer would fix
-  it.
-- The US postal city is approximated (above); the design's "CDP of 5,000+ people stays" can't be
-  applied because the Census places layer has populations for incorporated places only.
+- US postal cities are ZIP Code Business Patterns' and GeoNames' names, not USPS's own file
+  (copyrighted and sold per copy), and a ZCTA is only an approximation of a ZIP Code. A postal
+  name that is no census place (Universal City, Yosemite National Park, Brooklyn) is never a
+  locality. Hawaii's census name "Urban Honolulu" is used as is.
+- The East Los Angeles rule is a judgement: CDPs people name in their own right but whose names
+  don't extend the postal city (Kendall, White Center) take it (Miami, Seattle) and keep the CDP
+  as their sublocality.
+- New England towns and other county subdivisions are not in the pack yet: a point in a town with
+  no census place has no locality.
 - No urban-area test for roll-ups: a whole CMA counts, so a rural CSD at a CMA's edge can roll up.
 - India's localities are GeoNames places, which sometimes prefer a taluk or village over the city
   (Fort Kochi answers Kanayannur).

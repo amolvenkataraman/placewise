@@ -7,32 +7,6 @@ from placewise.constants import naming as const
 MUNICIPAL, RURAL, UNORGANIZED = "municipal", "rural", "unorganized"
 
 
-def title_cities(title, known):
-    """The principal cities a CBSA or CSA title names, in order ("Las Vegas-Henderson-North Las
-    Vegas, NV"). Names are joined on "-"; hyphenated names ("Winston-Salem") are kept whole when
-    known(name) says such a place exists, and "--" always separates. Unknown names are skipped."""
-    names = title.rpartition(",")[0] if "," in title else title
-    out = []
-    for group in names.split("--"):
-        tokens = [t.strip() for t in group.split("-")]
-        i = 0
-        while i < len(tokens):
-            for j in range(len(tokens), i, -1):
-                name = "-".join(tokens[i:j])
-                if known(name):
-                    out.append(name)
-                    i = j
-                    break
-            else:
-                i += 1
-    return out
-
-
-def title_states(title):
-    """The USPS state codes a CBSA or CSA title ends with ("NY-NJ" -> ["NY", "NJ"])."""
-    return [s.strip() for s in title.rpartition(",")[2].split("-") if s.strip()] if "," in title else []
-
-
 def cma_cities(name):
     """The cities a census metropolitan area's name lists ("Kitchener - Cambridge - Waterloo")."""
     return [part.strip() for part in name.split(" - ") if part.strip()]
@@ -73,6 +47,14 @@ def fold(name):
     """A name for comparison: case and accents ignored."""
     decomposed = unicodedata.normalize("NFKD", name or "")
     return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold().strip()
+
+
+def extends(name, base):
+    """Whether `name` is `base` with words added ("East Los Angeles" extends "Los Angeles"; "Los
+    Angeles" doesn't extend itself, "Losa" doesn't extend "Los")."""
+    words, inner = fold(name).split(), fold(base).split()
+    n = len(inner)
+    return 0 < n < len(words) and any(words[i : i + n] == inner for i in range(len(words) - n + 1))
 
 
 def same_name(a, b):

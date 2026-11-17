@@ -62,7 +62,7 @@ def test_curated_regions_leave_the_metro_city_rule_alone(tmp_path, packs):
     vegas = ((10, -150, 10.5, -149.4), "region:las-vegas", "Las Vegas Valley", "metro", "US")
     us = write_us(tmp_path, regions=regions_layer([vegas]))
     r = Geocoder(packs=[packs[0], us]).lookup(10.27, -149.85)
-    assert r.locality.name == "Las Vegas" and r.sources["locality"] == "us/places:metro"
+    assert r.locality.name == "Las Vegas" and r.sources["locality"] == "us/places:postal"
     assert {p.id for p in r.regions} == {"region:las-vegas", "census:cbsa:29820", "census:csa:332"}
 
 
@@ -73,7 +73,9 @@ def test_label_template_reaches_the_new_fields(packs):
         label=LabelSettings(template="{sublocality}, {borough}, {locality}, {postal}, {region}")
     )
     r = Geocoder(packs=list(packs), settings=settings).lookup(10.705, -149.8)
-    assert r.label == "Williamsfield, Brooklyn, New York, New York-Newark-Jersey City, NY-NJ Metro Area"
+    assert (
+        r.label == "Williamsfield, Brooklyn, New York, 11211, New York-Newark-Jersey City, NY-NJ Metro Area"
+    )
     city_style = Settings(label=LabelSettings(style="city"))
     assert (
         Geocoder(packs=list(packs), settings=city_style).lookup(10.25, -148.6).label

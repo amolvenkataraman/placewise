@@ -38,9 +38,11 @@
         ],
         "downloads": {
           "gazetteer_place": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2025_Gazetteer/2025_Gaz_place_national.zip",
-          "population": "https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/cities/totals/sub-est2025.csv"
+          "population": "https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/cities/totals/sub-est2025.csv",
+          "acs_population": "https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/acsdt5y2024-b01003.dat",
+          "principal_cities": "https://www2.census.gov/programs-surveys/metro-micro/geographies/reference-files/2023/delineation-files/list2_2023.xlsx"
         },
-        "notes": "Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025), which cover incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places) but not other census-designated places. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01). The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files."
+        "notes": "Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025) for incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places), and the American Community Survey 2020-2024 5-year estimates (table B01003, total population, from the table-based summary file, which needs no API key) for census-designated places and any place SUB-EST lacks; ZCTA populations are ACS too. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01): list 1 for counties, list 2 for principal cities. Each ZCTA's postal city name is the city ZIP Code Business Patterns 2023 (County Business Patterns program) gives its ZIP Code, matched to a census place by name within the state, preferring places the 2020 ZCTA-to-place relationship file says overlap the ZCTA; ZIP Codes Business Patterns lacks are named from the other US postal source in postal.json. The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files."
       }
     ],
     "can": [
@@ -61,6 +63,20 @@
           "csd": "https://www150.statcan.gc.ca/n1/tbl/csv/98100002-eng.zip"
         },
         "notes": "Full-table CSV downloads. 98-10-0002-01 covers Canada, provinces and territories, census divisions and census subdivisions; 98-10-0005-01 CMAs and CAs (whole and by provincial part); 98-10-0019-01 forward sortation areas. Joined to the boundaries on DGUID. 63 CSDs (incompletely enumerated Indian reserves and settlements) have no count (symbol '..'); they are stored as null, not zero."
+      },
+      {
+        "id": "nrcan-cgndb",
+        "name": "Canadian Geographical Names Database (CGNDB), Natural Resources Canada",
+        "url": "https://open.canada.ca/data/en/dataset/e27c6eba-3c5d-4051-9db2-082dc6411c2c",
+        "licence": "OGL-Canada-2.0",
+        "credit": "Contains information licensed under the Open Government Licence – Canada (Canadian Geographical Names Database, Natural Resources Canada).",
+        "used_in": [
+          "can/populated_places"
+        ],
+        "downloads": {
+          "populated_places": "https://ftp.maps.canada.ca/pub/nrcan_rncan/vector/geobase_cgn_toponyme/prov_csv_eng/cgn_canada_csv_eng.zip"
+        },
+        "notes": "Official geographical names approved by the Geographical Names Board of Canada and its provincial and territorial members, refreshed weekly (the national English-format CSV; names keep the language they were decided in, English or French, and are not translated). The Canada pack keeps generic category 'Populated Place' (hamlets, communities, towns, urban communities, neighbourhoods, Montreal's boroughs: about 26,000 points) without railway points, post offices, stations and former or vacated places, with the 'Relevance at Scale' field as a prominence. Coordinates are NAD83, used as WGS84. Points only, no boundaries or populations."
       }
     ]
   }

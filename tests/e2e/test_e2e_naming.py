@@ -5,12 +5,12 @@ Where the answer still differs from the design's target, the test says why (the 
 rule that's missing) so a fix shows up as a test to update, not a silent change."""
 
 import pytest
-from e2e_kit import geocoder
+from e2e_kit import naming_geocoder
 
 
 @pytest.fixture(scope="module")
 def geo():
-    return geocoder("world", "usa", "can", "ind")
+    return naming_geocoder()
 
 
 def names(r):
@@ -23,7 +23,7 @@ def names(r):
 def test_fort_erie_is_in_canada_not_buffalo(geo):
     r = geo.lookup(42.905, -78.929)
     assert names(r) | {"tz": r.tz} == {
-        "sublocality": None, "locality": "Fort Erie", "city": "Fort Erie", "borough": None,
+        "sublocality": "Erie Beach", "locality": "Fort Erie", "city": "Fort Erie", "borough": None,
         "admin1": "Ontario", "country": "Canada", "tz": "America/Toronto",
     }  # fmt: skip
     assert r.label == "Fort Erie, Ontario, Canada"
@@ -36,7 +36,7 @@ def test_las_vegas_strip_is_las_vegas(geo):
     r = geo.lookup(36.1147, -115.1728)
     assert r.label == "Las Vegas, Nevada, United States"
     assert (r.locality.name, r.city.name, r.sublocality.name) == ("Las Vegas", "Las Vegas", "Paradise")
-    assert r.sources["locality"] == "usa/places:metro"  # Paradise CDP next to the principal city
+    assert r.sources["locality"] == "usa/places:postal"  # Paradise CDP; ZIP Code 89109 says Las Vegas
     assert r.postal.name == "89109" and r.admin2.name == "Clark County"
     assert [p.id for p in r.regions] == ["region:las-vegas", "census:cbsa:29820", "census:csa:332"]
 
@@ -80,9 +80,45 @@ def test_lake_louise_province_and_zone(geo):
     assert r.admin2.name == "Division No. 15"
 
 
-@pytest.mark.xfail(strict=True, reason="no data: Lake Louise (pop. < 1,000) isn't in GeoNames cities1000")
 def test_lake_louise_has_a_locality(geo):
-    assert geo.lookup(51.4254, -116.1773).locality.name == "Lake Louise"
+    """GeoNames cities1000 has no place there; CGNDB's hamlet names Improvement District No. 9."""
+    r = geo.lookup(51.4254, -116.1773)
+    assert (r.locality.name, r.city.name) == ("Lake Louise", "Lake Louise")
+    assert r.sources["locality"] == "can/populated_places:inside"
+    assert r.label == "Lake Louise, Alberta, Canada"
+
+
+def test_east_los_angeles_keeps_its_name_under_los_angeles(geo):
+    r = geo.lookup(34.0232, -118.1706)  # East LA Civic Center, ZIP Code 90022 (postal city Los Angeles)
+    assert (r.locality.name, r.city.name) == ("East Los Angeles", "Los Angeles")
+    assert r.sources["city"] == "usa/places:postal"
+
+
+def test_big_cdps_keep_their_names(geo):
+    for point, name in [
+        ((38.8783, -77.0687), "Arlington"),  # Arlington National Cemetery
+        ((30.1617, -95.4659), "The Woodlands"),  # addressed Spring, another CDP
+        ((38.9176, -77.2205), "Tysons"),  # addressed McLean, another CDP
+    ]:
+        r = geo.lookup(*point)
+        assert (r.locality.name, r.city.name, r.sources["locality"]) == (name, name, "usa/places:polygon")
+
+
+@pytest.mark.parametrize(
+    ("point", "locality", "sublocality"),
+    [
+        ((43.7757, -79.2578), "Toronto", "Scarborough"),  # Scarborough Town Centre
+        ((45.3113, -75.9088), "Ottawa", "Kanata"),  # Kanata Centrum
+        ((43.7055, -79.6366), "Mississauga", "Malton"),  # Malton GO
+        ((43.5555, -79.5863), "Mississauga", "Port Credit"),  # Port Credit GO
+        ((49.2731, -123.1545), "Vancouver", "Kitsilano"),  # Kitsilano Beach
+        ((43.6677, -79.3948), "Toronto", "Yorkville"),  # Royal Ontario Museum
+    ],
+)
+def test_canadian_neighbourhoods_from_cgndb(geo, point, locality, sublocality):
+    r = geo.lookup(*point)
+    assert (r.locality.name, r.sublocality.name) == (locality, sublocality)
+    assert r.sources["sublocality"] == "can/populated_places:inside"
 
 
 def test_rouge_park_is_in_toronto(geo):
@@ -124,9 +160,10 @@ def test_williamsburg_brooklyn(geo):
     assert r.admin2.name == "Kings County" and r.postal.name == "11211"
 
 
-def test_sfo_unincorporated_with_its_metro_city(geo):
-    r = geo.lookup(37.6155, -122.39)
-    assert r.locality is None and r.city.name == "San Francisco"
+def test_sfo_unincorporated_takes_its_postal_city(geo):
+    r = geo.lookup(37.6155, -122.39)  # unincorporated San Mateo County, ZIP Code 94128
+    assert (r.locality.name, r.city.name) == ("San Francisco", "San Francisco")
+    assert r.sources["locality"] == "usa/places:postal" and r.postal.name == "94128"
     assert r.admin2.name == "San Mateo County"
     assert r.airport.place.codes["iata"] == "SFO" and r.airport.relation.value == "at"
 

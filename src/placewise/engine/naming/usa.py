@@ -1,13 +1,17 @@
 """United States naming over the Census Bureau pack (counties, places, ZCTAs, CBSAs, CSAs).
 
 - admin1: the county's state ("usa/counties:state").
-- locality: the census place containing the point. A census-designated place (CDP) inside a metro
-  area takes the CBSA title's first city in its state, when the point is within METRO_CDP_KM of
-  that city and the CDP isn't named in the title itself (Paradise -> Las Vegas; Arlington VA and
-  Stanford stay): the stand-in for the ZIP Code's postal city. The CDP is then the sublocality.
-  Unincorporated land (no place) has no locality.
-- city: the locality; on unincorporated land the metro's city within METRO_CITY_KM (SFO -> San
-  Francisco), else the GeoNames score. Incorporated places are always their own city (Emeryville).
+- locality: the census place containing the point; inside a metro area, the ZIP Code's postal
+  city (the ZCTA's `postal_place`, within POSTAL_CITY_KM) corrects how people talk:
+  - a census-designated place (CDP) takes its postal city when that is an incorporated place
+    (Paradise -> Las Vegas), unless the CDP's own name extends it (East Los Angeles stays, under
+    Los Angeles); a CDP of fewer than CDP_KEEP_POPULATION people also takes a postal city that is
+    another CDP. The CDP is then the sublocality.
+  - unincorporated land (no place) takes its postal city (SFO -> San Francisco).
+  Incorporated places are always themselves.
+- city: the locality; for a CDP that keeps its name, its incorporated postal city (East Los
+  Angeles -> Los Angeles). No locality: the metro's largest principal city in the state (OMB list
+  2) within METRO_CITY_KM, else the GeoNames score.
 - sublocality: the nearest GeoNames place within SUBLOCALITY_KM inside the same census place.
 - borough (New York City's five counties), admin2 (county), postal (ZCTA), regions (the pack's
   curated `regions` and the CBSA and CSA, smallest first).
@@ -47,13 +51,23 @@ class Usa:
             self.cbsa = layers.add(pack, names["cbsa"], common.region_place)
         if names["csa"] in pack:
             self.csa = layers.add(pack, names["csa"], common.region_place)
-        self._heads = {}
 
     # -- per-row tables -----------------------------------------------------------------------------
 
     def _col(self, key, field):
-        values = self.layers.column(key, field)
-        return values if values is not None else [""] * self.layers.layer(key).count
+        values = self.layers.column(key, field) if key is not None else None
+        return values if values is not None else [""] * (self.layers.layer(key).count if key else 0)
+
+    @cached_property
+    def _place(self):
+        ids = self._col(self.place, "id")
+        return {
+            "incorporated": np.array(
+                [c == "incorporated" for c in self._col(self.place, "class")], dtype=bool
+            ),
+            "population": common.population(self.layers.layer(self.place)),
+            "row_of": {pid: r for r, pid in enumerate(ids)},
+        }
 
     @cached_property
     def _county(self):
@@ -61,12 +75,15 @@ class Usa:
         row_of = self.admin.admin1_row_of_id
         admin1 = np.array([row_of.get(f"iso:US-{s}", -1) for s in states], dtype=np.int64)
         borough = [const.NYC_BOROUGHS.get(i.rpartition(":")[2]) for i in ids]
+        cbsa = self._member_rows(self.cbsa, self._col(self.county, "cbsa"))
+        metro = np.array([t == "metro" for t in self._col(self.cbsa, "type")] + [False], dtype=bool)
         return {
             "admin1": admin1,
-            "state": states,
             "borough": borough,
-            "cbsa": self._member_rows(self.cbsa, self._col(self.county, "cbsa")),
+            "cbsa": cbsa,
+            "metro": metro[cbsa],  # index -1 is the False sentinel
             "csa": self._member_rows(self.csa, self._col(self.county, "csa")),
+            "head": self._heads(cbsa, states),
         }
 
     def _member_rows(self, key, codes):
@@ -76,33 +93,27 @@ class Usa:
         row_of = {c: i for i, c in enumerate(self._col(key, "code"))}
         return np.array([row_of.get(c, -1) if c else -1 for c in codes], dtype=np.int64)
 
+    def _heads(self, cbsa, states):
+        """Per county, the place row of its CBSA's largest principal city in the county's state
+        (principal_cities lists them largest first), -1 for none."""
+        row_of, place_states = self._place["row_of"], self._col(self.place, "state")
+        lists = [
+            [row_of[i] for i in (s or "").split(",") if i in row_of]
+            for s in self._col(self.cbsa, "principal_cities")
+        ]
+        out = np.full(len(cbsa), -1, dtype=np.int64)
+        for c, (row, state) in enumerate(zip(cbsa.tolist(), states, strict=True)):
+            if row >= 0:
+                out[c] = next((p for p in lists[row] if place_states[p] == state), -1)
+        return out
+
     @cached_property
-    def _place(self):
-        layer = self.layers.layer(self.place)
-        names, states = self._col(self.place, "name"), self._col(self.place, "state")
-        incorporated = np.array([c == "incorporated" for c in self._col(self.place, "class")], dtype=bool)
-        pop = common.population(layer)
-        by_name = {}  # (state, name) -> row: incorporated first, then the most people
-        rank = np.lexsort((-np.nan_to_num(pop, nan=-1.0), ~incorporated))
-        for r in rank.tolist():
-            by_name.setdefault((states[r], names[r]), r)
-
-        return {
-            "incorporated": incorporated,
-            "by_name": by_name,
-        }
-
-    def _head(self, cbsa, state):
-        """(place row of the CBSA title's first city in `state` or -1, folded title names)."""
-        key = (cbsa, state)
-        if key not in self._heads:
-            title = self._col(self.cbsa, "title")[cbsa] if self.cbsa is not None and cbsa >= 0 else ""
-            states = rules.title_states(title)
-            by_name = self._place["by_name"]
-            cities = rules.title_cities(title, lambda n: any((s, n) in by_name for s in states))
-            head = next((by_name[state, n] for n in cities if (state, n) in by_name), -1)
-            self._heads[key] = (head, {rules.fold(n) for n in cities})
-        return self._heads[key]
+    def _zcta(self):
+        """Per ZCTA row, the place row of its postal city (-1: none or not a place in the pack)."""
+        row_of = self._place["row_of"]
+        return np.array(
+            [row_of.get(p or "", -1) for p in self._col(self.postal, "postal_place")], dtype=np.int64
+        )
 
     # -- the rules ----------------------------------------------------------------------------------
 
@@ -116,25 +127,30 @@ class Usa:
     def names(self, a, pts, lat, lon, st):
         out = common.Named(len(pts), self.layers)
         every, county = out.every, st["county"]
+        safe = np.maximum(county, 0)
         out.put("admin2", every, self.county, county, st["rule"])
         for i in np.flatnonzero(st["admin1"]).tolist():
             out.sources[i]["admin1"] = f"{self.county}:{const.STATE}"
         place, prule = self._places(lat, lon, st["rule"])
-        inc = (place >= 0) & self._place["incorporated"][np.maximum(place, 0)]
-        cdp = (place >= 0) & ~inc
-        head = self._metro_heads(lat, lon, county, place, cdp | (place < 0))
-        rolled = cdp & (head >= 0)
-        locality = np.where(rolled, head, place)
-        lrule = np.where(rolled, const.METRO, prule)
+        zcta = np.full(len(pts), -1, dtype=np.int64)
+        if self.postal is not None:
+            zcta = np.atleast_1d(self.layers.layer(self.postal).query(lat, lon)).astype(np.int64)
+            out.put("postal", every, self.postal, zcta, lookup_const.POLYGON)
+        metro = (county >= 0) & self._county["metro"][safe]
+        postal = self._postal_cities(lat, lon, zcta, place, metro)
+        locality, city, lrule, crule, rolled = self._locality(place, prule, postal)
+        # no locality: the metro's largest principal city in the state, if near
+        head = np.where(county >= 0, self._county["head"][safe], -1)
+        head = self._within(lat, lon, np.where(locality < 0, head, -1), const.METRO_CITY_KM)
+        took = (locality < 0) & (head >= 0)
+        city[took], crule[took] = head[took], const.METRO
         out.put("locality", every, self.place, locality, lrule)
-        # the city: the locality; on unincorporated land the metro's city, else the GeoNames score
-        city = np.where(place < 0, head, locality)
-        out.put("city", every, self.place, city, np.where(place < 0, const.METRO, lrule))
+        out.put("city", every, self.place, city, crule)
         fallback = np.flatnonzero(city < 0)
         out.put("city", fallback, lookup_const.CITIES, a["city"][pts[fallback]], lookup_const.SCORE)
         self._borough(out, county)
         found = out.sublocality_inside(self.cities, self.place, place, a["local"][pts], a["local_km"][pts])
-        cdp_itself = np.flatnonzero(rolled & (found < 0))  # the CDP, under its metro's city
+        cdp_itself = np.flatnonzero(rolled & (found < 0))  # the CDP, under its postal city
         out.put(
             "sublocality",
             cdp_itself,
@@ -143,9 +159,6 @@ class Usa:
             lookup_const.POLYGON,
             PlaceKind.SUBLOCALITY,
         )
-        if self.postal is not None:
-            zcta = np.atleast_1d(self.layers.layer(self.postal).query(lat, lon)).astype(np.int64)
-            out.put("postal", every, self.postal, zcta, lookup_const.POLYGON)
         self._regions(out, lat, lon, county)
         common.skip_near(self.cities, self.place, a, pts, locality, city)
         return out
@@ -159,24 +172,44 @@ class Usa:
             place[water], rule[water] = common.polygon(layer, lat[water], lon[water])
         return place, rule
 
-    def _metro_heads(self, lat, lon, county, place, want):
-        """Per point, the place row of its metro's city (see the module rules), or -1."""
-        out = np.full(len(lat), -1, dtype=np.int64)
-        tables, names = self._county, self.layers.column(self.place, "name")
-        for i in np.flatnonzero(want & (county >= 0)).tolist():
-            c = county[i]
-            head, title = self._head(int(tables["cbsa"][c]), tables["state"][c])
-            if head >= 0 and not (place[i] >= 0 and rules.fold(names[place[i]]) in title):
-                out[i] = head
-        # near enough: within METRO_CITY_KM of the city's boundary (internal points can be far
-        # off: San Francisco's is on the Farallon Islands)
-        layer = self.layers.layer(self.place)
-        limit = np.where(place >= 0, const.METRO_CDP_KM, const.METRO_CITY_KM)
-        out[~common.near_bbox(layer.bboxes(), out, lat, lon, limit)] = -1  # cheap test first
-        for head in np.unique(out[out >= 0]).tolist():
-            group = np.flatnonzero(out == head)
-            km = np.atleast_1d(layer.nearest_edge_km(lat[group], lon[group], head))
-            out[group[km > limit[group]]] = -1
+    def _postal_cities(self, lat, lon, zcta, place, metro):
+        """Per point, the place row of its ZCTA's postal city when the point is in a metro area,
+        the city isn't the point's own place and its boundary is within POSTAL_CITY_KM; else -1."""
+        postal = np.where((zcta >= 0) & metro, self._zcta[np.maximum(zcta, 0)] if len(self._zcta) else -1, -1)
+        postal[postal == place] = -1
+        return self._within(lat, lon, postal, const.POSTAL_CITY_KM)
+
+    def _locality(self, place, prule, postal):
+        """(locality, city, their rules, which points' CDP gave way to its postal city), by the
+        module's rules. Rows are place rows, -1 for none."""
+        tables, names = self._place, self.layers.column(self.place, "name")
+        inc = tables["incorporated"]
+        has, safe, psafe = place >= 0, np.maximum(place, 0), np.maximum(postal, 0)
+        cdp = has & ~inc[safe]
+        postal_inc = (postal >= 0) & inc[psafe]
+        extends = np.zeros(len(place), dtype=bool)
+        for i in np.flatnonzero(cdp & postal_inc).tolist():
+            extends[i] = rules.extends(names[place[i]], names[postal[i]])
+        small = tables["population"][safe] < const.CDP_KEEP_POPULATION  # NaN (unknown): not small
+        rolled = cdp & (postal >= 0) & ((postal_inc & ~extends) | (~postal_inc & small))
+        takes = rolled | (~has & (postal >= 0))
+        locality = np.where(takes, postal, place)
+        lrule = np.where(takes, const.POSTAL, prule).astype(object)
+        under = cdp & ~rolled & postal_inc  # a CDP keeping its name, under its postal city
+        city = np.where(under, postal, locality)
+        crule = np.where(under, const.POSTAL, lrule).astype(object)
+        return locality, city, lrule, crule, rolled
+
+    def _within(self, lat, lon, rows, km):
+        """`rows` (place rows, -1 for none) with those whose boundary is farther than km from the
+        point set to -1 (internal points can be far off: San Francisco's is on the Farallon
+        Islands)."""
+        layer, out = self.layers.layer(self.place), rows.copy()
+        out[~common.near_bbox(layer.bboxes(), out, lat, lon, km)] = -1  # cheap test first
+        for row in np.unique(out[out >= 0]).tolist():
+            group = np.flatnonzero(out == row)
+            km_away = np.atleast_1d(layer.nearest_edge_km(lat[group], lon[group], row))
+            out[group[km_away > km]] = -1
         return out
 
     def _borough(self, out, county):
