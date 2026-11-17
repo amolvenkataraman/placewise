@@ -1,4 +1,4 @@
-"""GPX 1.0 / 1.1 tracks, routes and waypoints in and out, streamed with ElementTree.iterparse.
+"""GPX 1.0 / 1.1 tracks, routes and waypoints in and out, streamed through expat with no element tree.
 
 Reading:
 
@@ -54,6 +54,7 @@ from placewise.tracks import Track, TrackMeta
 _NAN = math.nan
 # xsd:decimal: digits with an optional point, no exponent, no nan/inf
 _DECIMAL = re.compile(r"\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)\s*")
+_DECIMAL_CHARS = "0123456789.+-"
 _TIME = re.compile(
     r"\s*(\d{4})-(\d\d)-(\d\d)[Tt ](\d\d):(\d\d):(\d\d)(\.\d+)?\s*([Zz]|[+-]\d\d(?::?\d\d)?)?\s*"
 )
@@ -91,12 +92,17 @@ class GpxFile:
 def read_gpx(source):
     """A GpxFile from a path, raw bytes, or a str holding either the XML or a path."""
     stream, name = _open(source)
+    reader = _Reader(name)
+    parser = ET.XMLParser(target=reader)
     try:
-        return _Reader(name).read(stream)
+        while chunk := stream.read(_READ_BYTES):
+            parser.feed(chunk)
+        parser.close()
     except ET.ParseError as error:
         raise ValueError(f"not well-formed XML: {error}") from None
     finally:
         stream.close()
+    return reader.result()
 
 
 def _open(source):
@@ -160,18 +166,32 @@ class _Builder:
         return Track(time, lat, lon, segments, meta, **columns), hdop
 
 
-# end-event local names that need handling; everything else (the children of points, read in
-# bulk when their point ends) costs one set lookup
-_STRUCTURE = frozenset(("trkseg", "wpt", "name", "type", "keywords"))
+# local names that mean something outside points and waypoints; everything inside a point or
+# waypoint is collected and read when it ends
+_LABELS = frozenset(("name", "type", "keywords"))
+_LABEL_PARENTS = frozenset(("trk", "rte", "metadata", "gpx"))
 _EXTENSIONS = object()
+_READ_BYTES = 1 << 20
 
 
 class _Reader:
+    """An ElementTree parser target: expat calls start / end / data / comment as it reads, and no
+    element tree is built. A point or waypoint is collected as a pre-order list of its descendants'
+    [tag, text, depth below it], with text meaning what Element.text does (the text before the
+    first child), and read when it ends."""
+
     def __init__(self, source_name):
         self.source_name = source_name
         self.skipped = 0
         self.tracks, self.routes, self.waypoints = [], [], []
         self.file_name = self.keywords = self.comment_activity = self.creator = None
+        self.stack = []  # local names of the open elements
+        self.current = None  # the _Builder of the open <trk> or <rte>
+        self.capture = None  # descendants of the open point or waypoint, while one is open
+        self.capture_attrib = None
+        self.inner = 0  # depth below the open point or waypoint
+        self.open_entry = None  # the [tag, text, depth] still taking text: no child seen yet
+        self.label = None  # (depth, entry) of an open <name>, <type> or <keywords> that counts
         # caches keyed by the raw "{namespace}local" tag; a file has only a handful of distinct tags
         self.local = {}
         self.point_child = {}
@@ -183,50 +203,72 @@ class _Reader:
             local = self.local[tag] = tag[tag.rfind("}") + 1 :]
         return local
 
-    def read(self, stream):
-        stack, current, name, names = [], None, self._name, self.local
-        for event, elem in ET.iterparse(stream, events=("start", "end", "comment")):
-            if event == "end":
-                stack.pop()
-                local = names.get(elem.tag) or name(elem.tag)
-                if local == "trkpt" or local == "rtept":
-                    if current is not None:
-                        self._point(elem, current)
-                    del stack[-1][:]  # drop parsed points so memory stays flat on huge files
-                    continue
-                if local in _STRUCTURE:
-                    parent = name(stack[-1].tag) if stack else None
-                    if local == "trkseg":
-                        if current is not None:
-                            current.end_segment()
-                    elif local == "wpt":
-                        if parent == "gpx":
-                            self._waypoint(elem)
-                    else:
-                        self._label(local, parent, current, elem.text)
-                if len(stack) == 1:  # a finished top-level element: nothing in it is needed again
-                    current = None
-                    del stack[0][:]
-            elif event == "start":
-                stack.append(elem)
-                depth = len(stack)
-                if depth > 3:
-                    continue
-                local = name(elem.tag)
-                if depth == 1:
-                    if local != "gpx":
-                        raise ValueError(f"not GPX: root element is <{local}>")
-                    self.creator = elem.get("creator")
-                elif depth == 2 and (local == "trk" or local == "rte"):
-                    current = _Builder()
-                    (self.tracks if local == "trk" else self.routes).append(current)
-                elif local == "trkseg" and current is not None:
-                    current.segment_start = current.n
-            elif self.comment_activity is None:
-                match = _ACTIVITY_COMMENT.fullmatch(elem.text or "")
-                if match and match.group(1):
-                    self.comment_activity = match.group(1)
-        return self._result()
+    def start(self, tag, attrib):
+        if self.capture is not None:  # the hot path: the children of points
+            self.inner += 1
+            self.open_entry = entry = [tag, None, self.inner]
+            self.capture.append(entry)
+            return
+        stack = self.stack
+        depth = len(stack) + 1
+        local = self.local.get(tag) or self._name(tag)
+        parent = stack[-1] if stack else None
+        stack.append(local)
+        self.open_entry = None
+        if depth == 1:
+            if local != "gpx":
+                raise ValueError(f"not GPX: root element is <{local}>")
+            self.creator = attrib.get("creator")
+        elif depth == 2 and (local == "trk" or local == "rte"):
+            self.current = _Builder()
+            (self.tracks if local == "trk" else self.routes).append(self.current)
+        elif depth == 3 and local == "trkseg" and self.current is not None:
+            self.current.segment_start = self.current.n
+        if local == "trkpt" or local == "rtept":
+            if self.current is not None:
+                self.capture, self.capture_attrib = [], attrib
+        elif local == "wpt":
+            if parent == "gpx":
+                self.capture, self.capture_attrib = [], attrib
+        elif local in _LABELS and parent in _LABEL_PARENTS:
+            self.open_entry = entry = [tag, None, 0]
+            self.label = (depth, entry)
+
+    def data(self, text):
+        entry = self.open_entry
+        if entry is not None:
+            entry[1] = text if entry[1] is None else entry[1] + text
+
+    def end(self, tag):
+        self.open_entry = None
+        if self.inner:
+            self.inner -= 1
+            return
+        stack = self.stack
+        depth = len(stack)
+        local = stack.pop()
+        if self.capture is not None:
+            entries, self.capture = self.capture, None
+            if local == "wpt":
+                self._waypoint(self.capture_attrib, entries)
+            else:
+                self._point(self.capture_attrib, entries, self.current)
+                return  # a point never closes its <trk> or <rte>
+        elif local == "trkseg":
+            if self.current is not None:
+                self.current.end_segment()
+        elif self.label is not None and self.label[0] == depth:
+            _, entry = self.label
+            self.label = None
+            self._label(local, stack[-1], self.current, entry[1])
+        if depth == 2:  # a finished top-level element
+            self.current = None
+
+    def comment(self, text):
+        if self.comment_activity is None:
+            match = _ACTIVITY_COMMENT.fullmatch(text or "")
+            if match and match.group(1):
+                self.comment_activity = match.group(1)
 
     def _label(self, local, parent, current, text):
         text = text.strip() if text else None
@@ -255,52 +297,66 @@ class _Reader:
         column = self.extension_child[tag] = EXTENSION_ELEMENTS.get(self._name(tag))
         return column
 
-    def _point(self, elem, builder):
-        lat, lon = _coordinate(elem.get("lat"), 90.0), _coordinate(elem.get("lon"), 180.0)
+    def _point(self, attrib, entries, builder):
+        lat, lon = _coordinate(attrib.get("lat"), 90.0), _coordinate(attrib.get("lon"), 180.0)
         if lat is None or lon is None or (lat == 0.0 and lon == 0.0):
             self.skipped += 1
             return
         builder.lat.append(lat)
         builder.lon.append(lon)
         builder.n += 1
-        point_child, put = self.point_child, builder.put
-        for child in elem:
-            tag = child.tag
-            column = point_child[tag] if tag in point_child else self._point_column(tag)
-            if column is None:
-                continue
-            if column is _EXTENSIONS:
-                extension_child = self.extension_child
-                for sub in child.iter():
-                    tag = sub.tag
+        point_child, extension_child, put = self.point_child, self.extension_child, builder.put
+        get, last = builder.columns.get, builder.n - 1
+        in_extensions = False
+        for tag, text, depth in entries:
+            if depth == 1:  # a child of the point
+                column = point_child[tag] if tag in point_child else self._point_column(tag)
+                in_extensions = column is _EXTENSIONS
+                if column is None:
+                    continue
+                if column == "time":
+                    value = _parse_time(text)
+                elif in_extensions:
                     column = extension_child[tag] if tag in extension_child else self._extension_column(tag)
-                    if column is not None and (value := _number(sub.text)) is not None:
-                        put(column, value)
-            elif column == "time":
-                put("time", _parse_time(child.text))
-            elif (value := _number(child.text)) is not None:
+                    if column is None or (value := _number(text)) is None:
+                        continue
+                elif (value := _number(text)) is None:
+                    continue
+            elif in_extensions:  # everything inside <extensions>, matched by local name
+                column = extension_child[tag] if tag in extension_child else self._extension_column(tag)
+                if column is None or (value := _number(text)) is None:
+                    continue
+            else:
+                continue
+            arr = get(column)
+            if arr is not None and len(arr) == last:  # the usual case: every point has the field
+                arr.append(value)
+            else:
                 put(column, value)
 
-    def _waypoint(self, elem):
-        lat, lon = _coordinate(elem.get("lat"), 90.0), _coordinate(elem.get("lon"), 180.0)
+    def _waypoint(self, attrib, entries):
+        lat, lon = _coordinate(attrib.get("lat"), 90.0), _coordinate(attrib.get("lon"), 180.0)
         if lat is None or lon is None or (lat == 0.0 and lon == 0.0):
             self.skipped += 1
             return
         values = {"name": None, "ele": None, "time": None, "desc": None}
-        for child in elem:
-            local = self._name(child.tag)
+        for tag, text, depth in entries:
+            if depth != 1:
+                continue
+            local = self._name(tag)
             if local == "ele":
-                values["ele"] = _number(child.text)
+                values["ele"] = _number(text)
             elif local == "time":
-                time = _parse_time(child.text)
+                time = _parse_time(text)
                 values["time"] = None if math.isnan(time) else time
-            elif local in ("name", "desc") and child.text and child.text.strip():
-                values[local] = child.text.strip()
+            elif local in ("name", "desc") and text and text.strip():
+                values[local] = text.strip()
         self.waypoints.append(
             Waypoint(values["name"], lat, lon, values["ele"], values["time"], values["desc"])
         )
 
-    def _result(self):
+    def result(self):
+
         def build(builders, segmented):
             tracks, hdops = [], []
             for b in builders:
@@ -317,9 +373,17 @@ class _Reader:
 
 
 def _coordinate(text, limit):
-    if text is None or not _DECIMAL.fullmatch(text):
+    if text is None:
         return None
-    value = float(text)
+    if text.strip(_DECIMAL_CHARS):  # anything beyond plain ASCII digits, point and sign
+        if not _DECIMAL.fullmatch(text):
+            return None
+        value = float(text)
+    else:  # over these characters float() takes exactly what xsd:decimal does
+        try:
+            value = float(text)
+        except ValueError:
+            return None
     return value if -limit <= value <= limit else None
 
 
@@ -437,32 +501,86 @@ def _write_track(track, parts):
 
 
 def _format_points(track, rows, plain, tpx, present):
-    def strings(column):
-        fmt = _format_time if column == "time" else _integer if column in _INTEGER_COLUMNS else _decimal
-        return [None if v != v else fmt(v) for v in getattr(track, column)[rows].tolist()]  # v != v: NaN
+    """The <trkpt> lines of `rows`, built column by column: each column's text for every point,
+    then one join per point."""
 
-    lat = [_decimal(v) for v in track.lat[rows].tolist()]
-    lon = [_decimal(v) for v in track.lon[rows].tolist()]
-    plain = [(f"<{e}>", f"</{e}>", strings(c)) for c, e in plain]
-    tpx = [(f"<gpxtpx:{e}>", f"</gpxtpx:{e}>", strings(c)) for c, e in tpx]
-    power = strings("power") if "power" in present else None
-    accuracy = strings("accuracy") if "accuracy" in present else None
-    out = []
-    for i in range(len(lat)):
-        point = [f'<trkpt lat="{lat[i]}" lon="{lon[i]}">']
-        point += [f"{a}{s[i]}{b}" for a, b, s in plain if s[i] is not None]
-        extensions = [f"{a}{s[i]}{b}" for a, b, s in tpx if s[i] is not None]
-        if extensions:
-            extensions = ["<gpxtpx:TrackPointExtension>", *extensions, "</gpxtpx:TrackPointExtension>"]
-        if power and power[i] is not None:
-            extensions.append(f"<gpxpx:PowerInWatts>{power[i]}</gpxpx:PowerInWatts>")
-        if accuracy and accuracy[i] is not None:
-            extensions.append(f"<placewise:accuracy>{accuracy[i]}</placewise:accuracy>")
-        if extensions:
-            point.append(f"<extensions>{''.join(extensions)}</extensions>")
-        point.append("</trkpt>\n")
-        out.append("".join(point))
-    return "".join(out)
+    def strings(column):
+        return _strings(getattr(track, column)[rows], column)
+
+    def fragments(start, end, texts):
+        return [f"{start}{t}{end}" if t is not None else "" for t in texts]
+
+    lat, lon = _decimal_strings(track.lat[rows]), _decimal_strings(track.lon[rows])
+    n = len(lat)
+    columns = [[f'<trkpt lat="{a}" lon="{b}">' for a, b in zip(lat, lon, strict=True)]]
+    columns += [fragments(f"<{e}>", f"</{e}>", strings(c)) for c, e in plain]
+    inner = [fragments(f"<gpxtpx:{e}>", f"</gpxtpx:{e}>", strings(c)) for c, e in tpx]
+    in_tpx = [any(texts) for texts in zip(*inner, strict=True)] if inner else [False] * n
+    extra = []
+    if "power" in present:
+        extra.append(fragments("<gpxpx:PowerInWatts>", "</gpxpx:PowerInWatts>", strings("power")))
+    if "accuracy" in present:
+        extra.append(fragments("<placewise:accuracy>", "</placewise:accuracy>", strings("accuracy")))
+    in_extensions = [any(flags) for flags in zip(in_tpx, *extra, strict=True)]
+    columns.append(["<extensions>" if f else "" for f in in_extensions])
+    columns.append(["<gpxtpx:TrackPointExtension>" if f else "" for f in in_tpx])
+    columns += inner
+    columns.append(["</gpxtpx:TrackPointExtension>" if f else "" for f in in_tpx])
+    columns += extra
+    columns.append(["</extensions></trkpt>\n" if f else "</trkpt>\n" for f in in_extensions])
+    return "".join(map("".join, zip(*columns, strict=True)))
+
+
+def _strings(values, column):
+    """Text of each value as the file holds it, None for NaN."""
+    if column == "time":
+        return _time_strings(values)
+    if column in _INTEGER_COLUMNS:
+        return _integer_strings(values)
+    return _decimal_strings(values)
+
+
+def _decimal_strings(values):
+    """_decimal of each value, None for NaN."""
+    texts = [t[:-2] if t.endswith(".0") else t for t in map(repr, values.tolist())]
+    for k in [k for k, t in enumerate(texts) if "e" in t]:
+        texts[k] = _decimal(float(values[k]))
+    return _nan_to_none(texts, values)
+
+
+def _integer_strings(values):
+    """_integer of each value, None for NaN."""
+    finite = values[~np.isnan(values)]
+    if len(finite) and not np.all(np.abs(finite) < 2**52):  # inf, or past exact integers
+        return [None if v != v else _integer(v) for v in values.tolist()]
+    # np.rint rounds half to even, as round() does
+    texts = list(map(str, np.rint(np.nan_to_num(values)).astype(np.int64).tolist()))
+    return _nan_to_none(texts, values)
+
+
+_LAST_ISO_SECOND = 253402300799  # 9999-12-31T23:59:59, the last second datetime can print
+
+
+def _time_strings(values):
+    """_format_time of each value, None for NaN."""
+    finite = values[~np.isnan(values)]
+    if len(finite) and not (np.all(finite >= 0) and np.all(finite <= _LAST_ISO_SECOND)):
+        return [None if v != v else _format_time(v) for v in values.tolist()]
+    values0 = np.nan_to_num(values)
+    whole = np.floor(values0)
+    micro = np.round((values0 - whole) * 1e6)  # half to even, as round() does
+    carry = micro == 1_000_000
+    whole, micro = np.where(carry, whole + 1, whole), np.where(carry, 0.0, micro)
+    texts = [t + "Z" for t in whole.astype("datetime64[s]").astype(str).tolist()]
+    for k in np.flatnonzero(micro).tolist():
+        texts[k] = texts[k][:-1] + f".{int(micro[k]):06d}".rstrip("0") + "Z"
+    return _nan_to_none(texts, values)
+
+
+def _nan_to_none(texts, values):
+    for k in np.flatnonzero(np.isnan(values)).tolist():
+        texts[k] = None
+    return texts
 
 
 def _attribute(text):

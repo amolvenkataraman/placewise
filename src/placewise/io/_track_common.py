@@ -2,6 +2,7 @@
 building a Track from per-point lists."""
 
 import calendar
+import io
 import math
 import os
 import re
@@ -142,9 +143,29 @@ def parse_xml(data):
         raise ValueError(f"not well-formed XML: {error}") from None
 
 
-# XML formats come with several namespace versions (and sometimes none), so match on local names
+def iter_xml(data):
+    """(event, element) pairs for "start" and "end" of every element of the document, streamed
+    (callers delete what they have read, so big files never sit in memory as a whole tree);
+    malformed XML raises ValueError like every other bad input, not ParseError."""
+    try:
+        yield from ET.iterparse(io.BytesIO(xml_document(data)), events=("start", "end"))
+    except ET.ParseError as error:
+        raise ValueError(f"not well-formed XML: {error}") from None
+
+
+# XML formats come with several namespace versions (and sometimes none), so match on local names;
+# a document has a handful of distinct tags, so each is split once
+_LOCAL_NAMES = {}
+_LOCAL_NAMES_MAX = 4096
+
+
 def local_name(tag):
-    return tag.rsplit("}", 1)[-1] if isinstance(tag, str) else ""
+    local = _LOCAL_NAMES.get(tag)
+    if local is None:
+        local = tag.rsplit("}", 1)[-1] if isinstance(tag, str) else ""
+        if len(_LOCAL_NAMES) < _LOCAL_NAMES_MAX:
+            _LOCAL_NAMES[tag] = local
+    return local
 
 
 def xml_child(element, name):
