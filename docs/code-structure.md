@@ -13,6 +13,7 @@ If a module doesn't fit any folder's purpose below, the map is wrong: change thi
 | `privacy/` | Location-privacy transforms and the privacy audit | file formats |
 | `model/` | Shared dataclasses: results, places, geometry, settings, rules | behaviour beyond validation and dict round trips |
 | `constants/` | Fixed values: standards and physical constants, file-format codes, thresholds and defaults, and all country and region reference tables (`constants/countries/`) | functions with logic |
+| `world/` | Queries over countries, subdivisions and country groups: lookups by code or name, lists by group or continent, memberships over time, country profiles | the reference data itself (that's `constants/countries/` and `datasets/`) |
 | `packs/` | The pack file format: write and read | downloading |
 | `store/` | Downloading, verifying and installing packs | reading pack contents |
 | `geocode/` | Answering place questions from packs: `geocode/reverse/` (point to place), `geocode/text/` (parsing location strings); forward search joins later | file formats, HTTP |
