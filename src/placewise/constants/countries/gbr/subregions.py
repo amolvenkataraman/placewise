@@ -1,7 +1,8 @@
 """The United Kingdom's four countries (ISO 3166-2:GB "country" and "province" subdivisions).
 
 Source: ISO 3166-2:GB, https://www.iso.org/obp/ui/#iso:code:3166:GB (ENG England, SCT Scotland,
-WLS Wales, NIR Northern Ireland). Postings name them as if they were countries ("London,
+WLS Wales, NIR Northern Ireland), with its subdivision categories: England, Scotland and Wales are
+"country", Northern Ireland "province". Postings name them as if they were countries ("London,
 England"); placewise reads them as the UK's admin1, as GeoNames does.
 Counties and council areas are left to the data packs.
 """
@@ -15,6 +16,7 @@ from ..._keys import key
 class Nation:
     name: str
     code: str  # ISO 3166-2:GB suffix
+    kind: str  # ISO 3166-2:GB category: "country" or "province"
     aliases: tuple[str, ...] = ()
 
     @property
@@ -23,10 +25,10 @@ class Nation:
 
 
 SUBREGIONS = (
-    Nation("England", "ENG"),
-    Nation("Scotland", "SCT"),
-    Nation("Wales", "WLS", ("Cymru",)),
-    Nation("Northern Ireland", "NIR", ("N. Ireland", "NI")),
+    Nation("England", "ENG", "country"),
+    Nation("Scotland", "SCT", "country"),
+    Nation("Wales", "WLS", "country", ("Cymru",)),
+    Nation("Northern Ireland", "NIR", "province", ("N. Ireland", "NI")),
 )
 
 NATIONS = SUBREGIONS

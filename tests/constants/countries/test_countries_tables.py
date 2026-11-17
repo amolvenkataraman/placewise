@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from placewise.constants import countries
-from placewise.constants.countries import can, conventions, currencies, gbr, ind, usa
+from placewise.constants.countries import can, conventions, currency_codes, gbr, ind, usa
+from placewise.constants.location_text import CURRENCY_CITY_HINTS
 
 us_states = usa.subregions
 ca_provinces = can.subregions
@@ -232,9 +233,9 @@ def test_gb_nations():
     ],
 )
 def test_country_modules(module, alpha2, alpha3, currency):
-    assert (module.ALPHA2, module.ALPHA3, module.CURRENCY) == (alpha2, alpha3, currency)
+    assert (module.ALPHA2, module.ALPHA3) == (alpha2, alpha3) and not hasattr(module, "CURRENCY")
     assert module.NAME == countries.BY_ALPHA2[alpha2].name
-    assert currencies.CURRENCIES[alpha2] == currency
+    assert currency_codes.CURRENCY_CODES[alpha2] == currency  # the one country -> currency table
 
 
 @pytest.mark.parametrize(
@@ -253,7 +254,11 @@ def test_postal_code_formats(module, good, bad):
         assert not module.POSTAL_CODE.fullmatch(code), code
 
 
-def test_currencies_and_any_case_alpha3_use_real_codes():
-    assert set(currencies.CURRENCIES) <= set(countries.BY_ALPHA2)
+def test_currency_codes_and_any_case_alpha3_use_real_codes():
+    codes = currency_codes.CURRENCY_CODES
+    assert set(codes) <= set(countries.BY_ALPHA2) and len(codes) == 248  # all but Antarctica
+    assert all(len(c) == 3 and c.isupper() and c.isalpha() for c in codes.values())
+    assert (codes["BG"], codes["SV"], codes["IN"]) == ("EUR", "USD", "INR")
+    assert set(CURRENCY_CITY_HINTS.values()) <= set(codes.values())
     assert conventions.ALPHA3_ANY_CASE <= set(countries.BY_ALPHA3)
     assert conventions.STATE_CODES_ALSO_COUNTRIES <= set(countries.BY_ALPHA2)

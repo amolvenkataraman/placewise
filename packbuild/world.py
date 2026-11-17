@@ -1,5 +1,5 @@
-"""The world pack: countries and admin-1 polygons (Natural Earth), cities (GeoNames) and airports
-(OurAirports).
+"""The world pack: countries and admin-1 polygons (Natural Earth), cities (GeoNames), airports
+(OurAirports) and country facts (GeoNames, Unicode CLDR, Wikidata: packbuild.country_profiles).
 
     uv run python -m packbuild.world --version 2026.11
 
@@ -11,6 +11,7 @@ import datetime as dt
 import logging
 from pathlib import Path
 
+from . import country_profiles
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .sources import geonames, naturalearth, ourairports, url
@@ -19,7 +20,7 @@ log = logging.getLogger(__name__)
 
 
 def build_layers(cache_dir, refresh=False):
-    """The four world layers, fetching (or reusing) the source files in `cache_dir`."""
+    """The five world layers, fetching (or reusing) the source files in `cache_dir`."""
 
     def get(url):
         return fetch(url, cache_dir, refresh=refresh)
@@ -28,16 +29,25 @@ def build_layers(cache_dir, refresh=False):
         archive = get(url)
         return unzip(archive) / f"{archive.stem}.shp"
 
-    countries = naturalearth.countries(shapefile(url("naturalearth", "countries")))
+    countries_shp = shapefile(url("naturalearth", "countries"))
+    countries = naturalearth.countries(countries_shp)
     admin1 = naturalearth.admin1(shapefile(url("naturalearth", "admin1")))
     cities_zip = get(url("geonames", "cities"))
+    cities_txt = unzip(cities_zip) / f"{cities_zip.stem}.txt"
     cities = geonames.cities(
-        unzip(cities_zip) / f"{cities_zip.stem}.txt",
+        cities_txt,
         get(url("geonames", "admin1_codes")),
         get(url("geonames", "country_info")),
     )
     airports = ourairports.airports(get(url("ourairports", "airports")))
-    return [countries, admin1, cities, airports]
+    facts = country_profiles.country_facts(
+        cache_dir,
+        cities_txt,
+        countries_shp,
+        refresh=refresh,
+        fetcher=lambda u, d, refresh: fetch(u, d, refresh),
+    )
+    return [countries, admin1, cities, airports, facts]
 
 
 def build_world(cache_dir, out_dir, version, refresh=False):

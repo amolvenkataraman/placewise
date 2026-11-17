@@ -1,0 +1,16 @@
+{
+ "supplemental": {
+  "version": {
+   "_cldrVersion": "49"
+  },
+  "weekData": {
+   "firstDay": {
+    "001": "mon",
+    "CA": "sun",
+    "GB-alt-variant": "sun",
+    "IN": "sun",
+    "US": "sun"
+   }
+  }
+ }
+}

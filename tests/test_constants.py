@@ -1,6 +1,6 @@
 import pytest
 
-from placewise.constants import distance, earth, geohash, speed, web_mercator, wgs84
+from placewise.constants import distance, earth, geohash, licences, speed, web_mercator, wgs84
 
 
 def test_wgs84_defining_and_derived_values():
@@ -50,3 +50,9 @@ def test_utm_epsg_codes():
     for bad in [(0, "N"), (61, "N"), (17, "X")]:
         with pytest.raises(ValueError):
             crs.utm_epsg(*bad)
+
+
+def test_unicode_licence_v3_is_accepted_and_permissive():
+    # CLDR's licence (SPDX Unicode-3.0): attribution only, so not share-alike
+    assert "Unicode-3.0" in licences.KNOWN
+    assert "Unicode-3.0" not in licences.SHARE_ALIKE | licences.NEEDS_DERIVED_DATABASE

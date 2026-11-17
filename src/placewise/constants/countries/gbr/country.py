@@ -1,7 +1,7 @@
 """United Kingdom: country-level details. Its countries (England, Scotland, Wales, Northern
 Ireland) are in `subregions`.
 
-Codes and names come from the ISO 3166-1 table in `countries.countries`; the currency is ISO 4217.
+Codes and names come from the ISO 3166-1 table in `countries.countries`.
 """
 
 import re
@@ -15,7 +15,6 @@ NUMERIC = COUNTRY.numeric
 NAME = COUNTRY.name
 OFFICIAL_NAME = "United Kingdom of Great Britain and Northern Ireland"
 ALIASES = COUNTRY.aliases
-CURRENCY = "GBP"
 SUBREGION_KIND = "country"  # what its admin1 is called
 # postcode (Royal Mail outward and inward codes)
 POSTAL_CODE = re.compile(r"\b(?:[A-Z]{1,2}\d[A-Z\d]?|GIR) ?\d[A-Z]{2}\b")

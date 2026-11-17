@@ -2,6 +2,7 @@
 
     import placewise
     placewise.lookup(43.6426, -79.3871).label     # "Toronto, Ontario, Canada"
+    placewise.country("can").name                  # "Canada"  (placewise.world has the rest)
 
 The headline names load on first use, so `import placewise` stays cheap for toolkit-only users.
 """
@@ -15,6 +16,10 @@ _LAZY = {
     "Client": ("placewise.service", "Client"),
     "load_settings": ("placewise.config", "load_settings"),
     "load_overrides": ("placewise.overrides", "load_overrides"),
+    "world": ("placewise.world", None),  # the module itself
+    "country": ("placewise.world", "country"),
+    "countries": ("placewise.world", "countries"),
+    "profile": ("placewise.world", "profile"),
 }
 
 __all__ = ["__version__", *_LAZY]
@@ -26,6 +31,7 @@ def __getattr__(name):
     import importlib
 
     module, attr = _LAZY[name]
-    value = getattr(importlib.import_module(module), attr)
+    imported = importlib.import_module(module)
+    value = imported if attr is None else getattr(imported, attr)
     globals()[name] = value  # later lookups skip this function
     return value

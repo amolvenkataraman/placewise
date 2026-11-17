@@ -42,7 +42,7 @@
     {
       "id": "geo:europe",
       "name": "Europe",
-      "aliases": ["European continent"],
+      "aliases": ["European continent", "EUR"],
       "kind": "continent",
       "members": [
         "AD", "AL", "AT", "AX", "BA", "BE", "BG", "BY", "CH", "CZ", "DE", "DK", "EE", "ES", "FI",
@@ -107,7 +107,7 @@
     {
       "id": "geo:m49-americas",
       "name": "Americas (UN M49)",
-      "aliases": ["Americas", "The Americas"],
+      "aliases": ["Americas", "The Americas", "AMER"],
       "kind": "un-m49-region",
       "members": [
         "AG", "AI", "AR", "AW", "BB", "BL", "BM", "BO", "BQ", "BR", "BS", "BV", "BZ", "CA", "CL",
@@ -418,6 +418,42 @@
       "notes": "Exactly the United States and Canada, as postings mean by 'US & Canada' or 'North America (US & Canada)'. Distinct from the M49 sub-region Northern America (which adds BM, GL, PM) and from the continent North America (which adds MX, Central America and the Caribbean); the bare name 'North America' belongs to the continent."
     },
     {
+      "id": "geo:us-canada-mexico",
+      "name": "US, Canada & Mexico",
+      "aliases": ["US and Canada and Mexico"],
+      "kind": "custom",
+      "members": ["CA", "MX", "US"],
+      "source": "convention",
+      "notes": "The United States, Canada and Mexico, as postings mean by 'US and Canada and Mexico': the same three countries as the CUSMA / USMCA / T-MEC trade agreement (legal:cusma). Narrower than the continent North America (geo:north-america), wider than US & Canada (geo:us-canada)."
+    },
+    {
+      "id": "geo:world",
+      "name": "World",
+      "aliases": ["Worldwide", "Global", "Anywhere", "International", "Any Location", "Everywhere"],
+      "kind": "custom",
+      "members": [
+        "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "AT", "AU", "AW", "AX",
+        "AZ", "BA", "BB", "BD", "BE", "BF", "BG", "BH", "BI", "BJ", "BL", "BM", "BN", "BO", "BQ",
+        "BR", "BS", "BT", "BV", "BW", "BY", "BZ", "CA", "CC", "CD", "CF", "CG", "CH", "CI", "CK",
+        "CL", "CM", "CN", "CO", "CR", "CU", "CV", "CW", "CX", "CY", "CZ", "DE", "DJ", "DK", "DM",
+        "DO", "DZ", "EC", "EE", "EG", "EH", "ER", "ES", "ET", "FI", "FJ", "FK", "FM", "FO", "FR",
+        "GA", "GB", "GD", "GE", "GF", "GG", "GH", "GI", "GL", "GM", "GN", "GP", "GQ", "GR", "GS",
+        "GT", "GU", "GW", "GY", "HK", "HM", "HN", "HR", "HT", "HU", "ID", "IE", "IL", "IM", "IN",
+        "IO", "IQ", "IR", "IS", "IT", "JE", "JM", "JO", "JP", "KE", "KG", "KH", "KI", "KM", "KN",
+        "KP", "KR", "KW", "KY", "KZ", "LA", "LB", "LC", "LI", "LK", "LR", "LS", "LT", "LU", "LV",
+        "LY", "MA", "MC", "MD", "ME", "MF", "MG", "MH", "MK", "ML", "MM", "MN", "MO", "MP", "MQ",
+        "MR", "MS", "MT", "MU", "MV", "MW", "MX", "MY", "MZ", "NA", "NC", "NE", "NF", "NG", "NI",
+        "NL", "NO", "NP", "NR", "NU", "NZ", "OM", "PA", "PE", "PF", "PG", "PH", "PK", "PL", "PM",
+        "PN", "PR", "PS", "PT", "PW", "PY", "QA", "RE", "RO", "RS", "RU", "RW", "SA", "SB", "SC",
+        "SD", "SE", "SG", "SH", "SI", "SJ", "SK", "SL", "SM", "SN", "SO", "SR", "SS", "ST", "SV",
+        "SX", "SY", "SZ", "TC", "TD", "TF", "TG", "TH", "TJ", "TK", "TL", "TM", "TN", "TO", "TR",
+        "TT", "TV", "TW", "TZ", "UA", "UG", "UM", "US", "UY", "UZ", "VA", "VC", "VE", "VG", "VI",
+        "VN", "VU", "WF", "WS", "YE", "YT", "ZA", "ZM", "ZW"
+      ],
+      "source": "convention",
+      "notes": "Every country and territory: all 249 assigned ISO 3166-1 alpha-2 codes, the package's full ISO table. Means no geographic limit, as location strings mean by 'Remote - Worldwide' or 'Anywhere'."
+    },
+    {
       "id": "geo:nordic",
       "name": "Nordic countries",
       "aliases": ["Nordics", "Nordic region", "Nordic", "Norden"],
@@ -525,7 +561,9 @@
     {
       "id": "geo:emea",
       "name": "EMEA",
-      "aliases": ["Europe, Middle East and Africa", "Europe, the Middle East and Africa"],
+      "aliases": [
+        "Europe, Middle East and Africa", "Europe, the Middle East and Africa", "Europe Middle East Africa"
+      ],
       "kind": "business",
       "members": [
         "AD", "AE", "AL", "AM", "AO", "AT", "AX", "AZ", "BA", "BE", "BF", "BG", "BH", "BI", "BJ",
@@ -544,7 +582,7 @@
     {
       "id": "geo:apac",
       "name": "APAC",
-      "aliases": ["Asia-Pacific", "Asia Pacific", "Asia/Pacific", "AsiaPac"],
+      "aliases": ["Asia-Pacific", "Asia Pacific", "Asia/Pacific", "AsiaPac", "Asia Pac"],
       "kind": "business",
       "members": [
         "AS", "AU", "BD", "BN", "BT", "CC", "CK", "CN", "CX", "FJ", "FM", "GU", "HK", "HM", "ID",

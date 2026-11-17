@@ -215,6 +215,22 @@ def _tuple(values, indent):
     return ["(", *_pack(values, indent + 4), " " * indent + ")"]
 
 
+def _text(value, indent):
+    """A string literal; a long one is split over lines (implicit concatenation in parentheses)."""
+    one = _lit(value)
+    if indent + len(one) + 12 <= _WIDTH or " " not in value:  # short, or one word (a URL)
+        return [one]
+    pad, chunks, chunk = " " * (indent + 4), [], ""
+    for word in value.split(" "):
+        piece = f"{chunk} {word}" if chunk else word
+        if chunk and len(pad) + len(_lit(piece + " ")) > _WIDTH:
+            chunks.append(chunk + " ")
+            piece = word
+        chunk = piece
+    chunks.append(chunk)
+    return ["(", *(pad + _lit(c) for c in chunks), " " * indent + ")"]
+
+
 def _legal_member(member, indent):
     """Lines for one legal member: one line, or one per field when that would be too long."""
     fields = {"code": member.get("code"), "since": member.get("since"), "until": member.get("until")}
@@ -246,6 +262,11 @@ def _group_lines(group, legal):
         lines.append(f'        "members": {members[0]}')
         lines += members[1:]
         lines[-1] += ","
+    for key in ("source", "notes"):
+        text = _text(group[key], 8)
+        lines.append(f'        "{key}": {text[0]}')
+        lines += text[1:]
+        lines[-1] += ","
     lines.append("    },")
     return lines
 
@@ -260,8 +281,8 @@ def render(geographic, legal):
     out = [
         '"""GENERATED from datasets/country_groups by packbuild.country_groups; do not edit.',
         "",
-        "Regenerate with `uv run python -m packbuild.country_groups`. Sources, notes and the reasoning",
-        "behind each membership are in the datasets; this module holds the data only.",
+        "Regenerate with `uv run python -m packbuild.country_groups`. Each group carries its source and",
+        "notes; the reasoning behind single memberships (member notes, other sources) stays in the datasets.",
         '"""',
         "",
         "# fmt: off",
@@ -269,7 +290,7 @@ def render(geographic, legal):
         "# date the memberships were checked against their sources",
         f"AS_OF = {_lit(as_of)}",
         "",
-        "# id -> {name, aliases, kind, members}; members are ISO 3166-1 alpha-2 codes",
+        "# id -> {name, aliases, kind, members, source, notes}; members are ISO 3166-1 alpha-2 codes",
         "GEOGRAPHIC = {",
     ]
     for group in geographic["groups"]:
@@ -277,9 +298,10 @@ def render(geographic, legal):
     out += [
         "}",
         "",
-        "# id -> {name, aliases, kind, members}; each member has code (alpha-2, or None for a member without",
-        "# one, which then has `group` (an id here) or `entity` (a name)), since and until (None when",
-        "# unknown or still a member), and suspended_since when the organisation has suspended it",
+        "# id -> {name, aliases, kind, members, source, notes}; each member has code (alpha-2, or None for",
+        "# a member without one, which then has `group` (an id here) or `entity` (a name)), since and",
+        "# until (None when unknown or still a member), and suspended_since when the organisation has",
+        "# suspended it",
         "LEGAL = {",
     ]
     for group in legal["groups"]:

@@ -20,7 +20,7 @@ def _write(folder, purpose, regions, **extra):
 
 def test_each_file_is_one_purpose_listing_sources_per_region():
     registry = attribution.load_registry()
-    assert {"boundaries", "places", "regions", "postal", "airports"} <= set(registry)
+    assert {"boundaries", "places", "regions", "postal", "airports", "countries"} <= set(registry)
     for path in attribution.SOURCES_DIR.glob("*.json"):
         doc = json.loads(path.read_text(encoding="utf-8"))
         assert doc["purpose"] == path.stem and doc["description"]
@@ -130,3 +130,12 @@ def test_attribution_for_a_subset_lists_only_those_sources_and_their_regions():
     assert attribution.render_markdown(only=["uscensus", "uscensus"]).count("## US Census") == 1
     with pytest.raises(KeyError, match="nope"):
         attribution.render_markdown(only=["naturalearth", "nope"])
+
+
+def test_country_facts_list_their_sources():
+    world = {s.id: s for s in attribution.load_registry()["countries"]["world"]}
+    assert set(world) == {"geonames", "cldr", "wikidata", "naturalearth"}
+    assert world["cldr"].licence == "Unicode-3.0" and world["wikidata"].licence == "CC0-1.0"
+    assert all("/cldr-json/49.0.0/" in u for u in world["cldr"].downloads.values())  # a pinned release
+    assert set(world["geonames"].downloads) == {"country_info", "time_zones", "cities"}
+    assert all("world/country_facts" in s.used_in for s in world.values())

@@ -1,0 +1,18 @@
+{
+ "main": {
+  "en-CA": {
+   "dates": {
+    "calendars": {
+     "gregorian": {
+      "dateFormats": {
+       "full": "",
+       "long": "",
+       "medium": "",
+       "short": "y-MM-dd"
+      }
+     }
+    }
+   }
+  }
+ }
+}

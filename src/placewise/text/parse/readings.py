@@ -13,8 +13,9 @@ from placewise.constants.countries.conventions import (
     LOWERCASE_SHORT_FORMS,
     STATE_CODES_ALSO_COUNTRIES,
 )
-from placewise.constants.countries.macro_regions import MACRO_REGIONS as REGIONS
 from placewise.constants.location_text import AND_NAMES
+
+from .. import regions as _regions
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,7 +108,7 @@ def _and_names():
         ),
         *(n for c in countries.COUNTRIES for n in (c.name, *c.aliases)),
         *(n for m in countries.METROS for n in (m.name, *m.aliases)),
-        *(n for region in REGIONS for n in (region.name, *region.aliases)),
+        *(n for region in _regions.all_regions() for n in (region.name, *region.aliases)),
         *AND_NAMES,
     ]
     keys = (key(name.replace(",", " ")) for name in sources)

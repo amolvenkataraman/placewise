@@ -1,11 +1,10 @@
-"""Curated and generated reference data: regions, city aliases, generated cities, ambiguous names,
-macro regions."""
+"""Curated and generated reference data: regions, city aliases, generated cities and ambiguous names."""
 
 import pytest
 
 from placewise.constants import countries
 from placewise.constants._keys import city_key
-from placewise.constants.countries import ambiguous, macro_regions
+from placewise.constants.countries import ambiguous
 
 ADMIN1 = {alpha2: set(table.BY_CODE) for alpha2, table in countries.SUBREGIONS.items()}
 
@@ -64,12 +63,3 @@ def test_ambiguous_cities_use_known_codes():
             assert c.country in countries.BY_ALPHA2 and _admin1_ok(c.country, c.admin1), city
     for name, clash in ambiguous.NAME_CLASHES.items():
         assert clash.country in countries.BY_ALPHA2 and _admin1_ok(clash.admin1_country, clash.admin1), name
-
-
-def test_macro_regions_use_real_country_codes():
-    by_name = {r.name: r for r in macro_regions.MACRO_REGIONS}
-    for region in macro_regions.MACRO_REGIONS:
-        assert region.members is None or region.members <= set(countries.BY_ALPHA2), region.name
-    assert len(by_name["EU"].members) == 27 and "GB" not in by_name["EU"].members
-    assert "CA" in by_name["North America"].members
-    assert by_name["Worldwide"].members is None

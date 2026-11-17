@@ -4,21 +4,12 @@ import json
 import re
 from pathlib import Path
 
+from placewise.constants.countries.ind.subregions import SUBREGIONS
 from placewise.io import read_geojson
 
-# ISO 3166-2:IN after the 2023-11-23 change (CT->CG, OR->OD, TG->TS, UT->UK): code -> English name
-ISO_NAMES = {
-    "IN-AN": "Andaman and Nicobar Islands", "IN-AP": "Andhra Pradesh", "IN-AR": "Arunachal Pradesh",
-    "IN-AS": "Assam", "IN-BR": "Bihar", "IN-CH": "Chandigarh", "IN-CG": "Chhattisgarh",
-    "IN-DH": "Dadra and Nagar Haveli and Daman and Diu", "IN-DL": "Delhi", "IN-GA": "Goa",
-    "IN-GJ": "Gujarat", "IN-HR": "Haryana", "IN-HP": "Himachal Pradesh", "IN-JK": "Jammu and Kashmir",
-    "IN-JH": "Jharkhand", "IN-KA": "Karnataka", "IN-KL": "Kerala", "IN-LA": "Ladakh",
-    "IN-LD": "Lakshadweep", "IN-MP": "Madhya Pradesh", "IN-MH": "Maharashtra", "IN-MN": "Manipur",
-    "IN-ML": "Meghalaya", "IN-MZ": "Mizoram", "IN-NL": "Nagaland", "IN-OD": "Odisha",
-    "IN-PY": "Puducherry", "IN-PB": "Punjab", "IN-RJ": "Rajasthan", "IN-SK": "Sikkim",
-    "IN-TN": "Tamil Nadu", "IN-TS": "Telangana", "IN-TR": "Tripura", "IN-UP": "Uttar Pradesh",
-    "IN-UK": "Uttarakhand", "IN-WB": "West Bengal",
-}  # fmt: skip
+# ISO 3166-2:IN code -> English name, from the package's table (constants/countries/ind/subregions.py,
+# which documents the 2023-11-23 change: CT->CG, OR->OD, TG->TS, UT->UK)
+ISO_NAMES = {state.iso: state.name for state in SUBREGIONS}
 
 # GeoJSON "crs" names that mean WGS84 longitude/latitude (RFC 7946 drops the member: absent = WGS84)
 _WGS84_CRS = re.compile(r"(CRS:?84|EPSG:+4326)$", re.IGNORECASE)

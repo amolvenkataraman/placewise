@@ -54,3 +54,17 @@ ADDRESS_KEYS = (
     ("addressRegion", "region", "state", "stateCode", "province", "admin1"),
     ("addressCountry", "country", "countryCode", "country_code"),
 )
+
+# Country groups location search reads as a remote-work limit ("Remote - EMEA"), by id in
+# constants.countries.groups (from datasets/country_groups); their names and aliases are what it
+# matches. Other groups ("US & Canada", "NATO") are left out on purpose: "US & Canada" reads as
+# the two countries. The world group means no limit.
+REMOTE_SCOPE_GROUPS = (
+    "geo:world", "geo:north-america", "geo:us-canada-mexico", "geo:namer", "geo:m49-americas",
+    "geo:latam", "geo:latin-america-caribbean", "geo:europe", "legal:eu", "geo:emea", "geo:middle-east",
+    "geo:mena", "geo:africa", "geo:apac", "geo:dach", "geo:nordic", "geo:benelux", "geo:anz",
+)  # fmt: skip
+WORLDWIDE_GROUP = "geo:world"
+
+# Cities taken as a currency hint when no country can be found ("Toronto" -> CAD)
+CURRENCY_CITY_HINTS = {"Toronto": "CAD", "Vancouver": "CAD", "London": "GBP", "Berlin": "EUR", "Paris": "EUR"}

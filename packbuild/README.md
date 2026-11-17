@@ -19,6 +19,7 @@ committed.
 | `admin1` | polygon | Natural Earth 1:10m admin-1 states/provinces | public domain |
 | `cities` | point | GeoNames cities1000 + admin1CodesASCII + countryInfo | CC BY 4.0 |
 | `airports` | point | OurAirports airports.csv (large, medium, scheduled small) | public domain |
+| `country_facts` | point | one row per country (`iso:XX`, at its capital, else Natural Earth's label point): GeoNames countryInfo, timeZones and capitals; CLDR currency, conventions and date patterns; Wikidata driving side (`packbuild.country_profiles`) | CC BY 4.0, Unicode-3.0, CC0 |
 
 Attribution records (`placewise.model.Source`) are in `packbuild/sources/__init__.py`; building
 them checks each licence against `placewise.constants.licences`.

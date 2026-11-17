@@ -12,7 +12,9 @@ Reference data lives in `placewise.constants`; `placewise.text` holds only the c
 | Metro and vernacular regions | `datasets/regions/*.json` → `constants/countries/regions.py` | curated dataset; `python -m packbuild.regions` |
 | City aliases (YYZ, Philly, Saigon) | `datasets/cities/aliases.json` → `constants/countries/city_aliases.py` | curated, checked against GeoNames; `python -m packbuild.cities` |
 | Known cities (100k+ people, admin1 seats) | `constants/countries/{usa,can,ind,gbr}/cities.py` | GeoNames cities1000 (CC BY 4.0); `python -m packbuild.cities` |
-| Names several places share, macro regions | `constants/countries/ambiguous.py`, `macro_regions.py` | hand; macro regions from UN M49 |
+| Names several places share | `constants/countries/ambiguous.py` | hand |
+| Remote-scope regions (EMEA, EU, APAC ...) | `datasets/country_groups/*.json` → `constants/countries/groups.py`; which groups count: `REMOTE_SCOPE_GROUPS` in `constants/location_text.py` | curated, sourced dataset; `python -m packbuild.country_groups` |
+| Currency per country | `constants/countries/currency_codes.py` | Unicode CLDR currencyData; `python -m packbuild.currency_codes` |
 | Separators, noise words, placeholders | `constants/location_text.py` | hand |
 | Work-mode phrases | `constants/work_modes.py` | hand |
 
@@ -77,9 +79,11 @@ and round-trip through `to_dict` / `from_dict`.
 Remote scope: `Remote - US`, `US Remote`, `Remote-USA`, `Remote, Canada`, `Remote (Canada)`,
 `Canada (Remote)`, `Remote in Canada`, `Remote within the US`, `Remote (US only)`, `Anywhere in the
 United States`, `Remote - US and Canada`, `Remote US/Canada`, `Remote - Texas` (`US-TX`), `CA-Remote`
-(Canada), and macro regions from `constants/countries/macro_regions.py`: `EMEA`, `North America`, `APAC`, `LATAM`,
-`Americas`, `Europe`, `EU`, `DACH`, `Nordics`, `Benelux`, `ANZ`, `Middle East`, `Africa`.
-`Worldwide` / `Global` / `Anywhere` mean no limit. A remote listing with a city (`Remote - San
+(Canada), and the country groups listed in `REMOTE_SCOPE_GROUPS` (constants/location_text.py), by
+any name or alias in the country-group tables: `EMEA`, `North America`, `APAC`, `LATAM`, `Americas` /
+`AMER`, `Europe`, `EU` (its current members), `DACH`, `Nordics`, `Benelux`, `ANZ`, `Middle East`,
+`MENA`, `Africa`, `NORAM`. The scope holds the group's name (`European Union`, `Nordic countries`).
+`Worldwide` / `Global` / `Anywhere` (the World group) mean no limit; `US & Canada` stays two countries. A remote listing with a city (`Remote - San
 Francisco, CA`) is limited to that city's subdivision (`US-CA`). An unscoped `Remote` beside a
 scoped one adds nothing to the scope.
 

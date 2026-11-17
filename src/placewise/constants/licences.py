@@ -17,6 +17,7 @@ KNOWN = frozenset(
         "OGDL-Taiwan-1.0",
         "LicenseRef-GODL-India",
         "CDLA-Permissive-2.0",
+        "Unicode-3.0",  # Unicode License v3 (Unicode CLDR): permissive, keep the copyright notice
         "ODbL-1.0",
         "CC-BY-SA-4.0",
     }

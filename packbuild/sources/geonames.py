@@ -1,4 +1,5 @@
-"""GeoNames (CC BY 4.0): the `cities` point layer from cities1000 (places with 1,000+ people).
+"""GeoNames (CC BY 4.0): the `cities` point layer from cities1000 (places with 1,000+ people), and
+the country facts (countryInfo.txt, timeZones.txt) the country profiles are built from.
 
 GeoNames dumps are UTF-8, tab-separated, one record per line, with no quoting and no escaping, so
 they are split on tabs only (the csv module would mangle names that contain quotes).
@@ -23,6 +24,12 @@ GEONAME_FIELDS = (
 CITY_COLUMNS = (
     "id", "name", "asciiname", "country", "admin1", "admin1_name", "feature_code", "population",
     "elevation", "timezone", "alternate_count",
+)  # fmt: skip
+# countryInfo.txt columns, as its header names them
+COUNTRY_INFO_FIELDS = (
+    "iso", "iso3", "iso_numeric", "fips", "country", "capital", "area", "population", "continent",
+    "tld", "currency_code", "currency_name", "phone", "postal_code_format", "postal_code_regex",
+    "languages", "geonameid", "neighbours", "equivalent_fips_code",
 )  # fmt: skip
 ELEVATION_NULL = -32768  # i2 sentinel
 _DEM_NO_DATA = -9999
@@ -53,6 +60,26 @@ def read_admin1(path):
 def read_country_info(path):
     """{"CA": "Canada", ...} from countryInfo.txt (ISO, ISO3, ISO-Numeric, fips, Country, ...)."""
     return {row[0]: row[4] for row in read_tsv(path, 5, comments=True, exact=False)}
+
+
+def read_country_facts(path):
+    """{"CA": {field: text}} from countryInfo.txt, every COUNTRY_INFO_FIELDS column stripped of
+    surrounding space ("" where GeoNames has no value)."""
+    width = len(COUNTRY_INFO_FIELDS)
+    return {
+        row[0]: dict(zip(COUNTRY_INFO_FIELDS, (v.strip() for v in row[:width]), strict=True))
+        for row in read_tsv(path, width, comments=True, exact=False)
+    }
+
+
+def read_time_zones(path):
+    """{"CA": ("America/St_Johns", ...)} from timeZones.txt (CountryCode, TimeZoneId, offsets), in
+    file order; the header row is skipped."""
+    zones = {}
+    for row in read_tsv(path, 2, exact=False):
+        if row[0] != "CountryCode":
+            zones.setdefault(row[0], []).append(row[1])
+    return {code: tuple(ids) for code, ids in zones.items()}
 
 
 def cities(cities_path, admin1_path, country_info_path=None):

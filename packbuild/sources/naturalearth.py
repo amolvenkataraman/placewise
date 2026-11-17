@@ -57,6 +57,24 @@ def countries(shp_path):
     return LayerData("countries", "polygon", columns, (SOURCE,), features=_with_ids(raw, ids), types=types)
 
 
+def label_points(shp_path):
+    """{alpha-2: (lat, lon)}: each country's map label point (LABEL_Y, LABEL_X). A code several
+    units share goes to the unit that is the country itself, as in `countries`; files without
+    label attributes give {}."""
+    found, shared = {}, Counter()
+    rows = []
+    for feature in read_shapefile(shp_path):
+        p = feature.properties
+        code = _code(p.get("ISO_A2_EH"), _ISO2)
+        if code and p.get("LABEL_X") is not None and p.get("LABEL_Y") is not None:
+            shared[code] += 1
+            rows.append((code, _text(p.get("ADM0_A3")) == _text(p.get("ISO_A3_EH")), p))
+    for code, is_country, p in rows:
+        if shared[code] == 1 or is_country:
+            found[code] = (float(p["LABEL_Y"]), float(p["LABEL_X"]))
+    return found
+
+
 def admin1(shp_path):
     """Admin-1 units (states, provinces, ...). id is "iso:<iso_3166_2>"; placeholder codes such as
     "-99-X11~" or "AI-X00", and codes Natural Earth gives to more than one feature (Bosnia's cantons all read

@@ -1,0 +1,13 @@
+{
+ "supplemental": {
+  "version": {
+   "_cldrVersion": "49"
+  },
+  "likelySubtags": {
+   "hi": "hi-Deva-IN",
+   "und-AQ": "und-Latn-AQ",
+   "und-CA": "en-Latn-CA",
+   "und-IN": "hi-Deva-IN"
+  }
+ }
+}

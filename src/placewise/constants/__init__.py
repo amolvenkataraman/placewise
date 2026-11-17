@@ -32,6 +32,7 @@ from . import (
     web_mercator,
     wgs84,
     work_modes,
+    world,
 )
 
 __all__ = [
@@ -66,4 +67,5 @@ __all__ = [
     "web_mercator",
     "wgs84",
     "work_modes",
+    "world",
 ]

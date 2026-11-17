@@ -1,7 +1,7 @@
 """GENERATED from datasets/country_groups by packbuild.country_groups; do not edit.
 
-Regenerate with `uv run python -m packbuild.country_groups`. Sources, notes and the reasoning
-behind each membership are in the datasets; this module holds the data only.
+Regenerate with `uv run python -m packbuild.country_groups`. Each group carries its source and
+notes; the reasoning behind single memberships (member notes, other sources) stays in the datasets.
 """
 
 # fmt: off
@@ -9,7 +9,7 @@ behind each membership are in the datasets; this module holds the data only.
 # date the memberships were checked against their sources
 AS_OF = "2026-11-17"
 
-# id -> {name, aliases, kind, members}; members are ISO 3166-1 alpha-2 codes
+# id -> {name, aliases, kind, members, source, notes}; members are ISO 3166-1 alpha-2 codes
 GEOGRAPHIC = {
     "geo:africa": {
         "name": "Africa",
@@ -21,12 +21,32 @@ GEOGRAPHIC = {
             "MR", "MU", "MW", "MZ", "NA", "NE", "NG", "RE", "RW", "SC", "SD", "SH", "SL", "SN", "SO", "SS",
             "ST", "SZ", "TD", "TF", "TG", "TN", "TZ", "UG", "YT", "ZA", "ZM", "ZW",
         ),
+        "source": "convention",
+        "notes": (
+            "Seven-continent convention (Africa, Antarctica, Asia, Europe, North America, Oceania, South "
+            "America), as taught in most English-speaking countries. Six-continent conventions either merge "
+            "the Americas into one 'America' (common in Latin America and much of Europe) or merge Europe "
+            "and Asia into 'Eurasia'; those merged groups are not separate entries here. Countries and "
+            "territories are assigned as in the UN M49 regions, so transcontinental countries follow M49: RU "
+            "in Europe; TR, CY, GE, AM, AZ in Asia; KZ in Asia; EG in Africa. Same membership as the M49 "
+            "region Africa, including territories (EH, IO, RE, SH, TF, YT)."
+        ),
     },
     "geo:antarctica": {
         "name": "Antarctica",
         "aliases": (),
         "kind": "continent",
         "members": ("AQ",),
+        "source": "convention",
+        "notes": (
+            "Seven-continent convention (Africa, Antarctica, Asia, Europe, North America, Oceania, South "
+            "America), as taught in most English-speaking countries. Six-continent conventions either merge "
+            "the Americas into one 'America' (common in Latin America and much of Europe) or merge Europe "
+            "and Asia into 'Eurasia'; those merged groups are not separate entries here. Countries and "
+            "territories are assigned as in the UN M49 regions, so transcontinental countries follow M49: RU "
+            "in Europe; TR, CY, GE, AM, AZ in Asia; KZ in Asia; EG in Africa. Only AQ: sub-Antarctic "
+            "territories (BV, GS, HM, TF) stay with the M49 region M49 assigns them to."
+        ),
     },
     "geo:asia": {
         "name": "Asia",
@@ -38,16 +58,36 @@ GEOGRAPHIC = {
             "MY", "NP", "OM", "PH", "PK", "PS", "QA", "SA", "SG", "SY", "TH", "TJ", "TL", "TM", "TR", "TW",
             "UZ", "VN", "YE",
         ),
+        "source": "convention",
+        "notes": (
+            "Seven-continent convention (Africa, Antarctica, Asia, Europe, North America, Oceania, South "
+            "America), as taught in most English-speaking countries. Six-continent conventions either merge "
+            "the Americas into one 'America' (common in Latin America and much of Europe) or merge Europe "
+            "and Asia into 'Eurasia'; those merged groups are not separate entries here. Countries and "
+            "territories are assigned as in the UN M49 regions, so transcontinental countries follow M49: RU "
+            "in Europe; TR, CY, GE, AM, AZ in Asia; KZ in Asia; EG in Africa. The M49 region Asia plus TW, "
+            "which the M49 table does not list separately."
+        ),
     },
     "geo:europe": {
         "name": "Europe",
-        "aliases": ("European continent",),
+        "aliases": ("European continent", "EUR"),
         "kind": "continent",
         "members": (
             "AD", "AL", "AT", "AX", "BA", "BE", "BG", "BY", "CH", "CZ", "DE", "DK", "EE", "ES", "FI", "FO",
             "FR", "GB", "GG", "GI", "GR", "HR", "HU", "IE", "IM", "IS", "IT", "JE", "LI", "LT", "LU", "LV",
             "MC", "MD", "ME", "MK", "MT", "NL", "NO", "PL", "PT", "RO", "RS", "RU", "SE", "SI", "SJ", "SK",
             "SM", "UA", "VA",
+        ),
+        "source": "convention",
+        "notes": (
+            "Seven-continent convention (Africa, Antarctica, Asia, Europe, North America, Oceania, South "
+            "America), as taught in most English-speaking countries. Six-continent conventions either merge "
+            "the Americas into one 'America' (common in Latin America and much of Europe) or merge Europe "
+            "and Asia into 'Eurasia'; those merged groups are not separate entries here. Countries and "
+            "territories are assigned as in the UN M49 regions, so transcontinental countries follow M49: RU "
+            "in Europe; TR, CY, GE, AM, AZ in Asia; KZ in Asia; EG in Africa. Same membership as the M49 "
+            "region Europe, so RU is included and TR, CY and the South Caucasus are not."
         ),
     },
     "geo:north-america": {
@@ -59,6 +99,18 @@ GEOGRAPHIC = {
             "GL", "GP", "GT", "HN", "HT", "JM", "KN", "KY", "LC", "MF", "MQ", "MS", "MX", "NI", "PA", "PM",
             "PR", "SV", "SX", "TC", "TT", "US", "VC", "VG", "VI",
         ),
+        "source": "convention",
+        "notes": (
+            "Seven-continent convention (Africa, Antarctica, Asia, Europe, North America, Oceania, South "
+            "America), as taught in most English-speaking countries. Six-continent conventions either merge "
+            "the Americas into one 'America' (common in Latin America and much of Europe) or merge Europe "
+            "and Asia into 'Eurasia'; those merged groups are not separate entries here. Countries and "
+            "territories are assigned as in the UN M49 regions, so transcontinental countries follow M49: RU "
+            "in Europe; TR, CY, GE, AM, AZ in Asia; KZ in Asia; EG in Africa. The M49 subregion Northern "
+            "America plus the M49 intermediate regions Central America (with MX) and the Caribbean. In "
+            "everyday and business use 'North America' often means only US and CA: that group is "
+            "geo:us-canada (and geo:namer for the business region)."
+        ),
     },
     "geo:south-america": {
         "name": "South America",
@@ -66,6 +118,16 @@ GEOGRAPHIC = {
         "kind": "continent",
         "members": (
             "AR", "BO", "BR", "BV", "CL", "CO", "EC", "FK", "GF", "GS", "GY", "PE", "PY", "SR", "UY", "VE",
+        ),
+        "source": "convention",
+        "notes": (
+            "Seven-continent convention (Africa, Antarctica, Asia, Europe, North America, Oceania, South "
+            "America), as taught in most English-speaking countries. Six-continent conventions either merge "
+            "the Americas into one 'America' (common in Latin America and much of Europe) or merge Europe "
+            "and Asia into 'Eurasia'; those merged groups are not separate entries here. Countries and "
+            "territories are assigned as in the UN M49 regions, so transcontinental countries follow M49: RU "
+            "in Europe; TR, CY, GE, AM, AZ in Asia; KZ in Asia; EG in Africa. Same membership as the M49 "
+            "intermediate region South America (including FK, GF, GS, BV)."
         ),
     },
     "geo:oceania": {
@@ -75,6 +137,17 @@ GEOGRAPHIC = {
         "members": (
             "AS", "AU", "CC", "CK", "CX", "FJ", "FM", "GU", "HM", "KI", "MH", "MP", "NC", "NF", "NR", "NU",
             "NZ", "PF", "PG", "PN", "PW", "SB", "TK", "TO", "TV", "UM", "VU", "WF", "WS",
+        ),
+        "source": "convention",
+        "notes": (
+            "Seven-continent convention (Africa, Antarctica, Asia, Europe, North America, Oceania, South "
+            "America), as taught in most English-speaking countries. Six-continent conventions either merge "
+            "the Americas into one 'America' (common in Latin America and much of Europe) or merge Europe "
+            "and Asia into 'Eurasia'; those merged groups are not separate entries here. Countries and "
+            "territories are assigned as in the UN M49 regions, so transcontinental countries follow M49: RU "
+            "in Europe; TR, CY, GE, AM, AZ in Asia; KZ in Asia; EG in Africa. Same membership as the M49 "
+            "region Oceania. Also called 'Australia' as a continent in some conventions, where it means the "
+            "continental landmass rather than this wider region."
         ),
     },
     "geo:m49-africa": {
@@ -87,16 +160,26 @@ GEOGRAPHIC = {
             "MR", "MU", "MW", "MZ", "NA", "NE", "NG", "RE", "RW", "SC", "SD", "SH", "SL", "SN", "SO", "SS",
             "ST", "SZ", "TD", "TF", "TG", "TN", "TZ", "UG", "YT", "ZA", "ZM", "ZW",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 region 002. The UN M49 standard is for statistical use and implies no assumption about "
+            "political or other affiliation."
+        ),
     },
     "geo:m49-americas": {
         "name": "Americas (UN M49)",
-        "aliases": ("Americas", "The Americas"),
+        "aliases": ("Americas", "The Americas", "AMER"),
         "kind": "un-m49-region",
         "members": (
             "AG", "AI", "AR", "AW", "BB", "BL", "BM", "BO", "BQ", "BR", "BS", "BV", "BZ", "CA", "CL", "CO",
             "CR", "CU", "CW", "DM", "DO", "EC", "FK", "GD", "GF", "GL", "GP", "GS", "GT", "GY", "HN", "HT",
             "JM", "KN", "KY", "LC", "MF", "MQ", "MS", "MX", "NI", "PA", "PE", "PM", "PR", "PY", "SR", "SV",
             "SX", "TC", "TT", "US", "UY", "VC", "VE", "VG", "VI",
+        ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 region 019. The UN M49 standard is for statistical use and implies no assumption about "
+            "political or other affiliation."
         ),
     },
     "geo:m49-asia": {
@@ -109,6 +192,11 @@ GEOGRAPHIC = {
             "MY", "NP", "OM", "PH", "PK", "PS", "QA", "SA", "SG", "SY", "TH", "TJ", "TL", "TM", "TR", "UZ",
             "VN", "YE",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 region 142. The UN M49 standard is for statistical use and implies no assumption about "
+            "political or other affiliation."
+        ),
     },
     "geo:m49-europe": {
         "name": "Europe (UN M49)",
@@ -120,6 +208,11 @@ GEOGRAPHIC = {
             "MC", "MD", "ME", "MK", "MT", "NL", "NO", "PL", "PT", "RO", "RS", "RU", "SE", "SI", "SJ", "SK",
             "SM", "UA", "VA",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 region 150. The UN M49 standard is for statistical use and implies no assumption about "
+            "political or other affiliation."
+        ),
     },
     "geo:m49-oceania": {
         "name": "Oceania (UN M49)",
@@ -129,30 +222,55 @@ GEOGRAPHIC = {
             "AS", "AU", "CC", "CK", "CX", "FJ", "FM", "GU", "HM", "KI", "MH", "MP", "NC", "NF", "NR", "NU",
             "NZ", "PF", "PG", "PN", "PW", "SB", "TK", "TO", "TV", "UM", "VU", "WF", "WS",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 region 009. The UN M49 standard is for statistical use and implies no assumption about "
+            "political or other affiliation. AQ belongs to no M49 region."
+        ),
     },
     "geo:m49-australia-new-zealand": {
         "name": "Australia and New Zealand (UN M49)",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("AU", "CC", "CX", "HM", "NF", "NZ"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 053 of Oceania. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:central-asia": {
         "name": "Central Asia",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("KG", "KZ", "TJ", "TM", "UZ"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 143 of Asia. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:eastern-asia": {
         "name": "Eastern Asia",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("CN", "HK", "JP", "KP", "KR", "MN", "MO"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 030 of Asia. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:eastern-europe": {
         "name": "Eastern Europe",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("BG", "BY", "CZ", "HU", "MD", "PL", "RO", "RU", "SK", "UA"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 151 of Europe. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:latin-america-caribbean": {
         "name": "Latin America and the Caribbean",
@@ -164,30 +282,56 @@ GEOGRAPHIC = {
             "LC", "MF", "MQ", "MS", "MX", "NI", "PA", "PE", "PR", "PY", "SR", "SV", "SX", "TC", "TT", "UY",
             "VC", "VE", "VG", "VI",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 419 of Americas. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:melanesia": {
         "name": "Melanesia",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("FJ", "NC", "PG", "SB", "VU"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 054 of Oceania. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:micronesia": {
         "name": "Micronesia",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("FM", "GU", "KI", "MH", "MP", "NR", "PW", "UM"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 057 of Oceania. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation. The region, not the country FM (Federated "
+            "States of Micronesia)."
+        ),
     },
     "geo:northern-africa": {
         "name": "Northern Africa",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("DZ", "EG", "EH", "LY", "MA", "SD", "TN"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 015 of Africa. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:northern-america": {
         "name": "Northern America",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("BM", "CA", "GL", "PM", "US"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 021 of Americas. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:northern-europe": {
         "name": "Northern Europe",
@@ -196,24 +340,44 @@ GEOGRAPHIC = {
         "members": (
             "AX", "DK", "EE", "FI", "FO", "GB", "GG", "IE", "IM", "IS", "JE", "LT", "LV", "NO", "SE", "SJ",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 154 of Europe. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:polynesia": {
         "name": "Polynesia",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("AS", "CK", "NU", "PF", "PN", "TK", "TO", "TV", "WF", "WS"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 061 of Oceania. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:south-eastern-asia": {
         "name": "South-eastern Asia",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("BN", "ID", "KH", "LA", "MM", "MY", "PH", "SG", "TH", "TL", "VN"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 035 of Asia. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:southern-asia": {
         "name": "Southern Asia",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("AF", "BD", "BT", "IN", "IR", "LK", "MV", "NP", "PK"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 034 of Asia. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:southern-europe": {
         "name": "Southern Europe",
@@ -221,6 +385,11 @@ GEOGRAPHIC = {
         "kind": "un-m49-subregion",
         "members": (
             "AD", "AL", "BA", "ES", "GI", "GR", "HR", "IT", "ME", "MK", "MT", "PT", "RS", "SI", "SM", "VA",
+        ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 039 of Europe. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
         ),
     },
     "geo:sub-saharan-africa": {
@@ -233,6 +402,11 @@ GEOGRAPHIC = {
             "NE", "NG", "RE", "RW", "SC", "SH", "SL", "SN", "SO", "SS", "ST", "SZ", "TD", "TF", "TG", "TZ",
             "UG", "YT", "ZA", "ZM", "ZW",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 202 of Africa. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:western-asia": {
         "name": "Western Asia",
@@ -242,12 +416,22 @@ GEOGRAPHIC = {
             "AE", "AM", "AZ", "BH", "CY", "GE", "IL", "IQ", "JO", "KW", "LB", "OM", "PS", "QA", "SA", "SY",
             "TR", "YE",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 145 of Asia. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:western-europe": {
         "name": "Western Europe",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("AT", "BE", "CH", "DE", "FR", "LI", "LU", "MC", "NL"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 sub-region 155 of Europe. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:m49-caribbean": {
         "name": "Caribbean (UN M49)",
@@ -257,12 +441,24 @@ GEOGRAPHIC = {
             "AG", "AI", "AW", "BB", "BL", "BQ", "BS", "CU", "CW", "DM", "DO", "GD", "GP", "HT", "JM", "KN",
             "KY", "LC", "MF", "MQ", "MS", "PR", "SX", "TC", "TT", "VC", "VG", "VI",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 intermediate region 029 within the sub-region Latin America and the Caribbean; listed "
+            "with kind un-m49-subregion. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:central-america": {
         "name": "Central America",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("BZ", "CR", "GT", "HN", "MX", "NI", "PA", "SV"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 intermediate region 013 within the sub-region Latin America and the Caribbean; listed "
+            "with kind un-m49-subregion. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:eastern-africa": {
         "name": "Eastern Africa",
@@ -272,12 +468,24 @@ GEOGRAPHIC = {
             "BI", "DJ", "ER", "ET", "IO", "KE", "KM", "MG", "MU", "MW", "MZ", "RE", "RW", "SC", "SO", "SS",
             "TF", "TZ", "UG", "YT", "ZM", "ZW",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 intermediate region 014 within the sub-region Sub-Saharan Africa; listed with kind "
+            "un-m49-subregion. The UN M49 standard is for statistical use and implies no assumption about "
+            "political or other affiliation."
+        ),
     },
     "geo:middle-africa": {
         "name": "Middle Africa",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("AO", "CD", "CF", "CG", "CM", "GA", "GQ", "ST", "TD"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 intermediate region 017 within the sub-region Sub-Saharan Africa; listed with kind "
+            "un-m49-subregion. The UN M49 standard is for statistical use and implies no assumption about "
+            "political or other affiliation."
+        ),
     },
     "geo:m49-south-america": {
         "name": "South America (UN M49)",
@@ -286,12 +494,24 @@ GEOGRAPHIC = {
         "members": (
             "AR", "BO", "BR", "BV", "CL", "CO", "EC", "FK", "GF", "GS", "GY", "PE", "PY", "SR", "UY", "VE",
         ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 intermediate region 005 within the sub-region Latin America and the Caribbean; listed "
+            "with kind un-m49-subregion. The UN M49 standard is for statistical use and implies no "
+            "assumption about political or other affiliation."
+        ),
     },
     "geo:southern-africa": {
         "name": "Southern Africa",
         "aliases": (),
         "kind": "un-m49-subregion",
         "members": ("BW", "LS", "NA", "SZ", "ZA"),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 intermediate region 018 within the sub-region Sub-Saharan Africa; listed with kind "
+            "un-m49-subregion. The UN M49 standard is for statistical use and implies no assumption about "
+            "political or other affiliation."
+        ),
     },
     "geo:western-africa": {
         "name": "Western Africa",
@@ -300,6 +520,12 @@ GEOGRAPHIC = {
         "members": (
             "BF", "BJ", "CI", "CV", "GH", "GM", "GN", "GW", "LR", "ML", "MR", "NE", "NG", "SH", "SL", "SN",
             "TG",
+        ),
+        "source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+        "notes": (
+            "UN M49 intermediate region 011 within the sub-region Sub-Saharan Africa; listed with kind "
+            "un-m49-subregion. The UN M49 standard is for statistical use and implies no assumption about "
+            "political or other affiliation."
         ),
     },
     "geo:us-canada": {
@@ -310,54 +536,140 @@ GEOGRAPHIC = {
         ),
         "kind": "custom",
         "members": ("CA", "US"),
+        "source": "convention",
+        "notes": (
+            "Exactly the United States and Canada, as postings mean by 'US & Canada' or 'North America (US & "
+            "Canada)'. Distinct from the M49 sub-region Northern America (which adds BM, GL, PM) and from "
+            "the continent North America (which adds MX, Central America and the Caribbean); the bare name "
+            "'North America' belongs to the continent."
+        ),
+    },
+    "geo:us-canada-mexico": {
+        "name": "US, Canada & Mexico",
+        "aliases": ("US and Canada and Mexico",),
+        "kind": "custom",
+        "members": ("CA", "MX", "US"),
+        "source": "convention",
+        "notes": (
+            "The United States, Canada and Mexico, as postings mean by 'US and Canada and Mexico': the same "
+            "three countries as the CUSMA / USMCA / T-MEC trade agreement (legal:cusma). Narrower than the "
+            "continent North America (geo:north-america), wider than US & Canada (geo:us-canada)."
+        ),
+    },
+    "geo:world": {
+        "name": "World",
+        "aliases": ("Worldwide", "Global", "Anywhere", "International", "Any Location", "Everywhere"),
+        "kind": "custom",
+        "members": (
+            "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "AT", "AU", "AW", "AX", "AZ",
+            "BA", "BB", "BD", "BE", "BF", "BG", "BH", "BI", "BJ", "BL", "BM", "BN", "BO", "BQ", "BR", "BS",
+            "BT", "BV", "BW", "BY", "BZ", "CA", "CC", "CD", "CF", "CG", "CH", "CI", "CK", "CL", "CM", "CN",
+            "CO", "CR", "CU", "CV", "CW", "CX", "CY", "CZ", "DE", "DJ", "DK", "DM", "DO", "DZ", "EC", "EE",
+            "EG", "EH", "ER", "ES", "ET", "FI", "FJ", "FK", "FM", "FO", "FR", "GA", "GB", "GD", "GE", "GF",
+            "GG", "GH", "GI", "GL", "GM", "GN", "GP", "GQ", "GR", "GS", "GT", "GU", "GW", "GY", "HK", "HM",
+            "HN", "HR", "HT", "HU", "ID", "IE", "IL", "IM", "IN", "IO", "IQ", "IR", "IS", "IT", "JE", "JM",
+            "JO", "JP", "KE", "KG", "KH", "KI", "KM", "KN", "KP", "KR", "KW", "KY", "KZ", "LA", "LB", "LC",
+            "LI", "LK", "LR", "LS", "LT", "LU", "LV", "LY", "MA", "MC", "MD", "ME", "MF", "MG", "MH", "MK",
+            "ML", "MM", "MN", "MO", "MP", "MQ", "MR", "MS", "MT", "MU", "MV", "MW", "MX", "MY", "MZ", "NA",
+            "NC", "NE", "NF", "NG", "NI", "NL", "NO", "NP", "NR", "NU", "NZ", "OM", "PA", "PE", "PF", "PG",
+            "PH", "PK", "PL", "PM", "PN", "PR", "PS", "PT", "PW", "PY", "QA", "RE", "RO", "RS", "RU", "RW",
+            "SA", "SB", "SC", "SD", "SE", "SG", "SH", "SI", "SJ", "SK", "SL", "SM", "SN", "SO", "SR", "SS",
+            "ST", "SV", "SX", "SY", "SZ", "TC", "TD", "TF", "TG", "TH", "TJ", "TK", "TL", "TM", "TN", "TO",
+            "TR", "TT", "TV", "TW", "TZ", "UA", "UG", "UM", "US", "UY", "UZ", "VA", "VC", "VE", "VG", "VI",
+            "VN", "VU", "WF", "WS", "YE", "YT", "ZA", "ZM", "ZW",
+        ),
+        "source": "convention",
+        "notes": (
+            "Every country and territory: all 249 assigned ISO 3166-1 alpha-2 codes, the package's full ISO "
+            "table. Means no geographic limit, as location strings mean by 'Remote - Worldwide' or "
+            "'Anywhere'."
+        ),
     },
     "geo:nordic": {
         "name": "Nordic countries",
         "aliases": ("Nordics", "Nordic region", "Nordic", "Norden"),
         "kind": "custom",
         "members": ("AX", "DK", "FI", "FO", "GL", "IS", "NO", "SE"),
+        "source": "convention",
+        "notes": (
+            "The five Nordic states (DK, FI, IS, NO, SE) and the three autonomous areas that take part in "
+            "Nordic co-operation (AX, FO, GL). SJ (Svalbard and Jan Mayen, part of Norway) is not listed "
+            "separately. Wider than Scandinavia."
+        ),
     },
     "geo:scandinavia": {
         "name": "Scandinavia",
         "aliases": ("Scandinavian countries",),
         "kind": "custom",
         "members": ("DK", "NO", "SE"),
+        "source": "convention",
+        "notes": (
+            "Strict sense: Denmark, Norway and Sweden. In looser use 'Scandinavia' also takes in FI and IS, "
+            "which is the Nordic countries group (geo:nordic)."
+        ),
     },
     "geo:benelux": {
         "name": "Benelux",
         "aliases": ("Benelux countries", "Low Countries"),
         "kind": "custom",
         "members": ("BE", "LU", "NL"),
+        "source": "convention",
+        "notes": "Belgium, the Netherlands and Luxembourg; also the name of their Benelux Union.",
     },
     "geo:iberia": {
         "name": "Iberia",
         "aliases": ("Iberian Peninsula",),
         "kind": "custom",
         "members": ("AD", "ES", "GI", "PT"),
+        "source": "convention",
+        "notes": (
+            "The countries and territories of the Iberian Peninsula: ES, PT, AD and GI. In business use "
+            "'Iberia' usually means Spain and Portugal only."
+        ),
     },
     "geo:british-isles": {
         "name": "British Isles",
         "aliases": ("Britain and Ireland", "Britain & Ireland"),
         "kind": "custom",
         "members": ("GB", "GG", "IE", "IM", "JE"),
+        "source": "convention",
+        "notes": (
+            "A geographic term for the archipelago: GB, IE and the Crown Dependencies IM, JE, GG. The term "
+            "is sensitive, notably in Ireland, and is not a political grouping; 'Britain and Ireland' is a "
+            "common alternative. Not the same as 'UK & Ireland' (GB and IE only)."
+        ),
     },
     "geo:baltics": {
         "name": "Baltics",
         "aliases": ("Baltic states", "Baltic countries", "Baltic"),
         "kind": "custom",
         "members": ("EE", "LT", "LV"),
+        "source": "convention",
+        "notes": "Estonia, Latvia and Lithuania.",
     },
     "geo:balkans": {
         "name": "Balkans",
         "aliases": ("The Balkans", "Balkan Peninsula", "Balkan countries"),
         "kind": "custom",
         "members": ("AL", "BA", "BG", "GR", "HR", "ME", "MK", "RO", "RS", "SI"),
+        "source": "convention",
+        "notes": (
+            "The edges are fuzzy. Listed: the commonest broad set of countries wholly or largely on the "
+            "Balkan Peninsula, AL, BA, BG, GR, HR, ME, MK, RO, RS, SI. SI, HR, RO and GR are left out by "
+            "some definitions; TR (East Thrace) is added by others. Kosovo is included in most definitions "
+            "but has no ISO 3166-1 code (XK is a user-assigned code), so it cannot be listed here."
+        ),
     },
     "geo:dach": {
         "name": "DACH",
         "aliases": ("D-A-CH", "DACH region"),
         "kind": "custom",
         "members": ("AT", "CH", "DE"),
+        "source": "convention",
+        "notes": (
+            "Germany (D), Austria (A) and Switzerland (CH), the main German-speaking countries. Some uses "
+            "add LI ('DACHL')."
+        ),
     },
     "geo:caribbean": {
         "name": "Caribbean",
@@ -366,6 +678,11 @@ GEOGRAPHIC = {
         "members": (
             "AG", "AI", "AW", "BB", "BL", "BQ", "BS", "CU", "CW", "DM", "DO", "GD", "GP", "HT", "JM", "KN",
             "KY", "LC", "MF", "MQ", "MS", "PR", "SX", "TC", "TT", "VC", "VG", "VI",
+        ),
+        "source": "convention",
+        "notes": (
+            "The Caribbean islands, same membership as the M49 intermediate region Caribbean. Wider uses "
+            "(the Caribbean basin, CARICOM) also take in BZ, GY and SR on the mainland."
         ),
     },
     "geo:middle-east": {
@@ -376,16 +693,27 @@ GEOGRAPHIC = {
             "AE", "BH", "CY", "EG", "IL", "IQ", "IR", "JO", "KW", "LB", "OM", "PS", "QA", "SA", "SY", "TR",
             "YE",
         ),
+        "source": "convention",
+        "notes": (
+            "Definitions vary. Listed: the commonest modern set, the Arabian Peninsula and Levant states "
+            "with EG, IR, IQ, TR and CY. Some definitions add the Maghreb (see geo:mena), the South "
+            "Caucasus, AF or PK, or leave out CY, EG or TR."
+        ),
     },
     "geo:southeast-asia": {
         "name": "Southeast Asia",
         "aliases": ("South East Asia", "South-East Asia", "SE Asia"),
         "kind": "custom",
         "members": ("BN", "ID", "KH", "LA", "MM", "MY", "PH", "SG", "TH", "TL", "VN"),
+        "source": "convention",
+        "notes": "Same membership as the M49 sub-region South-eastern Asia (the eleven ASEAN members).",
     },
     "geo:emea": {
         "name": "EMEA",
-        "aliases": ("Europe, Middle East and Africa", "Europe, the Middle East and Africa"),
+        "aliases": (
+            "Europe, Middle East and Africa", "Europe, the Middle East and Africa",
+            "Europe Middle East Africa",
+        ),
         "kind": "business",
         "members": (
             "AD", "AE", "AL", "AM", "AO", "AT", "AX", "AZ", "BA", "BE", "BF", "BG", "BH", "BI", "BJ", "BW",
@@ -398,16 +726,31 @@ GEOGRAPHIC = {
             "SS", "ST", "SY", "SZ", "TD", "TF", "TG", "TN", "TR", "TZ", "UA", "UG", "VA", "YE", "YT", "ZA",
             "ZM", "ZW",
         ),
+        "source": "convention",
+        "notes": (
+            "Business region: the membership is a convention, not an official definition, and varies between "
+            "organisations; this is the commonest definition. Europe, the Middle East and Africa: the M49 "
+            "regions Europe and Africa, the M49 sub-region Western Asia (which includes TR, CY and the South "
+            "Caucasus) and IR. Central Asia is sometimes added."
+        ),
     },
     "geo:apac": {
         "name": "APAC",
-        "aliases": ("Asia-Pacific", "Asia Pacific", "Asia/Pacific", "AsiaPac"),
+        "aliases": ("Asia-Pacific", "Asia Pacific", "Asia/Pacific", "AsiaPac", "Asia Pac"),
         "kind": "business",
         "members": (
             "AS", "AU", "BD", "BN", "BT", "CC", "CK", "CN", "CX", "FJ", "FM", "GU", "HK", "HM", "ID", "IN",
             "JP", "KH", "KI", "KP", "KR", "LA", "LK", "MH", "MM", "MN", "MO", "MP", "MV", "MY", "NC", "NF",
             "NP", "NR", "NU", "NZ", "PF", "PG", "PH", "PK", "PN", "PW", "SB", "SG", "TH", "TK", "TL", "TO",
             "TV", "TW", "UM", "VN", "VU", "WF", "WS",
+        ),
+        "source": "convention",
+        "notes": (
+            "Business region: the membership is a convention, not an official definition, and varies between "
+            "organisations; this is the commonest definition. Asia-Pacific: East Asia (with TW), Southeast "
+            "Asia, South Asia without AF and IR (usually counted in the Middle East or EMEA) and Oceania. "
+            "Central Asia is usually left out; some uses also leave out South Asia or Oceania, or count "
+            "Australia and New Zealand separately (geo:anz)."
         ),
     },
     "geo:latam": {
@@ -420,18 +763,39 @@ GEOGRAPHIC = {
             "LC", "MF", "MQ", "MS", "MX", "NI", "PA", "PE", "PR", "PY", "SR", "SV", "SX", "TC", "TT", "UY",
             "VC", "VE", "VG", "VI",
         ),
+        "source": "convention",
+        "notes": (
+            "Business region: the membership is a convention, not an official definition, and varies between "
+            "organisations; this is the commonest definition. Latin America: the same set as the M49 "
+            "sub-region Latin America and the Caribbean (MX, Central and South America and the Caribbean). "
+            "Some uses leave out the non-Spanish- and non-Portuguese-speaking Caribbean."
+        ),
     },
     "geo:namer": {
         "name": "NA / NAMER",
         "aliases": ("NAMER", "NORAM", "North America (business region)"),
         "kind": "business",
         "members": ("CA", "US"),
+        "source": "convention",
+        "notes": (
+            "Business region: the membership is a convention, not an official definition, and varies between "
+            "organisations; this is the commonest definition. North America in sales and hiring regions: US "
+            "and CA, with MX usually counted in LATAM. The bare abbreviation 'NA' is not an alias because it "
+            "is also Namibia's ISO code and a common 'not applicable' marker."
+        ),
     },
     "geo:anz": {
         "name": "ANZ",
         "aliases": ("Australia and New Zealand", "Australia & New Zealand", "A/NZ"),
         "kind": "business",
         "members": ("AU", "NZ"),
+        "source": "convention",
+        "notes": (
+            "Business region: the membership is a convention, not an official definition, and varies between "
+            "organisations; this is the commonest definition. Australia and New Zealand. Narrower than the "
+            "M49 sub-region Australia and New Zealand, which also has the Australian external territories "
+            "CC, CX, HM and NF."
+        ),
     },
     "geo:mena": {
         "name": "MENA",
@@ -441,12 +805,20 @@ GEOGRAPHIC = {
             "AE", "BH", "DZ", "EG", "IL", "IQ", "IR", "JO", "KW", "LB", "LY", "MA", "OM", "PS", "QA", "SA",
             "SY", "TN", "YE",
         ),
+        "source": "convention",
+        "notes": (
+            "Business region: the membership is a convention, not an official definition, and varies between "
+            "organisations; this is the commonest definition. The Middle East and North Africa: the Middle "
+            "East without CY and TR, plus DZ, LY, MA and TN (EG is already in). Some uses add SD, MR, DJ or "
+            "EH, or keep TR."
+        ),
     },
 }
 
-# id -> {name, aliases, kind, members}; each member has code (alpha-2, or None for a member without
-# one, which then has `group` (an id here) or `entity` (a name)), since and until (None when
-# unknown or still a member), and suspended_since when the organisation has suspended it
+# id -> {name, aliases, kind, members, source, notes}; each member has code (alpha-2, or None for
+# a member without one, which then has `group` (an id here) or `entity` (a name)), since and
+# until (None when unknown or still a member), and suspended_since when the organisation has
+# suspended it
 LEGAL = {
     "legal:eu": {
         "name": "European Union",
@@ -482,6 +854,15 @@ LEGAL = {
             {"code": "RO", "since": "2007-01-01", "until": None},
             {"code": "HR", "since": "2013-07-01", "until": None},
         ),
+        "source": "https://european-union.europa.eu/principles-countries-history/eu-countries_en",
+        "notes": (
+            "27 member states. 'since' is the date of joining the European Communities, which became the EU "
+            "on 1993-11-01; the six founders' date is the entry into force of the EEC Treaty. GB left on "
+            "2020-01-31 (its last day as a member state). Members are states; some of their territories with "
+            "their own ISO codes are part of the EU (outermost regions such as GF, GP, MQ, RE, YT, MF; and "
+            "AX), others are not (e.g. GL, FO, and most overseas countries and territories). Greenland, part "
+            "of DK, left the European Communities in 1985."
+        ),
     },
     "legal:eurozone": {
         "name": "Euro area",
@@ -509,6 +890,13 @@ LEGAL = {
             {"code": "LT", "since": "2015-01-01", "until": None},
             {"code": "HR", "since": "2023-01-01", "until": None},
             {"code": "BG", "since": "2026-01-01", "until": None},
+        ),
+        "source": "https://www.ecb.europa.eu/euro/intro/html/index.en.html",
+        "notes": (
+            "The 21 EU member states that use the euro, per the ECB (BG joined on 2026-01-01). Not every EU "
+            "member: the others are outside the euro area. AD, MC, SM and VA use the euro under monetary "
+            "agreements with the EU, and ME and Kosovo use it unilaterally; none of them is a euro area "
+            "member."
         ),
     },
     "legal:eea": {
@@ -548,6 +936,15 @@ LEGAL = {
             {"code": "RO", "since": "2007-08-01", "until": None},
             {"code": "HR", "since": "2014-04-12", "until": None},
         ),
+        "source": "https://www.efta.int/eea/eea-agreement",
+        "notes": (
+            "The EU member states plus three EFTA states (IS, LI, NO); CH is in EFTA but not the EEA. The "
+            "agreement entered into force on 1994-01-01 (AT, FI, SE took part first as EFTA states, then as "
+            "EU members). Dates for the 2004, 2007 and 2013 EU entrants are the start of provisional "
+            "application of each EEA enlargement agreement, as published by EFTA (in force 2005-12-06, "
+            "2011-11-09 and 2025-02-19). GB ceased to be a party when it left the EU on 2020-01-31; the "
+            "agreement still applied to it during the transition period to 2020-12-31."
+        ),
     },
     "legal:efta": {
         "name": "European Free Trade Association",
@@ -564,6 +961,13 @@ LEGAL = {
             {"code": "PT", "since": "1960", "until": "1985-12-31"},
             {"code": "SE", "since": "1960", "until": "1994-12-31"},
             {"code": "GB", "since": "1960", "until": "1972-12-31"},
+        ),
+        "source": "https://www.efta.int/about-efta/history",
+        "notes": (
+            "Four members: IS, LI, NO, CH. Founded in 1960; years as published by EFTA. FI was an associate "
+            "member from 1961 and a full member from 1986. Former members left on joining the European "
+            "Communities or the EU (DK and GB on 1973-01-01, PT on 1986-01-01, AT, FI and SE on 1995-01-01); "
+            "'until' is their last day."
         ),
     },
     "legal:schengen": {
@@ -601,6 +1005,16 @@ LEGAL = {
             {"code": "BG", "since": "2025-01-01", "until": None},
             {"code": "RO", "since": "2025-01-01", "until": None},
         ),
+        "source": "https://home-affairs.ec.europa.eu/policies/schengen/schengen-area_en",
+        "notes": (
+            "29 countries: 25 EU member states and four non-EU countries (IS, NO, CH, LI). 'since' is the "
+            "year internal border controls were abolished, per the European Commission's Schengen timeline; "
+            "BG and RO joined fully on 2025-01-01 (air and sea border checks were lifted in 2024). Not "
+            "members: IE (opt-out) and CY (applies part of the Schengen rules; internal border controls not "
+            "yet lifted). MC, SM and VA have open borders with Schengen neighbours without being members. "
+            "Some territories of members are outside the area (e.g. GL, FO, SJ, and the EU outermost "
+            "regions)."
+        ),
     },
     "legal:canzuk": {
         "name": "CANZUK",
@@ -611,6 +1025,13 @@ LEGAL = {
             {"code": "AU", "since": None, "until": None},
             {"code": "NZ", "since": None, "until": None},
             {"code": "GB", "since": None, "until": None},
+        ),
+        "source": "convention",
+        "notes": (
+            "Not an organisation or a treaty: an informal proposal for closer co-operation (trade, travel, "
+            "foreign policy) among Canada, Australia, New Zealand and the United Kingdom. Membership is the "
+            "four countries the name abbreviates; there are no joining dates and no official source. Kind "
+            "'forum' is the nearest fit."
         ),
     },
     "legal:five-eyes": {
@@ -624,6 +1045,14 @@ LEGAL = {
             {"code": "GB", "since": None, "until": None},
             {"code": "US", "since": None, "until": None},
         ),
+        "source": "https://www.dni.gov/index.php/who-we-are/organizations/icig/icig-partnerships/icig-fiorc",
+        "notes": (
+            "Intelligence-sharing arrangement among Australia, Canada, New Zealand, the United Kingdom and "
+            "the United States, growing out of the UKUSA Agreement. Source: the Five Eyes Intelligence "
+            "Oversight and Review Council page of the US Office of the Director of National Intelligence. "
+            "Joining dates are left out: the arrangement grew in stages and no official membership dates are "
+            "published."
+        ),
     },
     "legal:cusma": {
         "name": "CUSMA / USMCA / T-MEC",
@@ -636,6 +1065,13 @@ LEGAL = {
             {"code": "CA", "since": "2020-07-01", "until": None},
             {"code": "MX", "since": "2020-07-01", "until": None},
             {"code": "US", "since": "2020-07-01", "until": None},
+        ),
+        "source": "https://www.international.gc.ca/trade-commerce/trade-agreements-accords-commerciaux/agr-acc/cusma-aceum/index.aspx?lang=eng",
+        "notes": (
+            "The same agreement under its names in Canada (CUSMA, French ACEUM), the United States (USMCA) "
+            "and Mexico (T-MEC). In force since 2020-07-01, replacing NAFTA (1994). At the first joint "
+            "review on 2026-07-01 the parties did not all confirm a 16-year extension, which starts annual "
+            "joint reviews; the agreement remains in force."
         ),
     },
     "legal:asean": {
@@ -655,6 +1091,8 @@ LEGAL = {
             {"code": "KH", "since": "1999-04-30", "until": None},
             {"code": "TL", "since": "2025-10-26", "until": None},
         ),
+        "source": "https://asean.org/member-states/",
+        "notes": "Eleven members; TL was admitted as the eleventh on 2025-10-26 at the 47th ASEAN Summit.",
     },
     "legal:gcc": {
         "name": "Gulf Cooperation Council",
@@ -668,6 +1106,8 @@ LEGAL = {
             {"code": "QA", "since": "1981-05-25", "until": None},
             {"code": "SA", "since": "1981-05-25", "until": None},
         ),
+        "source": "https://gcc-sg.org/en/AboutUs/Pages/default.aspx",
+        "notes": "The six founding states; the charter was signed on 1981-05-25.",
     },
     "legal:commonwealth": {
         "name": "Commonwealth of Nations",
@@ -733,6 +1173,12 @@ LEGAL = {
             {"code": "IE", "since": None, "until": "1949"},
             {"code": "ZW", "since": None, "until": "2003"},
         ),
+        "source": "https://thecommonwealth.org/our-member-countries",
+        "notes": (
+            "56 member countries. 'since' is the year each joined (for members that left and rejoined, the "
+            "current membership), as published on each Commonwealth Secretariat country page, except where a "
+            "member note says otherwise. Former members: IE (left 1949) and ZW (withdrew 2003)."
+        ),
     },
     "legal:oecd": {
         "name": "Organisation for Economic Co-operation and Development",
@@ -778,6 +1224,13 @@ LEGAL = {
             {"code": "TR", "since": "1961-08-02", "until": None},
             {"code": "US", "since": "1961-04-12", "until": None},
         ),
+        "source": "https://www.oecd.org/en/about/members-partners.html",
+        "notes": (
+            "38 member countries. 'since' is the date each deposited its instrument of ratification of the "
+            "OECD Convention, as listed by the OECD (and reproduced by Eurostat); the Convention entered "
+            "into force on 1961-09-30, so founders' dates before that are ratification, not membership, "
+            "dates. Accession candidates are not members."
+        ),
     },
     "legal:g7": {
         "name": "Group of Seven",
@@ -793,6 +1246,13 @@ LEGAL = {
             {"code": "CA", "since": "1976", "until": None},
             {"code": None, "since": None, "until": None, "group": "legal:eu"},
             {"code": "RU", "since": None, "until": "2014"},
+        ),
+        "source": "https://www.international.gc.ca/world-monde/international_relations-relations_internationales/g7/index.aspx?lang=eng",
+        "notes": (
+            "Seven countries; the European Union takes part as a non-enumerated member and is listed as a "
+            "non-country member (a group reference, since it has no ISO code). Six countries met from 1975, "
+            "CA joined in 1976. RU took part as the G8 until 2014. The G7 has no secretariat; the source is "
+            "the Government of Canada's G7 page (Canada held the 2025 presidency)."
         ),
     },
     "legal:g20": {
@@ -821,6 +1281,13 @@ LEGAL = {
             {"code": "US", "since": "1999", "until": None},
             {"code": None, "since": "1999", "until": None, "group": "legal:eu"},
             {"code": None, "since": "2023-09-09", "until": None, "group": "legal:african-union"},
+        ),
+        "source": "https://g20.org/",
+        "notes": (
+            "19 countries plus two non-country members: the European Union (since the G20 began in 1999) and "
+            "the African Union (admitted at the New Delhi summit on 2023-09-09). Non-country members are "
+            "group references because they have no ISO code. Which members and guests attend a given year's "
+            "meetings is decided by that year's presidency and is not recorded here."
         ),
     },
     "legal:nato": {
@@ -861,6 +1328,12 @@ LEGAL = {
             {"code": "FI", "since": "2023-04-04", "until": None},
             {"code": "SE", "since": "2024-03-07", "until": None},
         ),
+        "source": "https://www.nato.int/cps/en/natohq/topics_52044.htm",
+        "notes": (
+            "32 member countries. The 12 founders signed the North Atlantic Treaty on 1949-04-04 (year only "
+            "here); later dates are the accession dates published by NATO. DE joined as the Federal Republic "
+            "of Germany; the reunified Germany has been a member since 1990."
+        ),
     },
     "legal:mercosur": {
         "name": "Mercosur",
@@ -873,6 +1346,12 @@ LEGAL = {
             {"code": "UY", "since": "1991", "until": None},
             {"code": "BO", "since": "2024", "until": None},
             {"code": "VE", "since": "2012-07-31", "until": None, "suspended_since": "2017-08-05"},
+        ),
+        "source": "https://www.mercosur.int/en/about-mercosur/mercosur-countries/",
+        "notes": (
+            "States Parties: AR, BR, PY, UY (founders, Treaty of Asunción, 1991), BO (full member since "
+            "2024, with a transition period to adopt Mercosur rules) and VE (suspended, see its member "
+            "note). Associated states are not members."
         ),
     },
     "legal:african-union": {
@@ -941,6 +1420,14 @@ LEGAL = {
                 "entity": "Sahrawi Arab Democratic Republic",
             },
         ),
+        "source": "https://au.int/en/member_states/countryprofiles2",
+        "notes": (
+            "55 member states. 'since' is the date of joining the Organisation of African Unity (founded "
+            "1963-05-25) or the AU (which succeeded it in 2002), as published by the AU; month-only dates "
+            "are given as the year. Suspensions from AU activities after unconstitutional changes of "
+            "government change often and are not recorded; see the AU Peace and Security Council for current "
+            "status. The abbreviation 'AU' is not an alias because it is Australia's ISO code."
+        ),
     },
     "legal:cptpp": {
         "name": "Comprehensive and Progressive Agreement for Trans-Pacific Partnership",
@@ -960,6 +1447,13 @@ LEGAL = {
             {"code": "BN", "since": "2023-07-12", "until": None},
             {"code": "GB", "since": "2024-12-15", "until": None},
         ),
+        "source": "https://www.international.gc.ca/trade-commerce/trade-agreements-accords-commerciaux/agr-acc/cptpp-ptpgp/index.aspx?lang=eng",
+        "notes": (
+            "Twelve parties. 'since' is the date the agreement entered into force for each. For GB it "
+            "entered into force on 2024-12-15 with the parties that had ratified by then and on later dates "
+            "with the rest (e.g. AU on 2024-12-24). CR concluded accession negotiations in 2026 but is not "
+            "yet a party."
+        ),
     },
 }
 
@@ -967,14 +1461,14 @@ LEGAL = {
 ALIASES = {
     "africa": "geo:africa", "african continent": "geo:africa", "antarctica": "geo:antarctica",
     "asia": "geo:asia", "asian continent": "geo:asia", "europe": "geo:europe",
-    "european continent": "geo:europe", "north america": "geo:north-america",
+    "european continent": "geo:europe", "eur": "geo:europe", "north america": "geo:north-america",
     "north american continent": "geo:north-america", "south america": "geo:south-america",
     "south american continent": "geo:south-america", "oceania": "geo:oceania",
     "australia and oceania": "geo:oceania", "australia/oceania": "geo:oceania",
     "africa (un m49)": "geo:m49-africa", "africa (m49)": "geo:m49-africa",
     "americas (un m49)": "geo:m49-americas", "americas": "geo:m49-americas",
-    "the americas": "geo:m49-americas", "asia (un m49)": "geo:m49-asia", "asia (m49)": "geo:m49-asia",
-    "europe (un m49)": "geo:m49-europe", "europe (m49)": "geo:m49-europe",
+    "the americas": "geo:m49-americas", "amer": "geo:m49-americas", "asia (un m49)": "geo:m49-asia",
+    "asia (m49)": "geo:m49-asia", "europe (un m49)": "geo:m49-europe", "europe (m49)": "geo:m49-europe",
     "oceania (un m49)": "geo:m49-oceania", "oceania (m49)": "geo:m49-oceania",
     "australia and new zealand (un m49)": "geo:m49-australia-new-zealand", "central asia": "geo:central-asia",
     "eastern asia": "geo:eastern-asia", "eastern europe": "geo:eastern-europe",
@@ -991,7 +1485,10 @@ ALIASES = {
     "us & canada": "geo:us-canada", "us and canada": "geo:us-canada", "usa & canada": "geo:us-canada",
     "usa and canada": "geo:us-canada", "us/canada": "geo:us-canada", "u.s. & canada": "geo:us-canada",
     "canada & us": "geo:us-canada", "canada and the us": "geo:us-canada",
-    "north america (us & canada)": "geo:us-canada", "nordic countries": "geo:nordic", "nordics": "geo:nordic",
+    "north america (us & canada)": "geo:us-canada", "us, canada & mexico": "geo:us-canada-mexico",
+    "us and canada and mexico": "geo:us-canada-mexico", "world": "geo:world", "worldwide": "geo:world",
+    "global": "geo:world", "anywhere": "geo:world", "international": "geo:world", "any location": "geo:world",
+    "everywhere": "geo:world", "nordic countries": "geo:nordic", "nordics": "geo:nordic",
     "nordic region": "geo:nordic", "nordic": "geo:nordic", "norden": "geo:nordic",
     "scandinavia": "geo:scandinavia", "scandinavian countries": "geo:scandinavia", "benelux": "geo:benelux",
     "benelux countries": "geo:benelux", "low countries": "geo:benelux", "iberia": "geo:iberia",
@@ -1006,8 +1503,9 @@ ALIASES = {
     "southeast asia": "geo:southeast-asia", "south east asia": "geo:southeast-asia",
     "south-east asia": "geo:southeast-asia", "se asia": "geo:southeast-asia", "emea": "geo:emea",
     "europe, middle east and africa": "geo:emea", "europe, the middle east and africa": "geo:emea",
-    "apac": "geo:apac", "asia-pacific": "geo:apac", "asia pacific": "geo:apac", "asia/pacific": "geo:apac",
-    "asiapac": "geo:apac", "latam": "geo:latam", "latin america": "geo:latam", "latam region": "geo:latam",
+    "europe middle east africa": "geo:emea", "apac": "geo:apac", "asia-pacific": "geo:apac",
+    "asia pacific": "geo:apac", "asia/pacific": "geo:apac", "asiapac": "geo:apac", "asia pac": "geo:apac",
+    "latam": "geo:latam", "latin america": "geo:latam", "latam region": "geo:latam",
     "na / namer": "geo:namer", "namer": "geo:namer", "noram": "geo:namer",
     "north america (business region)": "geo:namer", "anz": "geo:anz", "australia and new zealand": "geo:anz",
     "australia & new zealand": "geo:anz", "a/nz": "geo:anz", "mena": "geo:mena",

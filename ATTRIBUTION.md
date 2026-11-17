@@ -8,10 +8,12 @@ should still read each licence for its own obligations.
 | Source | Licence | Used in |
 |---|---|---|
 | [OurAirports](https://ourairports.com/data/) | LicenseRef-public-domain | world/airports |
-| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1 |
+| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/country_facts |
 | [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | us/states, us/counties, us/places, us/cbsa, us/csa, us/zcta |
 | [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | ca/provinces, ca/cd, ca/csd, ca/cma |
-| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/cities, package: constants/countries/<country>/cities.py (generated) |
+| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated) |
+| [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
+| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts |
 | [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | ca/provinces, ca/cd, ca/csd, ca/cma, ca/fsa |
 | [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | ca/fsa |
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | in/pincodes |
@@ -26,6 +28,7 @@ should still read each licence for its own obligations.
 | boundaries | ca | Statistics Canada, 2021 Census Boundary Files (cartographic) |
 | boundaries | in | none: No openly licensed, redistributable state or district boundaries found yet (Survey of India data is not under an open licence; NWDP's terms are unclear; geoBoundaries is CC BY 2.5 IN or ODbL). Natural Earth admin1 covers states in the world pack. See packbuild/README.md, India pack. |
 | boundaries | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| countries | world | GeoNames, Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0, Wikidata, Natural Earth 1:10m Cultural Vectors |
 | places | world | GeoNames |
 | places | ca | Statistics Canada, 2021 Census of Population, population and dwelling counts |
 | places | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
@@ -51,6 +54,8 @@ Released into the public domain by the maintainers. The world pack keeps large a
 
 Public domain (naturalearthdata.com/about/terms-of-use). Borders are de facto; per-country ADM0_A3_XX and FCLASS_XX columns describe other worldviews and are kept for the worldview setting. Text fields are NUL-padded.
 
+country_facts uses each country's label point (LABEL_X, LABEL_Y) where GeoNames has no capital.
+
 ## US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations
 
 - Credit: U.S. Census Bureau (census.gov), public domain
@@ -73,7 +78,25 @@ Statistics Canada Open Licence (statcan.gc.ca/en/terms-conditions/open-licence);
 - Licence: CC-BY-4.0
 - Website: https://www.geonames.org
 
+The world pack's country_facts layer takes capital, area, population, top-level domain, calling code, postal code format, languages and neighbours from countryInfo.txt, each country's IANA time zones from timeZones.txt, and the capital's coordinates from cities1000 (the PPLC city). countryInfo gives no reference year for its population and area figures, so the layer carries none.
+
 Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists.
+
+## Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0
+
+- Credit: Unicode Common Locale Data Repository (CLDR), Copyright © 2015-2024 Unicode, Inc., Unicode License v3
+- Licence: Unicode-3.0
+- Website: https://cldr.unicode.org
+
+The cldr-json packages (github.com/unicode-org/cldr-json), pinned to release 49.0.0. Currency per territory (the first current legal tender in currencyData, an ISO 4217 code; also the package's offline currency_codes table) with its English name and symbols; measurement system (CLDR 'UK' is read as imperial-mixed) and first day of the week per territory, falling back to CLDR's world default (001) as CLDR does; and the short date pattern of each territory's likely locale (likelySubtags 'und-XX'), read from '<dates><locale>/ca-gregorian.json'. cldr-json locale files are resolved, so a regional locale already carries what it inherits. CLDR has no driving side.
+
+## Wikidata
+
+- Credit: Wikidata (wikidata.org), CC0
+- Licence: CC0-1.0
+- Website: https://www.wikidata.org
+
+Driving side (property P1622, values Q11920728 left and Q14565199 right) of every item with an ISO 3166-1 alpha-2 code (P297), leaving out deprecated statements and ones with an end time (P582). A code whose current statements disagree gets no driving side. The query result is cached on the first build; rebuilding with --refresh asks again.
 
 ## Statistics Canada, 2021 Census of Population, population and dwelling counts
 

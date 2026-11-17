@@ -1,0 +1,18 @@
+{
+ "main": {
+  "hi": {
+   "dates": {
+    "calendars": {
+     "gregorian": {
+      "dateFormats": {
+       "full": "",
+       "long": "",
+       "medium": "",
+       "short": "d/M/yy"
+      }
+     }
+    }
+   }
+  }
+ }
+}

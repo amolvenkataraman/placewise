@@ -1,6 +1,6 @@
 """United States: country-level details. Its states, DC and territories are in `subregions`.
 
-Codes and names come from the ISO 3166-1 table in `countries.countries`; the currency is ISO 4217.
+Codes and names come from the ISO 3166-1 table in `countries.countries`.
 """
 
 import re
@@ -14,7 +14,6 @@ NUMERIC = COUNTRY.numeric
 NAME = COUNTRY.name
 OFFICIAL_NAME = "United States of America"
 ALIASES = COUNTRY.aliases
-CURRENCY = "USD"
 SUBREGION_KIND = "state"  # what its admin1 is called
 # ZIP or ZIP+4 (USPS)
 POSTAL_CODE = re.compile(r"\b\d{5}(?:-\d{4})?\b")

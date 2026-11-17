@@ -5,12 +5,16 @@
   `subregions` (admin1); `cities` there are GENERATED from GeoNames by packbuild.cities.
 - `regions`: metro and vernacular regions, GENERATED from datasets/regions by packbuild.regions.
 - `city_aliases`: other names of cities, GENERATED from datasets/city_aliases.json.
-- `ambiguous`, `macro_regions`: names several places share, and macro regions for remote scope.
-- `currencies`, `conventions`: country facts (to move to the country profile).
+- `groups`: country groups (continents, UN M49 regions, business regions, unions, treaties ...)
+  with dated memberships, GENERATED from datasets/country_groups by packbuild.country_groups.
+- `currency_codes`: the ISO 4217 code per country, GENERATED from CLDR by packbuild.currency_codes.
+  Every other country fact (capital, languages, conventions ...) is in the world pack's
+  country_facts layer, read by `placewise.world.profile`.
+- `ambiguous`: names several places share; `conventions`: how location strings write countries.
 """
 
-from . import ambiguous, can, city_aliases, conventions, currencies, gbr, ind, macro_regions, regions, usa
-from ._records import Candidate, CityAlias, MacroRegion, Metro, NameClash
+from . import ambiguous, can, city_aliases, conventions, currency_codes, gbr, ind, regions, usa
+from ._records import Candidate, CityAlias, Metro, NameClash
 from .countries import BY_ALPHA2, BY_ALPHA3, BY_NAME, BY_NUMERIC, COUNTRIES, Country, lookup
 
 # alpha-2 -> that country's subregions module (SUBREGIONS, BY_CODE, BY_NAME, lookup)
@@ -35,18 +39,16 @@ __all__ = [
     "Candidate",
     "CityAlias",
     "Country",
-    "MacroRegion",
     "Metro",
     "NameClash",
     "ambiguous",
     "can",
     "city_aliases",
     "conventions",
-    "currencies",
+    "currency_codes",
     "gbr",
     "ind",
     "lookup",
-    "macro_regions",
     "regions",
     "usa",
 ]

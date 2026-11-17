@@ -58,15 +58,3 @@ class NameClash:
     admin1_country: str
     country: str
     country_cities: tuple[str, ...] = ()  # cities that settle it for the country
-
-
-@dataclass(frozen=True)
-class MacroRegion:
-    """A region that limits remote work ("EMEA"); `members` None means no limit."""
-
-    name: str
-    aliases: tuple[str, ...]
-    members: frozenset[str] | None
-
-    def contains(self, country):
-        return self.members is None or country in self.members

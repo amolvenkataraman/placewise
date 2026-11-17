@@ -1,0 +1,52 @@
+{
+ "head": {
+  "vars": [
+   "iso",
+   "side"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "iso": {
+     "type": "literal",
+     "value": "CA"
+    },
+    "side": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q14565199"
+    }
+   },
+   {
+    "iso": {
+     "type": "literal",
+     "value": "IN"
+    },
+    "side": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q11920728"
+    }
+   },
+   {
+    "iso": {
+     "type": "literal",
+     "value": "US"
+    },
+    "side": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q14565199"
+    }
+   },
+   {
+    "iso": {
+     "type": "literal",
+     "value": "US"
+    },
+    "side": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q11920728"
+    }
+   }
+  ]
+ }
+}

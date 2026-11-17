@@ -1,0 +1,14 @@
+{
+ "supplemental": {
+  "version": {
+   "_cldrVersion": "49"
+  },
+  "measurementData": {
+   "measurementSystem": {
+    "001": "metric",
+    "GB": "UK",
+    "US": "US"
+   }
+  }
+ }
+}

@@ -32,6 +32,7 @@ from .settings import (
     Settings,
     WorldviewSettings,
 )
+from .world import Country, CountryGroup, Currency, Membership, Profile, Statistic, Subregion
 
 __all__ = [
     "Add",
@@ -41,6 +42,9 @@ __all__ = [
     "BBox",
     "CityRule",
     "ComplianceSettings",
+    "Country",
+    "CountryGroup",
+    "Currency",
     "DataSettings",
     "DayPresence",
     "Disputed",
@@ -50,6 +54,7 @@ __all__ = [
     "Label",
     "LabelSettings",
     "Layer",
+    "Membership",
     "NameSettings",
     "NearSettings",
     "Nearby",
@@ -62,6 +67,7 @@ __all__ = [
     "PresenceDays",
     "PrivacyPolicy",
     "PrivacyZone",
+    "Profile",
     "RegionRule",
     "Relation",
     "Relative",
@@ -70,6 +76,8 @@ __all__ = [
     "ServerSettings",
     "Settings",
     "Source",
+    "Statistic",
+    "Subregion",
     "Tune",
     "WorldviewSettings",
 ]

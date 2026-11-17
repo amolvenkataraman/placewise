@@ -1,0 +1,73 @@
+{
+  "purpose": "countries",
+  "description": "Country facts: ISO codes, currencies, conventions, profiles.",
+  "regions": {
+    "world": [
+      {
+        "id": "geonames",
+        "name": "GeoNames",
+        "url": "https://www.geonames.org",
+        "licence": "CC-BY-4.0",
+        "credit": "GeoNames (geonames.org), CC BY 4.0",
+        "used_in": [
+          "world/country_facts"
+        ],
+        "downloads": {
+          "country_info": "https://download.geonames.org/export/dump/countryInfo.txt",
+          "time_zones": "https://download.geonames.org/export/dump/timeZones.txt",
+          "cities": "https://download.geonames.org/export/dump/cities1000.zip"
+        },
+        "notes": "The world pack's country_facts layer takes capital, area, population, top-level domain, calling code, postal code format, languages and neighbours from countryInfo.txt, each country's IANA time zones from timeZones.txt, and the capital's coordinates from cities1000 (the PPLC city). countryInfo gives no reference year for its population and area figures, so the layer carries none."
+      },
+      {
+        "id": "cldr",
+        "name": "Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0",
+        "url": "https://cldr.unicode.org",
+        "licence": "Unicode-3.0",
+        "credit": "Unicode Common Locale Data Repository (CLDR), Copyright © 2015-2024 Unicode, Inc., Unicode License v3",
+        "used_in": [
+          "world/country_facts",
+          "package: constants/countries/currency_codes.py (generated)"
+        ],
+        "downloads": {
+          "measurement_data": "https://raw.githubusercontent.com/unicode-org/cldr-json/49.0.0/cldr-json/cldr-core/supplemental/measurementData.json",
+          "week_data": "https://raw.githubusercontent.com/unicode-org/cldr-json/49.0.0/cldr-json/cldr-core/supplemental/weekData.json",
+          "likely_subtags": "https://raw.githubusercontent.com/unicode-org/cldr-json/49.0.0/cldr-json/cldr-core/supplemental/likelySubtags.json",
+          "available_locales": "https://raw.githubusercontent.com/unicode-org/cldr-json/49.0.0/cldr-json/cldr-core/availableLocales.json",
+          "currencies_en": "https://raw.githubusercontent.com/unicode-org/cldr-json/49.0.0/cldr-json/cldr-numbers-full/main/en/currencies.json",
+          "currency_data": "https://raw.githubusercontent.com/unicode-org/cldr-json/49.0.0/cldr-json/cldr-core/supplemental/currencyData.json",
+          "dates": "https://raw.githubusercontent.com/unicode-org/cldr-json/49.0.0/cldr-json/cldr-dates-full/main/"
+        },
+        "notes": "The cldr-json packages (github.com/unicode-org/cldr-json), pinned to release 49.0.0. Currency per territory (the first current legal tender in currencyData, an ISO 4217 code; also the package's offline currency_codes table) with its English name and symbols; measurement system (CLDR 'UK' is read as imperial-mixed) and first day of the week per territory, falling back to CLDR's world default (001) as CLDR does; and the short date pattern of each territory's likely locale (likelySubtags 'und-XX'), read from '<dates><locale>/ca-gregorian.json'. cldr-json locale files are resolved, so a regional locale already carries what it inherits. CLDR has no driving side."
+      },
+      {
+        "id": "wikidata",
+        "name": "Wikidata",
+        "url": "https://www.wikidata.org",
+        "licence": "CC0-1.0",
+        "credit": "Wikidata (wikidata.org), CC0",
+        "used_in": [
+          "world/country_facts"
+        ],
+        "downloads": {
+          "driving_side": "https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fiso%20%3Fside%20WHERE%20%7B%20%3Fcountry%20wdt%3AP297%20%3Fiso%3B%20p%3AP1622%20%3Fstatement.%20%3Fstatement%20ps%3AP1622%20%3Fside%3B%20wikibase%3Arank%20%3Frank.%20FILTER%28%3Frank%20%21%3D%20wikibase%3ADeprecatedRank%29%20FILTER%20NOT%20EXISTS%20%7B%20%3Fstatement%20pq%3AP582%20%3Fend%20%7D%20%7D"
+        },
+        "notes": "Driving side (property P1622, values Q11920728 left and Q14565199 right) of every item with an ISO 3166-1 alpha-2 code (P297), leaving out deprecated statements and ones with an end time (P582). A code whose current statements disagree gets no driving side. The query result is cached on the first build; rebuilding with --refresh asks again."
+      },
+      {
+        "id": "naturalearth",
+        "name": "Natural Earth 1:10m Cultural Vectors",
+        "url": "https://www.naturalearthdata.com",
+        "licence": "LicenseRef-public-domain",
+        "credit": "Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.",
+        "used_in": [
+          "world/country_facts"
+        ],
+        "downloads": {
+          "countries": "https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip"
+        },
+        "notes": "country_facts uses each country's label point (LABEL_X, LABEL_Y) where GeoNames has no capital."
+      }
+    ]
+  }
+}

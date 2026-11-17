@@ -1,4 +1,4 @@
-"""Canada: `country` (codes, names, currency, postal code format), generated `cities` and `subregions`
+"""Canada: `country` (codes, names, postal code format), generated `cities` and `subregions`
 (its provinces and territories)."""
 
 from . import cities, country, subregions

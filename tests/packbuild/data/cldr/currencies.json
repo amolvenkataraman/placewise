@@ -1,0 +1,25 @@
+{
+ "main": {
+  "en": {
+   "numbers": {
+    "currencies": {
+     "CAD": {
+      "displayName": "Canadian Dollar",
+      "symbol": "CA$",
+      "symbol-alt-narrow": "$"
+     },
+     "INR": {
+      "displayName": "Indian Rupee",
+      "symbol": "₹",
+      "symbol-alt-narrow": "₹"
+     },
+     "USD": {
+      "displayName": "US Dollar",
+      "symbol": "$",
+      "symbol-alt-narrow": "$"
+     }
+    }
+   }
+  }
+ }
+}
