@@ -91,7 +91,7 @@ region they name. See `packbuild/README.md`, "Regions layer".
 ```python
 from placewise.packs import open_pack
 
-regions = open_pack("ca-2026.11")["regions"]
+regions = open_pack("can-2026.11")["regions"]
 [regions.value("id", i) for i in regions.query_all(43.2557, -79.8711)]
 # ["region:gtha", "region:golden-horseshoe"]: Hamilton is in the GTHA, not the GTA
 ```

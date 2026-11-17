@@ -12,7 +12,7 @@ coordinate-free logs. This page covers hosting it for other people.
 | `GET /v1/lookup?lat=43.6426&lon=-79.3871&worldview=IN,de_facto` | one `Result` |
 | `POST /v1/lookup` `{"points": [[lat, lon], ...], "worldview": ["UN"]}` | `{"results": [Result, ...]}` |
 | `GET /v1/health` | `{"status", "data_version", "uptime_s"}` (and `cache` for the service) |
-| `GET /v1/attribution` / `?format=json` | the attribution markdown / the source registry |
+| `GET /v1/attribution` / `?format=json` | the attribution markdown / registry entries of the sources of the packs served (`&all=1`: every source) |
 | `GET /v1/version` | `{"placewise", "api", "data_version", "max_batch"}` |
 
 A `Result` is exactly `Result.to_dict()`. Errors are `{"error": {"code": ..., "message": ...}}`:

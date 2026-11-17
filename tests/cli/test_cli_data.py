@@ -33,9 +33,9 @@ def test_where_uses_env_without_options(capsys, tmp_path, monkeypatch):
 
 def test_install_list_update_prune_remove(run, release):
     release.add("world", "2026.10")
-    release.add("ca", "2026.11")
-    code, out, _ = run("data", "install", "world", "ca")
-    assert code == 0 and "world 2026.10" in out and "ca 2026.11" in out
+    release.add("can", "2026.11")
+    code, out, _ = run("data", "install", "world", "can")
+    assert code == 0 and "world 2026.10" in out and "can 2026.11" in out
 
     code, out, _ = run("data", "install", "world")
     assert code == 0 and "already installed" in out
@@ -46,7 +46,7 @@ def test_install_list_update_prune_remove(run, release):
     lines = {tuple(line.split()[:2]): line for line in out.splitlines() if line.strip()}
     assert "current" in lines[("world", "2026.10")]
     assert "available" in lines[("world", "2026.11")]
-    assert "current" in lines[("ca", "2026.11")]
+    assert "current" in lines[("can", "2026.11")]
 
     code, out, _ = run("data", "update")
     assert code == 0 and "world 2026.10 -> 2026.11" in out
@@ -59,11 +59,11 @@ def test_install_list_update_prune_remove(run, release):
     code, out, _ = run("data", "prune", "--keep", "1")
     assert code == 0 and "world 2026.10" in out
 
-    code, out, _ = run("data", "remove", "ca")
-    assert code == 0 and "ca 2026.11" in out
+    code, out, _ = run("data", "remove", "can")
+    assert code == 0 and "can 2026.11" in out
     code, out, _ = run("data", "list", "--offline")
-    assert "ca" in out  # still in the cached index, as available
-    assert "installed" not in next(line for line in out.splitlines() if line.startswith("ca"))
+    assert "can" in out  # still in the cached index, as available
+    assert "installed" not in next(line for line in out.splitlines() if line.startswith("can"))
 
 
 def test_list_marks_pinned(run, release, data_dir, capsys):

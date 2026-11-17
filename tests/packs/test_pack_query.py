@@ -110,6 +110,32 @@ def test_query_all_equals_brute_force(tmp_path, kind):
 
 
 @pytest.mark.parametrize("kind", list(LAYERS))
+def test_contains_tests_each_point_against_its_own_feature(tmp_path, kind):
+    features = LAYERS[kind]
+    layer = _open(tmp_path, features)
+    rng = np.random.default_rng(3)
+    lats, lons = _random_points(features, rng, 3000)
+    hits = np.array([np.asarray(f.contains(lats, lons)) for f in features])
+    # half the points get the last feature containing them (query names the first), half any
+    last = np.where(hits.any(axis=0), len(features) - 1 - np.argmax(hits[::-1], axis=0), -1)
+    given = np.where(rng.random(len(lats)) < 0.5, last, rng.integers(-1, len(features), len(lats)))
+    expected = np.where(given >= 0, hits[given, np.arange(len(lats))], False)
+    assert 0.1 < expected.mean() < 0.9
+    np.testing.assert_array_equal(layer.contains(lats, lons, given), expected)
+
+
+def test_contains_behind_an_earlier_overlapping_feature_scalars_and_shapes(tmp_path):
+    layer = _open(tmp_path, [SQUARE, ISLANDS, OVERLAP])
+    assert layer.query(9, 9) == 0 and layer.contains(9, 9, 2) is True  # query names only the first
+    assert layer.contains(5, 5, 0) is False  # in the hole
+    assert layer.contains(1, 31, -1) is False  # no feature given
+    np.testing.assert_array_equal(layer.contains([[2.0, 1.0]], [[2.0, 31.0]], [[0, 0]]), [[True, False]])
+    assert layer.contains(np.nan, 0, 0) is False
+    with pytest.raises(IndexError):
+        layer.contains(2, 2, 3)
+
+
+@pytest.mark.parametrize("kind", list(LAYERS))
 def test_inside_cells_never_change_an_answer(tmp_path, kind):
     features = LAYERS[kind]
     layer = _open(tmp_path, features, cell_deg=0.5)

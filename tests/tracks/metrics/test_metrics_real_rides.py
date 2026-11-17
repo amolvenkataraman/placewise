@@ -1,4 +1,4 @@
-"""Realism check: clean and measure on real 1 Hz bus rides (tests/data/tracks, anonymised, CC0)."""
+"""Realism check: clean and measure on real 1 Hz bus rides (tests/data/tracks, anonymised, CC BY 4.0)."""
 
 import re
 from pathlib import Path

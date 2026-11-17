@@ -117,12 +117,12 @@ def build_ca(
     tolerance_m=statcan.DEFAULT_TOLERANCE_M,
     regions=None,
 ):
-    """Fetch the sources, build the layers and write `<out_dir>/ca-<version>/`."""
+    """Fetch the sources, build the layers and write `<out_dir>/can-<version>/`."""
     layers = build_layers(cache_dir, refresh=refresh, via=via, tolerance_m=tolerance_m, regions=regions)
     for layer in layers:
         vertices = sum(len(r) for f in layer.features for o in f.outlines for r in o.rings)
         log.info("%s: %d features, %d vertices", layer.name, len(layer.columns["id"]), vertices)
-    return write_pack(Path(out_dir), "ca", version, layers)
+    return write_pack(Path(out_dir), "can", version, layers)
 
 
 def main(argv=None):

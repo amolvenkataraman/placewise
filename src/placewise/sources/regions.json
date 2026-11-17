@@ -2,7 +2,7 @@
   "purpose": "regions",
   "description": "Metropolitan, statistical and curated regions: CBSA/CSA and CMA layers, and the curated regions (Bay Area, GTA, GTHA, Delhi NCR ...) drawn in each country pack's `regions` layer as unions of official units.",
   "regions": {
-    "us": [
+    "usa": [
       {
         "id": "uscensus",
         "name": "US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations",
@@ -10,13 +10,13 @@
         "licence": "LicenseRef-public-domain",
         "credit": "U.S. Census Bureau (census.gov), public domain",
         "used_in": [
-          "us/states",
-          "us/counties",
-          "us/places",
-          "us/cbsa",
-          "us/csa",
-          "us/zcta",
-          "us/regions"
+          "usa/states",
+          "usa/counties",
+          "usa/places",
+          "usa/cbsa",
+          "usa/csa",
+          "usa/zcta",
+          "usa/regions"
         ],
         "downloads": {
           "cbsa": "https://www2.census.gov/geo/tiger/GENZ2025/shp/cb_2025_us_cbsa_500k.zip",
@@ -33,11 +33,11 @@
         "credit": "placewise curated datasets, CC BY 4.0",
         "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
         "used_in": [
-          "us/regions"
+          "usa/regions"
         ]
       }
     ],
-    "ca": [
+    "can": [
       {
         "id": "statcan-boundaries-2021",
         "name": "Statistics Canada, 2021 Census Boundary Files (cartographic)",
@@ -45,11 +45,11 @@
         "licence": "LicenseRef-StatCan-Open-Licence",
         "credit": "Adapted from Statistics Canada, 2021 Census Boundary Files (cartographic), reference date January 1, 2021. This does not constitute an endorsement by Statistics Canada of this product.",
         "used_in": [
-          "ca/provinces",
-          "ca/cd",
-          "ca/csd",
-          "ca/cma",
-          "ca/regions"
+          "can/provinces",
+          "can/cd",
+          "can/csd",
+          "can/cma",
+          "can/regions"
         ],
         "downloads": {
           "cma": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lcma000b21a_e.zip",
@@ -64,11 +64,11 @@
         "licence": "LicenseRef-StatCan-Open-Licence",
         "credit": "Adapted from Statistics Canada, Census of Population 2021, Population and dwelling counts (tables 98-10-0002-01, 98-10-0005-01 and 98-10-0019-01), reference date May 11, 2021. This does not constitute an endorsement by Statistics Canada of this product.",
         "used_in": [
-          "ca/provinces",
-          "ca/cd",
-          "ca/csd",
-          "ca/cma",
-          "ca/fsa"
+          "can/provinces",
+          "can/cd",
+          "can/csd",
+          "can/cma",
+          "can/fsa"
         ],
         "downloads": {
           "cma": "https://www150.statcan.gc.ca/n1/tbl/csv/98100005-eng.zip"
@@ -83,11 +83,11 @@
         "credit": "placewise curated datasets, CC BY 4.0",
         "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
         "used_in": [
-          "ca/regions"
+          "can/regions"
         ]
       }
     ],
-    "in": [
+    "ind": [
       {
         "id": "indiapost-pincode-boundary",
         "name": "All India Pincode Boundary (Department of Posts, Open Government Data Platform India)",
@@ -95,7 +95,7 @@
         "licence": "LicenseRef-GODL-India",
         "credit": "Department of Posts, Ministry of Communications, Government of India. All India Pincode Boundary Geo JSON, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
         "used_in": [
-          "in/regions"
+          "ind/regions"
         ],
         "notes": "India's curated regions are drawn as unions of PIN code areas grouped by district, since no district polygons are openly licensed."
       },
@@ -106,7 +106,7 @@
         "licence": "LicenseRef-GODL-India",
         "credit": "Department of Posts, Ministry of Communications, Government of India. All India Pincode Directory, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
         "used_in": [
-          "in/regions"
+          "ind/regions"
         ],
         "notes": "The directory's district column decides which PIN areas make up a district."
       },
@@ -118,7 +118,7 @@
         "credit": "placewise curated datasets, CC BY 4.0",
         "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
         "used_in": [
-          "in/regions"
+          "ind/regions"
         ]
       }
     ]

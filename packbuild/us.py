@@ -59,11 +59,11 @@ def build_layers(cache_dir, refresh=False, regions=None):
 
 
 def build_us(cache_dir, out_dir, version, refresh=False, regions=None):
-    """Fetch the sources, build the layers and write `<out_dir>/us-<version>/`."""
+    """Fetch the sources, build the layers and write `<out_dir>/usa-<version>/`."""
     layers = build_layers(cache_dir, refresh=refresh, regions=regions)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "us", version, layers)
+    return write_pack(Path(out_dir), "usa", version, layers)
 
 
 def main(argv=None):

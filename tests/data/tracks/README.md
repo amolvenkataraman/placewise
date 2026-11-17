@@ -2,7 +2,7 @@
 
 Short stretches of public-transit rides recorded at 1 Hz with a phone GPS logger, contributed by
 the project owner as realistic test data (GPS jitter, speed, satellite counts, urban canyons,
-highway driving). Released under CC0-1.0.
+highway driving). Licensed under CC BY 4.0: see `LICENSE.md`.
 
 Anonymised before inclusion:
 

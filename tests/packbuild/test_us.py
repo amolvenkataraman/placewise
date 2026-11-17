@@ -69,10 +69,10 @@ def test_build_us_fetches_every_registry_url_and_hands_seven_layers_to_the_write
 
     monkeypatch.setattr(us, "write_pack", fake_write_pack)
     out = us.build_us(tmp_path / "cache", tmp_path / "out", "2026.11")
-    assert out == tmp_path / "out" / "us-2026.11"
+    assert out == tmp_path / "out" / "usa-2026.11"
     assert sorted(offline) == sorted(SOURCES["uscensus"].downloads.values())
     [(out_dir, name, version, layers)] = calls
-    assert (out_dir, name, version) == (tmp_path / "out", "us", "2026.11")
+    assert (out_dir, name, version) == (tmp_path / "out", "usa", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
     assert {layer.name: len(layer.columns["id"]) for layer in layers} == COUNTS
     for layer in layers:
@@ -129,4 +129,4 @@ def test_a_region_member_missing_from_the_counties_fails_the_build(tmp_path, off
 
 def test_main_builds_into_the_given_directories(tmp_path, offline, capsys):
     us.main(["--cache-dir", str(tmp_path / "cache"), "--out", str(tmp_path / "out"), "--version", "2026.11"])
-    assert capsys.readouterr().out.strip() == str(tmp_path / "out" / "us-2026.11")
+    assert capsys.readouterr().out.strip() == str(tmp_path / "out" / "usa-2026.11")

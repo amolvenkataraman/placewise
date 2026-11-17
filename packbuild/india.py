@@ -55,8 +55,9 @@ def build_layers(
             url(indiapost.DIRECTORY_SOURCE, "directory_mirror"), cache_dir, refresh=refresh
         )
     pincodes = indiapost.pincodes(pincode_boundaries, pincode_directory)
-    layers.append(pincodes)
-    layers.append(indiapost.post_offices(pincode_directory))
+    # an office keeps its coordinates only in or near its own PIN area (indiapost.OFFICE_BUFFER_KM)
+    offices, _ = indiapost.keep_placed_offices(indiapost.post_offices(pincode_directory), pincodes)
+    layers.extend([pincodes, offices])
     curated = regions_layer.for_country(regions, "IN")
     c = pincodes.columns
     regions_layer.check_districts(curated, zip(c["id"], c["state_code"], c["district"], strict=True))
@@ -65,11 +66,11 @@ def build_layers(
 
 
 def build_india(cache_dir, out_dir, version, refresh=False, **paths):
-    """Build the layers (see build_layers for the optional file paths) and write `<out_dir>/in-<version>/`."""
+    """Build the layers (see build_layers for the optional file paths); write `<out_dir>/ind-<version>/`."""
     layers = build_layers(cache_dir, refresh=refresh, **paths)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "in", version, layers)
+    return write_pack(Path(out_dir), "ind", version, layers)
 
 
 def main(argv=None):

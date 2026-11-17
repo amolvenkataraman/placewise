@@ -34,7 +34,8 @@ Natural Earth's default files draw borders de facto. Its per-worldview attribute
 
 The world pack carries no time-zone polygons. The usual source, timezone-boundary-builder, is
 built from OpenStreetMap and is ODbL (share-alike), and share-alike data may only go in the
-separate share-alike pack (`placewise.constants.licences.SHARE_ALIKE`), never in `world`.
+separate share-alike packs (`placewise.constants.licences.SHARE_ALIKE`; named `<name>-sa`), never in
+`world`.
 
 Plan:
 
@@ -46,10 +47,10 @@ Plan:
   derived-database offer that licence requires. When it is installed, polygons win; the
   nearest-city rule stays as the fallback.
 
-## US pack
+## US pack (`usa`)
 
 ```
-uv run python -m packbuild.us --version 2026.11        # writes .cache/packbuild/out/us-2026.11/
+uv run python -m packbuild.us --version 2026.11        # writes .cache/packbuild/out/usa-2026.11/
 ```
 
 Everything comes from the US Census Bureau (registry id `uscensus`, public domain):
@@ -90,10 +91,10 @@ same id as the world pack's admin1. Member lists (`counties`, `cbsas`) are comma
   outside the clipped shape (San Francisco's is on the Farallon Islands).
 - **Delineation.** OMB list 1 is an .xlsx; it is read with the standard library (zip + XML).
 
-## Canada pack
+## Canada pack (`can`)
 
 ```
-uv run python -m packbuild.ca --version 2026.11 --via service   # writes .cache/packbuild/out/ca-2026.11/
+uv run python -m packbuild.ca --version 2026.11 --via service   # writes .cache/packbuild/out/can-2026.11/
 ```
 
 | Layer | Kind | Source | Licence |
@@ -159,10 +160,10 @@ Horseshoe are curated as unions of census divisions (and one CSD) in the `region
   code is M5V). Full six-character postal codes and their coordinates are Canada Post data and are
   not open data in Canada; placewise uses no postal-code-to-coordinate dataset.
 
-## India pack
+## India pack (`ind`)
 
 ```
-uv run python -m packbuild.india --version 2026.11     # writes .cache/packbuild/out/in-2026.11/
+uv run python -m packbuild.india --version 2026.11     # writes .cache/packbuild/out/ind-2026.11/
 uv run python -m packbuild.india --version 2026.11 \
     --pincode-boundaries All_India_pincode_Boundary-19312.geojson --pincode-directory pincode.csv
 ```
@@ -170,7 +171,7 @@ uv run python -m packbuild.india --version 2026.11 \
 | Layer | Kind | Source | Licence |
 |---|---|---|---|
 | `pincodes` | polygon | All India Pincode Boundary (Department of Posts, 2025), district and state joined from the directory | GODL-India |
-| `post_offices` | point | All India Pincode Directory (Department of Posts): offices with usable coordinates | GODL-India |
+| `post_offices` | point | All India Pincode Directory (Department of Posts): offices whose coordinates lie in or within 2 km of their own PIN area | GODL-India |
 | `regions` | polygon | curated regions as unions of PIN areas grouped by district (see [Regions layer](#regions-layer-us-canada-and-india-packs)) | CC BY 4.0 + GODL-India |
 
 Registry: `indiapost-pincode-boundary`, `indiapost-pincode-directory`. Ids: `pin:560001`;
@@ -192,6 +193,22 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
 - **Coordinates.** Directory coordinates are kept only when both are plain numbers inside a box
   round India (6-38 N, 68-98 E); "NA", the 1/1 placeholder and values with stray characters (a
   trailing "-") are dropped, not repaired. GeoJSON whose `crs` is not WGS84 is refused.
+- **Offices against their PIN areas.** Many directory coordinates are wrong: on the 2026.11
+  build only 91,016 of the 143,571 offices with usable coordinates (63.4%) lie inside their own
+  PIN area, 41,573 lie in another PIN area (often another district or state) and 1,577 in none
+  (outside India, some in neighbouring countries, or off the coast). So an office keeps its point
+  only if it is inside its own PIN polygon or within 2 km of its boundary
+  (`indiapost.OFFICE_BUFFER_KM`, `keep_placed_offices`); the rest, and the 283 offices whose PIN
+  code has no polygon, are left out of `post_offices`, and the build logs each count. That kept
+  100,138 offices: the 91,016 inside, which are now 90.9% of the layer, and 9,122 within 2 km.
+  Why 2 km: PIN areas are generalised delivery zones and offices often sit on the road that bounds
+  one, so a strict inside test drops good points (4,109 lie within 500 m outside, 6,342 within
+  1 km); past a couple of km the point is inside a neighbouring area, and the count keeps rising
+  with no clear break (13,961 within 5 km, 19,218 within 10 km), which is the signature of points
+  misplaced by whole areas rather than metres. The test runs on placewise's own pack geometry
+  (`PolygonLayer.contains`, `near_boundary`; distances exact on the sphere): the PIN areas are
+  written to a temporary pack first; the check takes about 35 s of the build's ~50 s. Ids keep
+  the directory's numbering, so a left-out office leaves a gap rather than renumbering the rest.
 - **Disputed areas.** PIN areas are delivery zones as published by the Department of Posts (a
   Government of India body), not administrative boundaries; the pack carries them unchanged.
   Whether any extend into areas whose status is disputed has not been checked yet (do it on the
@@ -207,7 +224,7 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
   third-party material, and its SHP and GeoJSON are projected (EPSG:7755, refused; its KMZ is
   WGS84). geoBoundaries' India ADM1 is CC BY 2.5 India (not an accepted licence) and ADM2 is
   ODbL (share-alike pack only); LGD/Bharatmaps and Bhuvan layers carry no licence; GADM is denied.
-  `--states`/`--districts` are refused until `boundaries.json` lists an `nwdp-soi-boundaries` entry for `in`.
+  `--states`/`--districts` are refused until `boundaries.json` lists an `nwdp-soi-boundaries` entry for `ind`.
   Survey of India boundaries show India's official view, including areas India claims that other
   countries administer; Natural Earth's world admin1 is de facto.
 - *Census 2011 towns.* The Town Directory has no coordinates; GeoNames in the world pack covers
@@ -268,7 +285,7 @@ uv run python -m packbuild.us --version 2026.11
 
 # 2. prepare: verify, archive, index (nothing is uploaded; prints the gh command it would run)
 uv run python -m packbuild.release \
-    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/us-2026.11 \
+    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/usa-2026.11 \
     --out .cache/packbuild/release/2026.11
 
 # 3. test the release directory as placewise would use it
@@ -279,20 +296,24 @@ uv run placewise --data-dir /tmp/pw-test \
 
 # 4. publish (needs both the flag and the environment switch; uses gh's login)
 PLACEWISE_ALLOW_PUBLISH=1 uv run python -m packbuild.release \
-    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/us-2026.11 \
+    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/usa-2026.11 \
     --out .cache/packbuild/release/2026.11 --publish [--tag 2026.11]
 ```
 
 `packbuild.release.prepare_release(pack_dirs, out_dir)` re-hashes every pack (`open_pack(verify=True)`)
 and refuses a pack name given twice, a pack schema other than the index's, a directory not named
-`<name>-<version>` and a source id missing from the registry. It writes into `--out`:
+`<name>-<version>`, a source id missing from the registry, and a share-alike source
+(`placewise.constants.licences.SHARE_ALIKE`) in any pack whose name doesn't end in `-sa`
+(`placewise.constants.packs.SHARE_ALIKE_SUFFIX`): share-alike data ships only in its own packs. It
+writes into `--out`:
 
 | File | |
 |---|---|
 | `<name>-<version>.tar.xz` | `placewise.packs.archive`: byte-for-byte reproducible from the pack's contents |
 | `index.json` | `write_index`: relative URLs, so the directory is a complete mirror |
-| `ATTRIBUTION.md` | `attribution.render_markdown(only=...)`: just the sources these packs use |
-| `SHA256SUMS` | for `sha256sum -c` |
+| `ATTRIBUTION.md` | `attribution.render_markdown(only=...)`: the disclaimer, then just the sources these packs use |
+| `DISCLAIMER.md` | a copy of the repository's, which `ATTRIBUTION.md` links to |
+| `SHA256SUMS` | for `sha256sum -c` (every asset above) |
 | `release-notes.md` | the release description (`--notes-file`), not an asset |
 
 `publish(plan, repo=..., tag=None, dry_run=True)` builds `gh release create <tag> --repo <repo>
