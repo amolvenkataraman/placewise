@@ -1,0 +1,8 @@
+placewise
+Copyright 2026 the placewise authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The data packs and curated datasets are not covered by this licence: each pack carries data under
+the licences of the datasets it was built from (see ATTRIBUTION.md), and the curated datasets in
+the placewise-data repository are licensed CC BY 4.0.

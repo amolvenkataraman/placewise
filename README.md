@@ -104,6 +104,12 @@ Packs are published as release assets of `amolvenkataraman/placewise-data` (`ind
 - Distances are kilometres unless a name ends in `_m`.
 - English names only; standard coordinate systems only (no obfuscated ones like GCJ-02).
 
+## Licence
+
+The code is licensed under the [Apache License 2.0](LICENSE) (see also [NOTICE](NOTICE)). The data
+packs keep their sources' licences (`ATTRIBUTION.md`); placewise's own curated datasets, in the
+placewise-data repository, are CC BY 4.0.
+
 ## Disclaimer
 
 placewise and its data packs are provided "as is" and "where is", with no warranty of any kind and

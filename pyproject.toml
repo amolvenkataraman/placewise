@@ -3,6 +3,8 @@ name = "placewise"
 version = "0.0.1"
 description = "Offline, two-way geocoding and geo toolkit: the place people would name, plus distances, bearings, shapes and coordinates."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
 
