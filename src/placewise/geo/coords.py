@@ -18,6 +18,7 @@ _URL_PATTERNS = [
 ]
 # numbers, and hemisphere letters standing alone (so the N in "LON" or E in "HELLO" don't count)
 _TOKEN = re.compile(r"(?<![A-Z])[NSEW](?![A-Z])|-?\d+(?:\.\d+)?")
+_NUMBERS = (float, int)  # validate's fast path; bool is an int, and numpy's float64 a float
 _SYMBOLS = str.maketrans({"′": "'", "’": "'", "″": '"', "”": '"', "º": "°"})
 
 
@@ -73,6 +74,14 @@ def normalize_lon(lon):
 
 def validate(lat, lon):
     """Raise ValueError unless every lat is in [-90, 90] and every lon in [-180, 180], all finite."""
+    if isinstance(lat, _NUMBERS) and isinstance(lon, _NUMBERS):
+        # plain numbers (numpy's float64 is a float too): the same checks without making arrays
+        lat, lon = float(lat), float(lon)
+        if -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0:  # False for NaN
+            return
+        if not (math.isfinite(lat) and math.isfinite(lon)):
+            raise ValueError("coordinates must be finite")
+        raise ValueError("latitude must be within ±90 and longitude within ±180")
     lat, lon = as_floats(lat, lon)
     if not (np.all(np.isfinite(lat)) and np.all(np.isfinite(lon))):
         raise ValueError("coordinates must be finite")

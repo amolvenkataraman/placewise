@@ -23,9 +23,6 @@ TERRITORIAL_KM = 12 * METRES_PER["nmi"] / 1000
 # 200 nautical miles, the exclusive economic zone: how far out `water` still names the nearest
 # country. Beyond it a point is just "Offshore".
 WATER_SEARCH_KM = 200 * METRES_PER["nmi"] / 1000
-# boundaries are sampled this often for the `water` distance beyond TERRITORIAL_KM, so that distance
-# is approximate to about half this; exact edge distances are only computed within TERRITORIAL_KM
-WATER_SAMPLE_KM = 5.0
 
 # Provisional city rule (replaced by municipal polygons in the naming phase): among GeoNames
 # cities within CITY_RADIUS_KM, pick the highest population**ALPHA / (km + D0).
@@ -60,10 +57,6 @@ TZ_FALLBACK_CELL_DEG = 2.0
 OFFSHORE_LABEL_KM = 100.0
 OFFSHORE_LABEL = "Offshore"
 COMPASS_POINTS = 8  # "NE", not "ENE": labels are for people
-
-# grid cell (degrees) of the in-memory boundary-edge index used for TERRITORIAL_KM searches; at
-# 0.25° a point's neighbourhood is a handful of cells holding a few thousand edges at most
-EDGE_CELL_DEG = 0.25
 
 # worldviews: Natural Earth's per-view columns (packbuild/sources/naturalearth.py)
 VIEW_COLUMN = "adm0_a3_{view}"  # the admin-0 unit a view groups each polygon into

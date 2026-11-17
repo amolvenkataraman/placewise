@@ -93,8 +93,8 @@ def main():
         )
         print(f"{'':<52} {np.mean(inside[cell.astype(int)] >= 0):9.1%} answered by inside cells")
 
-        timed("nearest: build point grid (200k points)", lambda: cities._grid)
-        print(f"{'':<52} {cities._grid.cell_deg:9g} deg cells")
+        timed("nearest: build point grid (200k points)", lambda: cities.index)
+        print(f"{'':<52} {cities.index.cell_deg:9g} deg cells")
         q = 100_000
         qlat, qlon = (
             plat[rng.integers(0, n_points, q)] + rng.normal(0, 0.2, q),

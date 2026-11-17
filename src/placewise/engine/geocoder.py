@@ -4,8 +4,9 @@ Rules, in the order they run (constants in placewise.constants.lookup):
 
 - country: the containing polygon; outside every polygon, the nearest country within
   TERRITORIAL_KM (12 nmi; Natural Earth's 1:10m coast misses some coastal points), with the rule
-  "offshore" in Result.sources; beyond that none, and `water` names the nearest country (OFFSHORE)
-  up to WATER_SEARCH_KM. The polygon's country is then mapped through the worldview order.
+  "offshore" in Result.sources; beyond that none, and `water` names the country whose boundary is
+  nearest (OFFSHORE) up to WATER_SEARCH_KM, with the exact distance and bearing to that boundary.
+  The polygon's country is then mapped through the worldview order.
 - admin1: the containing polygon if it belongs to that country, else the nearest of that country's
   admin1 features within TERRITORIAL_KM ("nearest" on land, "offshore" at sea).
 - city (provisional until the naming phase brings municipal polygons): among GeoNames cities within
@@ -21,7 +22,6 @@ Rules, in the order they run (constants in placewise.constants.lookup):
 `lookup` is `lookup_many` with one point, so the two always agree.
 """
 
-import dataclasses
 import inspect
 from functools import cached_property
 
@@ -33,7 +33,7 @@ from placewise.geo import compass, initial_bearing
 from placewise.model import Disputed, Nearby, Place, PlaceKind, Point, Relation, Result, Settings
 from placewise.packs import Pack, open_pack
 
-from ._index import EdgeIndex, PointIndex, SampleIndex, best_per_query
+from ._index import RowIndex, best_per_query
 from ._worldview import Worldviews
 
 
@@ -143,18 +143,6 @@ class Geocoder:
         return f"{self._layers[name][0].name}/{name}:{rule}"
 
     @cached_property
-    def _country_edges(self):
-        return EdgeIndex(self._layer(const.COUNTRIES))
-
-    @cached_property
-    def _admin1_edges(self):
-        return EdgeIndex(self._layer(const.ADMIN1))
-
-    @cached_property
-    def _water(self):
-        return SampleIndex(self._layer(const.COUNTRIES))
-
-    @cached_property
     def _admin1_country(self):
         """Per admin1 feature, the countries row of its unit (adm0_a3), or -1."""
         admin1, wv = self._layer(const.ADMIN1), self._worldviews
@@ -222,7 +210,7 @@ class Geocoder:
             "excluded": excluded,
             "country": lookup[inverse.ravel()] if n else np.zeros(0, dtype=np.int64),
             "tz": layer.column("timezone") if "timezone" in f else None,
-            "notable": PointIndex(layer.lat, layer.lon, notable),
+            "notable": RowIndex(layer.lat, layer.lon, notable),
             "admin1": np.full(n, -2, dtype=np.int64),  # filled lazily: -2 unknown, -1 outside all
             "by_country": {},
         }
@@ -237,12 +225,12 @@ class Geocoder:
         return cache[rows]
 
     def _country_cities(self, code):
-        """PointIndex over the cities of one country code (int), built on first use."""
+        """RowIndex over the cities of one country code (int), built on first use."""
         by = self._cities["by_country"]
         if code not in by:
             c = self._cities
             rows = np.flatnonzero(c["country"] == code)
-            by[code] = PointIndex(c["lat"], c["lon"], rows, const.TZ_FALLBACK_CELL_DEG)
+            by[code] = RowIndex(c["lat"], c["lon"], rows, const.TZ_FALLBACK_CELL_DEG)
         return by[code]
 
     # -- the vectorised answer -------------------------------------------------------------------
@@ -276,9 +264,11 @@ class Geocoder:
             a["airport"], a["airport_km"] = np.atleast_1d(idx), np.atleast_1d(dist)
         far = np.flatnonzero(~land)
         a["water"], a["water_km"] = np.full(n, -1, dtype=np.int64), np.full(n, np.inf)
+        a["water_at"] = np.full((n, 2), np.nan)  # the nearest point of that country's boundary
         if countries is not None and len(far):
-            f, d = self._water.nearest(lat[far], lon[far], const.WATER_SEARCH_KM)
+            f, d, at_lat, at_lon = countries.nearest_boundary(lat[far], lon[far], const.WATER_SEARCH_KM)
             a["water"][far], a["water_km"][far] = f, d
+            a["water_at"][far] = np.column_stack([at_lat, at_lon])
         return a
 
     def _countries(self, a, lat, lon):
@@ -286,7 +276,7 @@ class Geocoder:
         a["cmode"][cidx >= 0] = const.POLYGON
         miss = np.flatnonzero(cidx < 0)
         if len(miss):
-            q, f, d = self._country_edges.within(lat[miss], lon[miss], const.TERRITORIAL_KM)
+            q, f, d = self._layer(const.COUNTRIES).near_boundary(lat[miss], lon[miss], const.TERRITORIAL_KM)
             best = best_per_query(q, d, len(miss))
             hit = best >= 0
             cidx[miss[hit]] = f[best[hit]]
@@ -315,7 +305,7 @@ class Geocoder:
         need = np.flatnonzero(land & ~ok)
         if not len(need):
             return
-        q, f, d = self._admin1_edges.within(lat[need], lon[need], const.TERRITORIAL_KM)
+        q, f, d = admin1.near_boundary(lat[need], lon[need], const.TERRITORIAL_KM)
         keep = (owner[f] == cidx[need[q]]) | unrestricted[need[q]]
         q, f, d = q[keep], f[keep], d[keep]
         best = best_per_query(q, d, len(need))
@@ -409,11 +399,15 @@ class Geocoder:
         only for points that have none, to each claimant country's own cities."""
         out, best_km = self._first_allowed(local, local_km, allowed)
         miss = np.flatnonzero(out < 0)
-        for code in np.unique(allowed[miss]):
-            if code < 0:
-                continue
-            pts = miss[(allowed[miss] == code).any(axis=1)]
-            idx, km = self._country_cities(int(code)).nearest(plat[pts], plon[pts], 1, const.TZ_SEARCH_KM)
+        # each (missed point, claimant code) once, grouped by code (ascending: on a tie in
+        # distance the lower code's city stays)
+        row, col = np.nonzero(allowed[miss] >= 0)
+        pair = np.unique(allowed[miss][row, col] * len(plat) + miss[row])
+        codes, pts_all = pair // len(plat), pair % len(plat)
+        starts = np.flatnonzero(np.diff(codes, prepend=-1))
+        for g0, g1 in zip(starts, np.append(starts[1:], len(pair)), strict=False):
+            pts, cities = pts_all[g0:g1], self._country_cities(int(codes[g0]))
+            idx, km = cities.nearest(plat[pts], plon[pts], 1, const.TZ_SEARCH_KM)
             better = km[:, 0] < best_km[pts]
             out[pts[better]], best_km[pts[better]] = idx[better, 0], km[better, 0]
         return out
@@ -463,21 +457,25 @@ class Geocoder:
             for rule in (const.POLYGON, const.OFFSHORE, const.NEAREST, const.SCORE)
         }
         place = self._place
+        # the place caches, read directly in the loop below (place() fills them on a miss)
+        country_places, admin1_places, city_places = (
+            self._places.get(k, {}) for k in (const.COUNTRIES, const.ADMIN1, const.CITIES)
+        )
         results = []
         for i in range(n):
             ci, vi, ai = cidx[i], view[i], aidx[i]
             sources = {}
             country = admin1 = city_place = tz = air = water_near = disputed = None
             if vi >= 0:
-                country = place(const.COUNTRIES, vi)
+                country = country_places.get(vi) or place(const.COUNTRIES, vi)
                 sources["country"] = src[const.COUNTRIES, cmode[i]]
             if ai >= 0:
-                admin1 = place(const.ADMIN1, ai)
+                admin1 = admin1_places.get(ai) or place(const.ADMIN1, ai)
                 sources["admin1"] = src[const.ADMIN1, amode[i]]
             if ci >= 0:
                 disputed = self._disputed(ci, ai, foreign[i], applied, locked)
                 if city[i] >= 0:
-                    city_place = place(const.CITIES, city[i])
+                    city_place = city_places.get(city[i]) or place(const.CITIES, city[i])
                     sources["city"] = sources["locality"] = src[const.CITIES, const.SCORE]
                 t = tz_row[i]
                 if t >= 0 and tz_col[t]:
@@ -513,13 +511,11 @@ class Geocoder:
                 )
             else:
                 label = const.OFFSHORE_LABEL
-            # coordinates were validated for the whole batch above, so skip Result's per-point check
             results.append(
-                _trusted(
-                    Result, lat=lats[i], lon=lons[i], label=label, country=country, admin1=admin1,
-                    city=city_place, locality=city_place, tz=tz, near=near, airport=air, water=water_near,
-                    disputed=disputed, sources=sources, data_version=self.data_version, worldview=order,
-                    worldview_locked=locked,
+                Result(
+                    lat=lats[i], lon=lons[i], label=label, country=country, admin1=admin1, city=city_place,
+                    locality=city_place, tz=tz, near=near, airport=air, water=water_near, disputed=disputed,
+                    sources=sources, data_version=self.data_version, worldview=order, worldview_locked=locked,
                 )
             )  # fmt: skip
         return results
@@ -562,19 +558,26 @@ class Geocoder:
         return deg, words
 
     def _polygon_bearing(self, lat, lon, a):
-        """Bearing from far-offshore points to the nearest boundary sample of their `water` country:
-        the direction of its nearest point, found again exactly from the sample index."""
+        """Bearing from far-offshore points to the nearest point of their `water` country's
+        boundary."""
         n = len(lat)
         deg, words = np.full(n, np.nan), np.full(n, "", dtype=object)
         far = np.flatnonzero(a["water"] >= 0)
         if len(far):
-            grid = self._water.grid
-            idx, _ = grid.nearest(lat[far], lon[far], 1, const.WATER_SEARCH_KM)
-            b = np.atleast_1d(initial_bearing(lat[far], lon[far], grid.lat[idx[:, 0]], grid.lon[idx[:, 0]]))
+            at = a["water_at"][far]
+            b = np.atleast_1d(initial_bearing(lat[far], lon[far], at[:, 0], at[:, 1]))
             deg[far], words[far] = b, np.atleast_1d(compass(b, const.COMPASS_POINTS))
         return deg, words
 
     def _label(self, country, admin1, city, airport, water):
+        template = self.settings.label.template
+        if not template:
+            # style "locality" and "city" agree until the naming phase separates them
+            parts = []
+            for p in (city, admin1, country):
+                if p is not None and p.name and (not parts or parts[-1] != p.name):
+                    parts.append(p.name)
+            return ", ".join(parts)
         names = {
             "city": city.name if city else "",
             "locality": city.name if city else "",
@@ -583,17 +586,9 @@ class Geocoder:
             "airport": airport.place.name if airport else "",
             "water": water.place.name if water else "",
         }
-        template = self.settings.label.template
-        if template:
-            text = template.format_map(_Blank(names))
-            parts = [p.strip() for p in text.split(",")]
-            return ", ".join(p for p in parts if p)
-        # style "locality" and "city" agree until the naming phase separates them
-        parts = []
-        for name in (names["locality"], names["admin1"], names["country"]):
-            if name and (not parts or parts[-1] != name):
-                parts.append(name)
-        return ", ".join(parts)
+        text = template.format_map(_Blank(names))
+        parts = [p.strip() for p in text.split(",")]
+        return ", ".join(p for p in parts if p)
 
     # -- places ----------------------------------------------------------------------------------
 
@@ -632,8 +627,7 @@ class Geocoder:
             found = {"iso": pid[4:]} if pid.startswith("iso:") else {}
             found.update(codes("country"))
             return Place(pid, name, PlaceKind.ADMIN1, bbox=layer.bbox(i), codes=found, source=source)
-        # pack coordinates are in range by construction (the writer checks them)
-        point = _trusted(Point, lat=float(layer.lat[i]), lon=float(layer.lon[i]))
+        point = Point(float(layer.lat[i]), float(layer.lon[i]))
         if layer_name == const.CITIES:
             return Place(pid, name, PlaceKind.LOCALITY, point=point, codes=codes("country"), source=source)
         found = codes("iata", "icao", "country", "region")
@@ -674,28 +668,6 @@ class _Blank(dict):
 
 def _plain_order(order):
     return (order,) if isinstance(order, str) else tuple(order)
-
-
-_FIELDS = {}
-
-
-def _trusted(cls, **values):
-    """A frozen model dataclass built without its __post_init__ checks, for values already
-    validated in bulk (a batch's coordinates, a pack's points). Unnamed fields take defaults."""
-    fields = _FIELDS.get(cls)
-    if fields is None:
-        fields = _FIELDS[cls] = [
-            (f.name, f.default, None if f.default_factory is dataclasses.MISSING else f.default_factory)
-            for f in dataclasses.fields(cls)
-        ]
-    obj = object.__new__(cls)
-    setattr_ = object.__setattr__
-    for name, default, factory in fields:
-        if name in values:
-            setattr_(obj, name, values[name])
-        else:
-            setattr_(obj, name, factory() if factory is not None else default)
-    return obj
 
 
 def _km(km):

@@ -18,16 +18,19 @@ import numpy as np
 
 from placewise.constants import packs as consts
 from placewise.constants.earth import MEAN_RADIUS_KM
-from placewise.geo import haversine, lines, normalize_lon
+from placewise.geo import haversine, lines
 from placewise.model import BBox, Feature, Outline
 
 from . import _geometry as gm
-from ._points import PointGrid
+from ._boundary import Boundary
+from ._points import PointIndex
 from ._refine import Refinement
 
 # queries x edges handled at once by nearest_edge_km, to bound memory
 _EDGE_BLOCK = 1_000_000
 _EDGE_SLACK_KM = 1e-9  # so rounding in the bound never drops the nearest edge
+# latitude bands (degrees) by which each feature's edges are listed for the exact even-odd test
+_SLAB_DEG = consts.REFINE_CELL_DEG
 
 
 class PackFormatError(ValueError):
@@ -222,29 +225,20 @@ class PointLayer(Layer):
         return gm.from_e7(self._array(f"{consts.GEOM_DIR}/lon.npy"))
 
     @cached_property
-    def _grid(self):
-        return PointGrid(self.lat, self.lon)
+    def index(self):
+        """The layer's points as a PointIndex (built on first use; indexes are row numbers)."""
+        return PointIndex(self.lat, self.lon)
 
     def nearest(self, lat, lon, k=1, max_km=None):
         """(indexes, distances_km) of the k nearest points to each query point (haversine), nearest
         first, ties to the lower index; -1 and inf where there are fewer than k (within max_km).
         Shapes: the query's, plus a trailing k axis when k > 1; plain int and float for a scalar
-        query with k=1."""
-        if k < 1:
-            raise ValueError("k must be at least 1")
-        lat, lon = np.broadcast_arrays(np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64))
-        shape = lat.shape
-        flat_lat, flat_lon = _normalise(lat.ravel(), lon.ravel())
-        idx, dist = self._grid.nearest(flat_lat, flat_lon, int(k), max_km)
-        if k > 1:
-            return idx.reshape((*shape, k)), dist.reshape((*shape, k))
-        idx, dist = idx[:, 0].reshape(shape), dist[:, 0].reshape(shape)
-        return (int(idx), float(dist)) if not shape else (idx, dist)
+        query with k=1. See PointIndex.nearest."""
+        return self.index.nearest(lat, lon, k=k, max_km=max_km)
 
     def within(self, lat, lon, radius_km):
         """(indexes, distances_km) of every point within radius_km of one point, nearest first."""
-        flat_lat, flat_lon = _normalise(np.array([float(lat)]), np.array([float(lon)]))
-        return self._grid.within(float(flat_lat[0]), float(flat_lon[0]), float(radius_km))
+        return self.index.within(lat, lon, radius_km)
 
 
 class PolygonLayer(Layer):
@@ -304,7 +298,7 @@ class PolygonLayer(Layer):
         without geometry; elsewhere only the cell's candidates get the exact test."""
         lat, lon = np.broadcast_arrays(np.asarray(lats, dtype=np.float64), np.asarray(lons, dtype=np.float64))
         shape = lat.shape
-        flat_lat, flat_lon = _normalise(lat.ravel(), lon.ravel())
+        flat_lat, flat_lon = gm.normalise(lat.ravel(), lon.ravel())
         result = np.full(flat_lat.shape, -1, dtype=np.int64)
         ok = np.flatnonzero(np.isfinite(flat_lat))
         if len(ok) and self.count:
@@ -333,10 +327,7 @@ class PolygonLayer(Layer):
             pts_lat, pts_lon = lat[todo], lon[todo]
             in_box = np.flatnonzero(self._in_bbox(feature, pts_lat, pts_lon))
             if len(in_box):
-                order = in_box[np.argsort(feature[in_box], kind="stable")]
-                for members in np.split(order, np.flatnonzero(np.diff(feature[order])) + 1):
-                    f = int(feature[members[0]])
-                    hit[members] = self._contains(f, pts_lat[members], pts_lon[members])
+                hit[in_box] = self._contains(feature[in_box], pts_lat[in_box], pts_lon[in_box])
             result[todo[hit]] = feature[hit]
             ptr += 1
             more = ~hit & (ptr < stop)
@@ -353,28 +344,40 @@ class PolygonLayer(Layer):
         vs, ve = g["vertex"][i], g["vertex"][i + 1]
         return g["lat"][vs:ve], g["lon"][vs:ve], g["lat_b"][vs:ve], g["lon_b"][vs:ve]
 
-    def _contains(self, i, lat, lon):
-        """Even-odd containment in feature i: directly for the first few points, then through a
-        fine grid built once the feature has been asked about enough to repay it."""
-        refined = self._refined.get(i)
-        if refined is None:
-            self._tested[i] = self._tested.get(i, 0) + len(lat)
-            if self._tested[i] < consts.REFINE_AFTER_POINTS:
-                return gm.even_odd(lat, lon, *self._edges(i))
-            refined = self._refined[i] = Refinement(self._edges(i), self.cell_deg)
-        return refined.contains(lat, lon)
+    def _contains(self, feature, lat, lon):
+        """Even-odd containment of each point in its own feature, for all features at once:
+        directly while a feature has been asked about few points, then through fine grids, built
+        for it once it has been asked about enough to repay them."""
+        self._tested += np.bincount(feature, minlength=self.count)
+        refined = self._refined
+        refined.add(feature[self._tested[feature] >= consts.REFINE_AFTER_POINTS])
+        fine = refined.refined[feature]
+        inside = np.empty(len(feature), dtype=bool)
+        if fine.any():
+            inside[fine] = refined.contains(lat[fine], lon[fine], feature[fine])
+        if not fine.all():
+            inside[~fine] = self._slabs.even_odd(lat[~fine], lon[~fine], feature[~fine])
+        return inside
+
+    @cached_property
+    def _slabs(self):
+        g = self._geom
+        return gm.Slabs(g["vertex"], (g["lat"], g["lon"], g["lat_b"], g["lon_b"]), _SLAB_DEG)
 
     @cached_property
     def _refined(self):
-        return {}
+        g = self._geom
+        return Refinement(
+            g["vertex"], (g["lat"], g["lon"], g["lat_b"], g["lon_b"]), self.cell_deg, self._slabs.even_odd
+        )
 
     @cached_property
     def _tested(self):
-        return {}
+        return np.zeros(self.count, dtype=np.int64)
 
     def query_all(self, lat, lon):
         """Indexes of every feature containing one point, ascending."""
-        lat, lon = _normalise(np.array([float(lat)]), np.array([float(lon)]))
+        lat, lon = gm.normalise(np.array([float(lat)]), np.array([float(lon)]))
         if not (np.isfinite(lat[0]) and self.count):
             return []
         cell = int(self._cell(lat, lon)[0])
@@ -438,15 +441,41 @@ class PolygonLayer(Layer):
         best = best.reshape(shape)
         return float(best) if best.ndim == 0 else best
 
+    @cached_property
+    def _boundary(self):
+        g = self._geom
+        owner = np.repeat(np.arange(self.count), np.diff(g["vertex"]))
+        return Boundary(g["lat"], g["lon"], g["lat_b"], g["lon_b"], owner)
 
-def _normalise(lat, lon):
-    """Longitudes outside ±180 wrapped (±180 itself kept: polygons are planar, so the two differ);
-    latitudes outside ±90 or anything non-finite become NaN, which matches nothing."""
-    lon = np.where((lon < -180) | (lon > 180), normalize_lon(lon), lon)
-    bad = ~(np.isfinite(lat) & np.isfinite(lon) & (np.abs(lat) <= 90))
-    if bad.any():
-        lat, lon = np.where(bad, np.nan, lat), np.where(bad, np.nan, lon)
-    return lat, lon
+    def near_boundary(self, lats, lons, radius_km):
+        """Every feature whose boundary (outer rings and holes) comes within radius_km of each
+        point, inside or out: flat arrays (point, feature, km), one row per pair at its nearest
+        distance, sorted by point then feature; `point` indexes the flattened query. Distances
+        as nearest_edge_km: exact, edges as great-circle arcs, cuts along ±180 not borders.
+        Vectorised; meant for small radii (tens of km), where few edges are near."""
+        lat, lon = np.broadcast_arrays(np.asarray(lats, dtype=np.float64), np.asarray(lons, dtype=np.float64))
+        flat_lat, flat_lon = gm.normalise(lat.ravel(), lon.ravel())
+        if not self.count:
+            return np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0)
+        return self._boundary.near(flat_lat, flat_lon, float(radius_km))
+
+    def nearest_boundary(self, lats, lons, max_km=None):
+        """(feature, km, lat, lon) per point: the feature whose boundary is nearest, how far, and
+        the nearest point of that boundary; ties to the lower feature; -1, inf, NaN, NaN where no
+        boundary is within max_km. Distances as nearest_edge_km. Keeps the input's shape; plain
+        Python numbers for a scalar."""
+        lat, lon = np.broadcast_arrays(np.asarray(lats, dtype=np.float64), np.asarray(lons, dtype=np.float64))
+        shape = lat.shape
+        flat_lat, flat_lon = gm.normalise(lat.ravel(), lon.ravel())
+        if self.count:
+            out = self._boundary.nearest(flat_lat, flat_lon, None if max_km is None else float(max_km))
+        else:
+            n = len(flat_lat)
+            out = (np.full(n, -1, dtype=np.int64), np.full(n, np.inf), np.full(n, np.nan), np.full(n, np.nan))
+        out = [a.reshape(shape) for a in out]
+        if not shape:
+            return int(out[0]), float(out[1]), float(out[2]), float(out[3])
+        return tuple(out)
 
 
 def _read_json(path, label):

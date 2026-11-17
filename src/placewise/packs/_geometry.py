@@ -11,9 +11,15 @@ import math
 import numpy as np
 
 from placewise.constants.packs import E7
+from placewise.geo import normalize_lon
 
 # pairs of (edge, point) examined at once by the even-odd test; bounds memory to ~0.5 GB worst case
 _PAIR_BUDGET = 4_000_000
+# Slabs builds every feature at once when asked for more than this many new ones
+_BUILD_ALL_AFTER = 64
+# Slabs.even_odd sorts the points instead when the features asked about have at most this many
+# edges per point
+_PAIRS_PER_POINT = 4
 # margin, in degrees, by which edges are fattened when finding the cells they touch: far below the
 # 1e-7 storage grid, far above float64 rounding at 180 degrees
 _EPS = 1e-9
@@ -25,6 +31,17 @@ def to_e7(degrees):
 
 def from_e7(values):
     return np.asarray(values, dtype=np.float64) / E7
+
+
+def normalise(lat, lon):
+    """Query points for the readers: longitudes outside ±180 wrapped (±180 itself kept: polygons
+    are planar, so the two differ); latitudes outside ±90 or anything non-finite become NaN, which
+    matches nothing."""
+    lon = np.where((lon < -180) | (lon > 180), normalize_lon(lon), lon)
+    bad = ~(np.isfinite(lat) & np.isfinite(lon) & (np.abs(lat) <= 90))
+    if bad.any():
+        lat, lon = np.where(bad, np.nan, lat), np.where(bad, np.nan, lon)
+    return lat, lon
 
 
 def grid_shape(cell_deg):
@@ -71,12 +88,124 @@ def even_odd(lat, lon, ya, xa, yb, xb):
     # an edge crosses the ray from (lat, lon) when ymin <= lat < ymax, as (ya > lat) != (yb > lat)
     lo = np.searchsorted(slat, ymin, "left")
     hi = np.searchsorted(slat, ymax, "left")
+    inside[order] = _odd_crossings(slat, slon, lo, hi, ya, xa, yb, xb)
+    return inside
+
+
+def even_odd_pairs(lat, lon, feature, offsets, ya, xa, yb, xb):
+    """`even_odd` for many (point, feature) pairs at once: whether each point lies inside its own
+    feature, whose edges are ya[offsets[f]:offsets[f + 1]] (and likewise xa, yb, xb). Same rule,
+    same arithmetic, same answers. Pairs are sorted by (feature, latitude rank) and each edge of the
+    features asked about is paired with its own feature's points in its latitude span, so the work
+    is the features' edges plus the crossings: best when there are many points per feature."""
+    lat, lon = np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64)
+    feature = np.asarray(feature, dtype=np.int64)
+    if len(lat) == 0:
+        return np.zeros(0, dtype=bool)
+    levels = np.unique(lat)
+    width = len(levels) + 1
+    key = feature * width + np.searchsorted(levels, lat)
+    order = np.argsort(key, kind="stable")
+    skey, slat, slon = key[order], lat[order], lon[order]
+    feats = np.unique(feature)
+    owner, edge = _expand(offsets[feats], offsets[feats + 1])
+    base = feats[owner] * width
+    e_ya, e_xa, e_yb, e_xb = ya[edge], xa[edge], yb[edge], xb[edge]
+    # ymin <= lat  <=>  rank(lat) >= the first rank not below ymin; lat < ymax likewise
+    lo = np.searchsorted(skey, base + np.searchsorted(levels, np.minimum(e_ya, e_yb), "left"), "left")
+    hi = np.searchsorted(skey, base + np.searchsorted(levels, np.maximum(e_ya, e_yb), "left"), "left")
+    inside = np.zeros(len(lat), dtype=bool)
+    inside[order] = _odd_crossings(slat, slon, lo, hi, e_ya, e_xa, e_yb, e_xb)
+    return inside
+
+
+class Slabs:
+    """The edges of a layer's features listed under every latitude band (band_deg high) their
+    latitude span touches, so the even-odd test of a point need only look at its own feature's
+    edges in its own band: only they can cross its ray. Built per feature on first use (all at
+    once when many are asked for)."""
+
+    def __init__(self, offsets, edges, band_deg):
+        self.offsets = np.asarray(offsets, dtype=np.int64)  # feature f's edges: offsets[f]:offsets[f + 1]
+        self.edges = tuple(np.asarray(e, dtype=np.float64) for e in edges)  # ya, xa, yb, xb
+        self.band_deg = band_deg
+        self.bands = math.ceil(round(180 / band_deg, 9))
+        self.built = np.zeros(len(self.offsets) - 1, dtype=bool)
+        self.key = np.zeros(0, dtype=np.int64)  # feature * bands + band, sorted
+        self.edge = np.zeros(0, dtype=np.int64)
+
+    def _band(self, lat):
+        return np.clip(np.floor((lat + 90.0) / self.band_deg), 0, self.bands - 1).astype(np.int64)
+
+    def add(self, features):
+        new = np.unique(np.asarray(features, dtype=np.int64))
+        new = new[~self.built[new]]
+        if len(new) > _BUILD_ALL_AFTER:
+            new = np.flatnonzero(~self.built)
+        if not len(new):
+            return
+        owner, edge = _expand(self.offsets[new], self.offsets[new + 1])
+        ya, yb = self.edges[0][edge], self.edges[2][edge]
+        lo, hi = self._band(np.minimum(ya, yb)), self._band(np.maximum(ya, yb))
+        which, band = _expand(lo, hi + 1)
+        key = new[owner[which]] * self.bands + band  # sorted: features ascending, then bands
+        edge = edge[which]
+        order = np.argsort(key, kind="stable")
+        key, edge = key[order], edge[order]
+        # each feature's keys form their own range, so the new ones slot in between the old
+        at = np.searchsorted(self.key, key)
+        self.key, self.edge = np.insert(self.key, at, key), np.insert(self.edge, at, edge)
+        self.built[new] = True
+
+    def even_odd(self, lat, lon, feature):
+        """`even_odd` of each point against its own feature's edges: same rule, same arithmetic,
+        same answers."""
+        lat, lon = np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64)
+        feature = np.asarray(feature, dtype=np.int64)
+        n = len(lat)
+        if n == 0:
+            return np.zeros(0, dtype=bool)
+        feats = np.unique(feature)
+        if int(np.sum(self.offsets[feats + 1] - self.offsets[feats])) <= _PAIRS_PER_POINT * n:
+            # many points per feature (grid corners, big batches): sorting them beats the bands
+            return even_odd_pairs(lat, lon, feature, self.offsets, *self.edges)
+        self.add(feats)
+        key = feature * self.bands + self._band(lat)
+        start, stop = np.searchsorted(self.key, key, "left"), np.searchsorted(self.key, key, "right")
+        parity = np.zeros(n, dtype=np.int64)
+        cum = np.cumsum(stop - start)
+        cuts = np.searchsorted(cum, np.arange(_PAIR_BUDGET, cum[-1], _PAIR_BUDGET), "left") if cum[-1] else []
+        ya, xa, yb, xb = self.edges
+        for c0, c1 in zip([0, *cuts], [*cuts, n], strict=True):
+            point, k = _expand(start[c0:c1], stop[c0:c1])
+            e = self.edge[k]
+            plat = lat[c0:c1][point]
+            e_ya, e_xa, e_yb, e_xb = ya[e], xa[e], yb[e], xb[e]
+            # the crossing rule of `even_odd` (ymin <= lat < ymax), then its arithmetic
+            across = (e_ya > plat) != (e_yb > plat)
+            point, plat, e_ya, e_xa, e_yb, e_xb = (
+                point[across],
+                plat[across],
+                e_ya[across],
+                e_xa[across],
+                e_yb[across],
+                e_xb[across],
+            )
+            x_cross = e_xa + (plat - e_ya) * (e_xb - e_xa) / (e_yb - e_ya)
+            parity[c0:c1] += np.bincount(point[lon[c0:c1][point] < x_cross], minlength=c1 - c0)
+        return (parity & 1).astype(bool)
+
+
+def _odd_crossings(slat, slon, lo, hi, ya, xa, yb, xb):
+    """For points sorted as given and edges each crossing the rays of points lo..hi-1: whether an
+    odd number of crossings lie east of each point."""
+    n = len(slat)
     total = int(np.sum(hi - lo))
+    parity = np.zeros(n, dtype=np.int64)
     if total == 0:
-        return inside
+        return parity.astype(bool)
     chunks = max(1, -(-total // _PAIR_BUDGET))
     bounds = np.linspace(0, n, chunks + 1).astype(np.int64)
-    parity = np.zeros(n, dtype=np.int64)
     for c0, c1 in itertools.pairwise(bounds):
         clo, chi = np.clip(lo, c0, c1), np.clip(hi, c0, c1)
         counts = chi - clo
@@ -90,8 +219,15 @@ def even_odd(lat, lon, ya, xa, yb, xb):
         e_ya, e_xa, e_yb, e_xb = ya[edge], xa[edge], yb[edge], xb[edge]
         x_cross = e_xa + (slat[pos] - e_ya) * (e_xb - e_xa) / (e_yb - e_ya)
         parity += np.bincount(pos[slon[pos] < x_cross], minlength=n)
-    inside[order] = (parity & 1).astype(bool)
-    return inside
+    return (parity & 1).astype(bool)
+
+
+def _expand(start, stop):
+    """(owner, i) for every i in each [start, stop) range."""
+    counts = np.maximum(stop - start, 0)
+    owner = np.repeat(np.arange(len(start)), counts)
+    first = np.cumsum(counts) - counts
+    return owner, np.arange(int(counts.sum()), dtype=np.int64) - np.repeat(first - start, counts)
 
 
 def even_odd_rows(lat, lon, ya, xa, yb, xb):

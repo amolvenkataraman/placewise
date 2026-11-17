@@ -94,7 +94,7 @@ class Disputed(Model):
     claimants: tuple[str, ...]
     administered_by: str | None = None
     applied_view: str = "de_facto"
-    views: dict[str, str] = field(default_factory=dict)  # view -> admin1 code it assigns
+    views: dict[str, str] = field(default_factory=dict)  # view -> country code it assigns the area to
     locked: bool = False  # the operator locked the worldview; request settings were ignored
 
 

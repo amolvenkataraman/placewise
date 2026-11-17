@@ -64,3 +64,46 @@ def test_normalize_and_validate():
             c.validate(*bad)
     with pytest.raises(ValueError):
         c.validate(np.array([0, 100]), np.array([0, 0]))
+
+
+def _validate_as_arrays(lat, lon):
+    """validate's rule for any input, as it reads for arrays: the reference for the scalar path."""
+    lat, lon = np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64)
+    if not (np.all(np.isfinite(lat)) and np.all(np.isfinite(lon))):
+        raise ValueError("coordinates must be finite")
+    if np.any(np.abs(lat) > 90) or np.any(np.abs(lon) > 180):
+        raise ValueError("latitude must be within ±90 and longitude within ±180")
+
+
+def _outcome(fn, *args):
+    try:
+        fn(*args)
+    except Exception as err:  # the type and message are what's compared
+        return type(err), str(err)
+    return None
+
+
+VALIDATE_CASES = [
+    (LAT, LON), (90, -180), (-90.0, 180.0), (0, 0), (True, False), (np.float64(45.5), 10),
+    (np.float32(10.5), np.int64(20)), ("12.5", 3), ([1.0, 2.0], [3.0, 4.0]), (90.0000001, 0.0),
+    (0.0, -180.0000001), (91, 0), (0, 181), (float("nan"), 0), (0, float("inf")), (-float("inf"), 0),
+    (np.nan, "x"), ("abc", 0), (None, 0), (1, None), (10**400, 0), (0, -(10**400)), (1 + 2j, 0),
+    (np.array([0, 100]), np.array([0, 0])), (np.float32("nan"), 0),
+]  # fmt: skip
+
+
+@pytest.mark.parametrize(("lat", "lon"), VALIDATE_CASES)
+def test_validate_scalars_raise_exactly_as_before(lat, lon):
+    assert _outcome(c.validate, lat, lon) == _outcome(_validate_as_arrays, lat, lon)
+
+
+def test_validate_is_cheap_for_plain_numbers():
+    import time
+
+    c.validate(LAT, LON)
+    t = time.perf_counter()
+    for _ in range(20_000):
+        c.validate(LAT, LON)
+        c.validate(90, -180)
+    per_call = (time.perf_counter() - t) / 40_000
+    assert per_call < 2e-6, f"{per_call * 1e6:.1f} µs per call"

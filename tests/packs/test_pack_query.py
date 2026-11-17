@@ -199,3 +199,32 @@ def test_shapes_on_the_grid_lines(tmp_path):
     lats = np.concatenate([rng.uniform(28, 42, 20_000), np.round(rng.uniform(28, 42, 20_000) * 8) / 8])
     lons = np.concatenate([rng.uniform(-112, -87, 20_000), np.round(rng.uniform(-112, -87, 20_000) * 8) / 8])
     np.testing.assert_array_equal(layer.query(lats, lons), brute_force(features, lats, lons))
+
+
+@pytest.mark.parametrize("refine_after", [0, 10**9])
+def test_query_work_is_vectorised_across_features(tmp_path, monkeypatch, refine_after):
+    """Each round of candidates is tested in a few array calls for all its features together, not
+    in a Python loop per feature: the call count stays flat however many features are hit."""
+    from placewise.constants import packs as consts
+    from placewise.packs import _geometry
+
+    features = LAYERS["dense_overlapping"]
+    layer = _open(tmp_path, features)
+    monkeypatch.setattr(consts, "REFINE_AFTER_POINTS", refine_after)
+    calls = []
+    for name in [n for n in dir(_geometry) if n.startswith("even_odd")]:
+        real = getattr(_geometry, name)
+        monkeypatch.setattr(
+            _geometry, name, lambda *a, _real=real, _name=name: calls.append(_name) or _real(*a)
+        )
+    if hasattr(_geometry, "Slabs"):
+        slabs = _geometry.Slabs.even_odd
+        monkeypatch.setattr(
+            _geometry.Slabs, "even_odd", lambda *a: calls.append("Slabs.even_odd") or slabs(*a)
+        )
+    lats, lons = _random_points(features, np.random.default_rng(10), 20_000)
+    got = layer.query(lats, lons)
+    np.testing.assert_array_equal(got, brute_force(features, lats, lons))
+    hit = len(np.unique(got[got >= 0]))
+    assert hit > 100  # most features get points
+    assert len(calls) < 40, f"{len(calls)} even-odd calls for {hit} features"

@@ -64,9 +64,30 @@ def test_far_offshore_has_no_country_but_names_the_nearest(geo):
     assert r.country is None and r.admin1 is None and r.city is None and r.tz is None
     assert r.water.relation == Relation.OFFSHORE
     assert r.water.place.id == "iso:XA"
-    assert r.water.distance_km == pytest.approx(44.5, abs=const.WATER_SAMPLE_KM)
+    assert r.water.distance_km == pytest.approx(44.5, abs=0.1)
     assert r.water.compass == "S"
     assert r.label == "Offshore, 72 km N of Alpha City"
+
+
+def test_water_distance_and_bearing_are_exact(geo, world):
+    """To the nearest point of the country's boundary itself, not to a sample of it."""
+    countries = open_pack(world)["countries"]
+    r = geo.lookup(1.4, -139.3)
+    assert r.water.distance_km == pytest.approx(countries.nearest_edge_km(1.4, -139.3, 0), rel=1e-9)
+    assert r.water.bearing_deg == pytest.approx(180.0, abs=0.01)  # straight down to the coast
+
+
+def test_engine_uses_only_public_pack_apis():
+    """The engine reads packs through placewise.packs' public API, never its private modules or
+    the files inside a pack."""
+    from pathlib import Path
+
+    import placewise.engine
+
+    for path in Path(placewise.engine.__file__).parent.glob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        assert "placewise.packs._" not in source and "from placewise.packs import _" not in source, path.name
+        assert '"geom"' not in source and ".npy" not in source, path.name
 
 
 def test_far_offshore_beyond_any_reference(geo):
