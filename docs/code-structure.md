@@ -31,6 +31,7 @@ loaders, `packbuild/packs/` one builder per pack, release tooling); `tests/` mir
 
 - **Size:** a module stays around 300 lines, 400 at most; split by responsibility, not arbitrarily.
   A package holds about 8 modules; past that, group by subject into subpackages.
+  Generated data modules (headed "GENERATED ... do not edit") are exempt: their size is the data's.
 - **Public API:** users import from packages (`from placewise.io import read_gpx`,
   `placewise.geo.distance`), which re-export; modules starting with `_` are private and may move.
 - **Dependencies point one way:** `constants` and `model` import nothing above them; `geo` uses
