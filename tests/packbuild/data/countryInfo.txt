@@ -1,0 +1,5 @@
+# GeoNames countryInfo.txt excerpt
+#ISO	ISO3	ISO-Numeric	fips	Country	Capital	Area(in sq km)	Population	Continent	tld	CurrencyCode	CurrencyName	Phone	Postal Code Format	Postal Code Regex	Languages	geonameid	neighbours	EquivalentFipsCode
+CA	CAN	124	CA	Canada	Ottawa	9984670	41651653	NA	.ca	CAD	Dollar	1	@#@ #@#		en-CA,fr-CA,iu	6251999	US	
+IN	IND	356	IN	India	New Delhi	3287590	1463865525	AS	.in	INR	Rupee	91	######	^(\d{6})$	en-IN,hi	1269750	CN,NP,MM,BT,PK,BD	
+US	USA	840	US	United States	Washington	9629091	341784857	NA	.us	USD	Dollar	1	#####-####	^\d{5}(-\d{4})?$	en-US,es-US	6252001	CA,MX,CU	

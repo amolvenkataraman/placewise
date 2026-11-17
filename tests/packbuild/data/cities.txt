@@ -1,0 +1,5 @@
+6167865	Toronto	Toronto	Taronta,Torontas,Toronto	43.65333	-79.38389	P	PPLA	CA		08	3520			2794356		92	America/Toronto	2026-11-11
+6094817	Ottawa	Ottawa	Atava,Otava	45.41117	-75.69812	P	PPLC	CA		08	3506	3506008		1017449		71	America/Toronto	2025-08-04
+1277333	Bengaluru	Bengaluru	BLR,Ban'nkalor,Bangalor,Bangalore	12.97194	77.59369	P	PPLA	IN		19	572			8495492	920	914	Asia/Kolkata	2025-05-24
+5511077	Reno	Reno	RNO	39.52963	-119.8138	P	PPLA2	US		NV	031			264165	1373	1380	America/Los_Angeles	2025-06-26
+7262586	Yosemite Valley	Yosemite Valley		37.74075	-119.57788	P	PPL	US		CA	043			1035		-9999	America/Los_Angeles	2026-09-17

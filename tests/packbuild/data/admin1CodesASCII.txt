@@ -1,0 +1,4 @@
+CA.08	Ontario	Ontario	6093943
+CA.10	Québec	Quebec	6115047
+IN.19	Karnataka	Karnataka	1267701
+US.NV	Nevada	Nevada	5509151

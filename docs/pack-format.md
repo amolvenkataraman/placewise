@@ -43,10 +43,14 @@ be opened with `numpy.load(path, mmap_mode="r")` and costs nothing until touched
 ```
 
 - `schema`: this document's version. A reader refuses packs whose schema it doesn't know.
-- `version`: CalVer `YYYY.MM` with an optional `.N` for re-releases in the same month.
+- `name`: `[a-z0-9][a-z0-9_-]*` (it becomes a directory name; layer names follow the same rule,
+  field names `[A-Za-z_][A-Za-z0-9_]*`).
+- `version`: CalVer `YYYY.MM` with MM 01–12, optionally `.N` (N ≥ 1, no leading zero) for
+  re-releases in the same month.
 - `sources`: attribution source ids (`placewise.constants.licences`); each must also appear in a
   layer's `sources`.
-- `files`: every other file in the pack with its SHA-256 and size; the store verifies them after
+- `files`: every other file in the pack, keyed by its POSIX path relative to the pack directory,
+  with its SHA-256 and size; the store verifies them after
   download and `placewise verify` re-checks them.
 
 ## layer.json
@@ -74,7 +78,8 @@ be opened with `numpy.load(path, mmap_mode="r")` and costs nothing until touched
   (`"geonames:6167865"`, `"wikidata:Q16"`, `"iso:CA"`).
 - Field types: `str`, `i1 i2 i4 i8`, `u1 u2 u4`, `f4 f8`, `bool`. Integer fields may name a `null`
   sentinel; float nulls are NaN; a `str` null is the empty string.
-- `coords` is `e7` (int32 degrees × 10⁷, ~1 cm, the same as Atlas) for every coordinate array.
+- `coords` is `e7` (int32 degrees × 10⁷, ~1 cm, the same as Atlas) for every coordinate array,
+  rounded half to even.
 
 ## Columns
 
@@ -82,7 +87,8 @@ be opened with `numpy.load(path, mmap_mode="r")` and costs nothing until touched
 - String field `f`: `col/f.npy` is `int32` indexes into the layer's **string table**.
 - String table: `strings.bin` is all distinct strings of the layer, UTF-8, concatenated;
   `strings.idx.npy` (int64, length `m + 1`) holds byte offsets, so string `k` is
-  `strings.bin[idx[k]:idx[k+1]]`. Index 0 is always the empty string. Strings are deduplicated.
+  `strings.bin[idx[k]:idx[k+1]]`. Index 0 is always the empty string. Strings are deduplicated, and one table
+  serves every `str` column of the layer. Ids are never empty.
 
 ## Point layers
 
@@ -104,22 +110,30 @@ flattened, with offset arrays in the style of GeoArrow:
 
 Point-in-polygon uses the even-odd rule across all rings of a feature, so ring orientation doesn't
 matter to readers (builders still write outer rings counter-clockwise, holes clockwise, as GeoJSON
-does).
+does). Containment is planar in (lat, lon) degrees. Features crossing the antimeridian are split at
+±180 (RFC 7946 §3.1.9); an edge may span more than 180° of longitude only along a parallel from +180
+to −180. A feature's bbox west/east is the shortest longitude range covering all its parts.
 
 ### Grid index
 
 A regular grid of `cell_deg` degrees answers "which features might contain this point" without
-looking at geometry. For each cell, features whose bbox touches it are candidates, and cells that
-lie wholly inside exactly one feature are marked so the exact test can be skipped.
+looking at geometry. `items` lists, ascending, every feature that may contain a point of the cell:
+at least those whose boundary touches the cell or that cover it (builders may also include features
+whose bbox merely touches it). `inside[c]` is f when f wholly covers cell c (its four corners are
+inside f and no edge of f touches the closed cell, so a cell in a hole is not covered) and every
+earlier candidate misses c entirely; otherwise −1. It gives the first-match answer and must not be
+used for `query_all`.
 
 | File | dtype | Shape | Meaning |
 |---|---|---|---|
-| `grid/meta.json` | — | — | `{"cell_deg": 1.0, "rows": 180, "cols": 360}` (row 0 starts at −90°, col 0 at −180°) |
+| `grid/meta.json` | — | — | `{"cell_deg": 1.0, "rows": 180, "cols": 360}`: rows = ceil(180 / cell_deg), cols = ceil(360 / cell_deg); row 0 starts at −90°, col 0 at −180° |
 | `grid/cell.npy` | int64 | `(rows * cols + 1,)` | offsets into `items` per cell |
 | `grid/items.npy` | int32 | `(k,)` | candidate feature indexes, ascending within each cell |
 | `grid/inside.npy` | int32 | `(rows * cols,)` | feature that wholly covers the cell, or −1 |
 
-A point on a cell edge belongs to the cell to its north-east. Features earlier in the layer win
+A point's row is floor((lat + 90) / cell_deg) clamped to [0, rows − 1], likewise for columns, so a
+point on a cell edge belongs to the cell to its north-east and lat 90 / lon 180 fall in the last row
+or column (180 is not wrapped to −180). Features earlier in the layer win
 when several contain a point; builders order features so the most specific comes first when that
 matters.
 
@@ -139,7 +153,8 @@ standard library's `tarfile`/`lzma`) and one `index.json` for all packs:
 ```
 
 Relative `url`s resolve against the index's own URL, so a mirror is a copy of the directory. Each
-entry is a `placewise.model.PackInfo`. The store downloads to a temporary file, checks the archive's
+entry is `PackInfo.to_dict()` minus `name` (it's the key), plus `url`. The archive holds one
+top-level directory `<name>-<version>/` with only regular files and directories. The store downloads to a temporary file, checks the archive's
 SHA-256, unpacks to a temporary directory (refusing absolute paths, `..` and links), checks every
 file in `pack.json`, then renames the directory into place, so a pack is either fully there or
 not there at all. Older versions stay until `placewise data prune`.
