@@ -9,8 +9,22 @@ full detail for a few countries).
 It is built for everyone from someone who just wants their Yosemite photos to GIS professionals:
 plain words on the simple path, precise terms (EPSG codes, ellipsoids, error bounds) one step away.
 
-**Status: early development.** The toolkit, tracks, privacy tools, data store and pack format are
-done; reverse lookup over the world pack is being built now. See the design doc for the roadmap.
+**Status: early development.** Reverse lookup works on the world pack (countries, states and
+provinces, 172k cities, time zones, airports, worldviews); the US, Canada and India packs and
+naming rules are next. The toolkit, tracks, privacy tools, data store, overrides, config and the
+server are done.
+
+```python
+import placewise
+
+r = placewise.lookup(43.6426, -79.3871)       # downloads the world pack on first use
+r.label                                       # "Toronto, Ontario, Canada"
+r.admin1.codes, r.tz, r.airport               # ISO codes, "America/Toronto", Nearby(YTZ, 1.8 km)
+placewise.Geocoder().lookup_many(lats, lons)  # vectorised, ~30k points/s
+```
+
+The same lookups run as a local service or a self-hosted web server (`placewise serve`, see
+`docs/self-hosting.md`), with `placewise.Client` offering the identical interface.
 
 ## Geo toolkit (`placewise.geo`), no data needed
 

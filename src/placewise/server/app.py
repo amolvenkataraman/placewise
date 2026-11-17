@@ -96,7 +96,7 @@ def keys_required(host, server_settings):
 
 def default_geocoder(settings):
     """The real lookup engine, imported only when a server is started without one."""
-    from placewise.lookup import Geocoder
+    from placewise.engine import Geocoder
 
     return Geocoder(settings=settings)
 
