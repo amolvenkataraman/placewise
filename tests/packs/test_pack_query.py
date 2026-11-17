@@ -21,6 +21,15 @@ ISLANDS = Feature(outlines=(*box_feature(0, 20, 2, 22).outlines, *box_feature(0,
 OVERLAP = box_feature(8, 8, 12, 12)
 
 
+def test_bboxes_is_every_bbox_at_once(tmp_path):
+    layer = _open(tmp_path, [SQUARE, ISLANDS, OVERLAP])
+    boxes = layer.bboxes()
+    assert boxes.shape == (3, 4) and not boxes.flags.writeable
+    for i in range(3):
+        b = layer.bbox(i)
+        assert boxes[i].tolist() == [b.south, b.west, b.north, b.east]
+
+
 def test_scalar_queries_holes_overlaps_and_query_all(tmp_path):
     layer = _open(tmp_path, [SQUARE, ISLANDS, OVERLAP])
     assert layer.query(2, 2) == 0 and type(layer.query(2, 2)) is int
@@ -107,6 +116,27 @@ def test_query_all_equals_brute_force(tmp_path, kind):
     hits = np.array([np.asarray(f.contains(lats, lons)) for f in features])
     for k in range(len(lats)):
         assert layer.query_all(lats[k], lons[k]) == np.flatnonzero(hits[:, k]).tolist()
+
+
+@pytest.mark.parametrize("kind", list(LAYERS))
+def test_query_every_equals_brute_force(tmp_path, kind):
+    """The vectorised query_all: every (point, feature) pair, sorted by point then feature."""
+    features = LAYERS[kind]
+    layer = _open(tmp_path, features)
+    lats, lons = _random_points(features, np.random.default_rng(4), 500)
+    hits = np.array([np.asarray(f.contains(lats, lons)) for f in features])
+    point, feature = layer.query_every(lats, lons)
+    want_feature, want_point = np.nonzero(hits)
+    order = np.lexsort((want_feature, want_point))
+    np.testing.assert_array_equal(point, want_point[order])
+    np.testing.assert_array_equal(feature, want_feature[order])
+
+
+def test_query_every_overlaps_and_empty_input(tmp_path):
+    layer = _open(tmp_path, [SQUARE, ISLANDS, OVERLAP])
+    point, feature = layer.query_every([9, 5, 11, 50], [9, 5, 11, 50])
+    assert point.tolist() == [0, 0, 2] and feature.tolist() == [0, 2, 2]
+    assert [a.tolist() for a in layer.query_every([], [])] == [[], []]
 
 
 @pytest.mark.parametrize("kind", list(LAYERS))

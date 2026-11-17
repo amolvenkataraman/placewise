@@ -43,14 +43,14 @@ def test_get_lookup_passes_the_worldview(serve, fake):
     reply = call(serve(), "GET", LOOKUP + "&worldview=IN,de_facto")
     assert reply.status == 200
     assert fake.calls[-1] == ("lookup", 1, ("IN", "de_facto"))
-    assert reply.json["worldview"] == ["IN", "de_facto"]
+    assert "worldview" not in reply.json
 
 
 def test_post_lookup_batch(serve, fake):
     points = [CN_TOWER, EIFFEL, OPERA_HOUSE]
     reply = call(serve(), "POST", "/v1/lookup", json_body={"points": points, "worldview": ["UN"]})
     assert reply.status == 200
-    assert reply.json["results"] == [expected(a, b, ("UN",)).to_dict() for a, b in points]
+    assert reply.json["results"] == [expected(a, b).to_dict() for a, b in points]
     assert fake.calls[-1] == ("lookup_many", 3, ("UN",))
     assert reply.headers["Cache-Control"] == "no-store"
 
@@ -121,7 +121,14 @@ def test_version(serve):
         "api": "v1",
         "data_version": DATA_VERSION,
         "max_batch": 7,
+        "worldview": {"order": ["de_facto"], "locked": False},
     }
+
+
+def test_version_describes_the_worldview_lock(serve):
+    locked = Settings(worldview=WorldviewSettings(order=("IN", "de_facto"), lock=True))
+    reply = call(serve(settings=locked), "GET", "/v1/version")
+    assert reply.json["worldview"] == {"order": ["IN", "de_facto"], "locked": True}
 
 
 def test_keep_alive_serves_several_requests_on_one_connection(serve):
@@ -315,11 +322,21 @@ def test_worldview_lock_ignores_request_worldview(serve, fake):
     assert reply.status == 200
     assert fake.calls[-1] == ("lookup", 1, None)
     assert reply.json["worldview_locked"] is True
-    batch = call(server, "POST", "/v1/lookup", json_body={"points": [CN_TOWER], "worldview": ["IN"]})
-    assert fake.calls[-1] == ("lookup_many", 1, None)
-    assert batch.json["results"][0]["worldview_locked"] is True
+    batch = call(
+        server, "POST", "/v1/lookup", json_body={"points": [CN_TOWER, CN_TOWER], "worldview": ["IN"]}
+    )
+    assert fake.calls[-1] == ("lookup_many", 2, None)
+    assert batch.json["worldview_locked"] is True  # once per response, not per result
+    assert all("worldview_locked" not in r and "worldview" not in r for r in batch.json["results"])
     plain = call(server, "GET", LOOKUP)
     assert plain.json["worldview_locked"] is True
+
+
+def test_unlocked_answers_carry_no_lock_flag(serve):
+    server = serve()
+    assert "worldview_locked" not in call(server, "GET", LOOKUP).json
+    batch = call(server, "POST", "/v1/lookup", json_body={"points": [CN_TOWER]})
+    assert "worldview_locked" not in batch.json and "worldview_locked" not in batch.json["results"][0]
 
 
 def test_worldview_lock_from_the_geocoder_settings(serve):

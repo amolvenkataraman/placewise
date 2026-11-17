@@ -4,6 +4,9 @@ Endpoints (all JSON unless noted):
 
     GET  /v1/lookup?lat=&lon=&worldview=     one Result
     POST /v1/lookup  {"points": [[lat, lon], ...], "worldview": [...]}   {"results": [Result, ...]}
+
+When the operator locked the worldview, the body also says `"worldview_locked": true`, once (beside
+the Result's fields, or beside "results"); /v1/version describes the lock.
     GET  /v1/health                          {"status", "data_version", "uptime_s"}
     GET  /v1/attribution[?format=json][&all=1]  the served packs' sources (all=1: every source),
                                              as attribution markdown or registry entries
@@ -92,7 +95,7 @@ class Handler(SecurityChecks, HandlerBase):
         if self.server.settings.server.log_coordinates:
             self._coords = f" lat={lat!r} lon={lon!r}"
         result = self.server.geocoder.lookup(lat, lon, worldview=worldview)
-        self._write_json(200, _result_dict(result, locked))
+        self._write_json(200, _locked(result.to_dict(), locked))
 
     def _lookup_many(self, bucket, per_minute):
         server = self.server
@@ -122,7 +125,7 @@ class Handler(SecurityChecks, HandlerBase):
         results = server.geocoder.lookup_many(lats, lons, worldview=worldview) if points else []
         if len(results) != len(points):
             raise RuntimeError("geocoder returned a different number of results")
-        self._write_json(200, {"results": [_result_dict(r, locked) for r in results]})
+        self._write_json(200, _locked({"results": [r.to_dict() for r in results]}, locked))
 
     def _worldview(self, requested):
         """(worldview to pass on, whether the operator's lock applies), decided by
@@ -158,8 +161,8 @@ class Handler(SecurityChecks, HandlerBase):
         self._write(200, body, content_type, cache="public, max-age=3600")
 
 
-def _result_dict(result, locked):
-    out = result.to_dict()
+def _locked(envelope, locked):
+    """The response body, flagged once (not per result) when the operator's lock applied."""
     if locked:
-        out["worldview_locked"] = True
-    return out
+        envelope["worldview_locked"] = True
+    return envelope

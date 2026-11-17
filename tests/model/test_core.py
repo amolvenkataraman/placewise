@@ -75,7 +75,7 @@ def _example_result():
         airport=Nearby(yyz, Relation.AT, 0.0, None, None),
         sources={"locality": "statcan-boundaries-2021"},
         data_version="2026.11",
-        worldview=("de_facto",),
+        postal=Place("statcan:L4T", "L4T", PlaceKind.POSTAL_CODE),
     )
 
 
@@ -86,6 +86,13 @@ def test_result_round_trips_through_plain_json():
     assert again == result
     assert again.airport.place.codes["iata"] == "YYZ"
     assert again.cc == "CA"
+
+
+def test_result_has_a_postal_code_and_no_worldview():
+    fields = {f.name for f in dataclasses.fields(Result)}
+    assert "postal" in fields
+    assert not fields & {"worldview", "worldview_locked"}
+    assert _example_result().to_dict()["postal"]["name"] == "L4T"
 
 
 def test_to_dict_is_compact_and_ordered():

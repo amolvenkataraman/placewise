@@ -84,10 +84,16 @@ def test_engine_uses_only_public_pack_apis():
 
     import placewise.engine
 
-    for path in Path(placewise.engine.__file__).parent.glob("*.py"):
+    for path in Path(placewise.engine.__file__).parent.rglob("*.py"):
         source = path.read_text(encoding="utf-8")
         assert "placewise.packs._" not in source and "from placewise.packs import _" not in source, path.name
         assert '"geom"' not in source and ".npy" not in source, path.name
+
+
+def test_results_carry_no_worldview_fields(geo):
+    """The applied view is in Disputed where it matters, not on every answer."""
+    d = geo.lookup(0.75, -139.45).to_dict()
+    assert "worldview" not in d and "worldview_locked" not in d
 
 
 def test_far_offshore_beyond_any_reference(geo):
@@ -196,7 +202,6 @@ def test_disputed_filled_with_the_de_facto_view(geo):
     assert d.claimants == ("XA", "XC")
     assert d.administered_by == "XC"
     assert d.applied_view == "de_facto" and d.locked is False
-    assert r.worldview == ("de_facto",)
 
 
 def test_worldview_column_switches_the_country(geo):
@@ -204,7 +209,6 @@ def test_worldview_column_switches_the_country(geo):
     assert r.country.id == "iso:XA"
     assert r.admin1.id == "iso:XC-01"  # the data's admin1 for that ground
     assert r.disputed.applied_view == "XA" and r.disputed.administered_by == "XC"
-    assert r.worldview == ("XA", "de_facto")
     assert geo.lookup(2.25, -139.75, worldview=("xb",)).country.id == "iso:XC"
     assert geo.lookup(2.25, -139.75, worldview="xa").country.id == "iso:XA"
     assert geo.lookup(2.25, -139.75, worldview=("XAA",)).country.id == "iso:XA"  # ISO alpha-3 works too
@@ -225,8 +229,7 @@ def test_lock_overrides_the_per_call_worldview(world):
     geo = Geocoder(packs=[world], settings=settings)
     r = geo.lookup(2.25, -139.75, worldview=("de_facto",))
     assert r.country.id == "iso:XA"
-    assert r.worldview_locked is True and r.disputed.locked is True
-    assert r.worldview == ("XA", "de_facto")
+    assert r.disputed.locked is True and r.disputed.applied_view == "XA"
 
 
 def test_lock_with_reject_refuses_another_order(world):
@@ -242,7 +245,7 @@ def test_settings_order_applies_without_lock(world):
     geo = Geocoder(packs=[world], settings=settings)
     assert geo.lookup(2.25, -139.75).country.id == "iso:XA"
     r = geo.lookup(2.25, -139.75, worldview=("de_facto",))
-    assert r.country.id == "iso:XC" and r.worldview_locked is False
+    assert r.country.id == "iso:XC" and r.disputed.locked is False
 
 
 def test_admin1_code_of_another_country_fills_disputed(geo):

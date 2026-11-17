@@ -411,9 +411,45 @@ class PolygonLayer(Layer):
                 found.append(int(f))
         return found
 
+    def query_every(self, lats, lons):
+        """Every feature containing each point, for layers whose features overlap (regions): flat
+        arrays (point, feature), sorted by point then feature; `point` indexes the flattened query.
+        Vectorised query_all: each point is tested against all of its grid cell's candidates."""
+        lat, lon = np.broadcast_arrays(np.asarray(lats, dtype=np.float64), np.asarray(lons, dtype=np.float64))
+        flat_lat, flat_lon = gm.normalise(lat.ravel(), lon.ravel())
+        ok = np.flatnonzero(np.isfinite(flat_lat))
+        if not (len(ok) and self.count):
+            return np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.int64)
+        cell = self._cell(flat_lat[ok], flat_lon[ok])
+        offsets = self._array(f"{consts.GRID_DIR}/cell.npy")
+        start, stop = (
+            np.asarray(offsets[cell]).astype(np.int64),
+            np.asarray(offsets[cell + 1]).astype(np.int64),
+        )
+        point = np.repeat(ok, stop - start)
+        items = self._array(f"{consts.GRID_DIR}/items.npy")
+        feature = np.asarray(items[_ranges(start, stop)]).astype(np.int64)
+        in_box = self._in_bbox(feature, flat_lat[point], flat_lon[point])
+        point, feature = point[in_box], feature[in_box]
+        hit = (
+            self._contains(feature, flat_lat[point], flat_lon[point])
+            if len(point)
+            else np.zeros(0, dtype=bool)
+        )
+        point, feature = point[hit], feature[hit]
+        order = np.lexsort((feature, point))
+        return point[order], feature[order]
+
     def bbox(self, i):
         """The feature's bounding box; west > east when it crosses the antimeridian."""
         return BBox(*self._bbox[self._row_index(i)].tolist())
+
+    def bboxes(self):
+        """Every feature's bounding box at once: a read-only (count, 4) array of (south, west,
+        north, east) degrees, as bbox(i) gives one at a time."""
+        boxes = self._bbox.view()
+        boxes.flags.writeable = False
+        return boxes
 
     def feature(self, i):
         """Feature i with its full geometry, its row as properties and its id."""
@@ -508,3 +544,13 @@ def _read_json(path, label):
     if not isinstance(data, dict):
         raise PackFormatError(f"{path}: {label} must be a JSON object")
     return data
+
+
+def _ranges(start, stop):
+    """The ranges start[i]:stop[i], concatenated into one index array."""
+    sizes = stop - start
+    total = int(sizes.sum())
+    if not total:
+        return np.zeros(0, dtype=np.int64)
+    shift = start - np.concatenate([[0], np.cumsum(sizes)[:-1]])
+    return np.arange(total, dtype=np.int64) + np.repeat(shift, sizes)
