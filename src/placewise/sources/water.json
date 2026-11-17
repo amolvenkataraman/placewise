@@ -1,0 +1,60 @@
+{
+  "purpose": "water",
+  "description": "Seas and oceans, lakes and reservoirs, rivers: what a point is on or beside (the world-water pack).",
+  "regions": {
+    "world": [
+      {
+        "id": "naturalearth-physical",
+        "name": "Natural Earth 1:10m Physical Vectors",
+        "url": "https://www.naturalearthdata.com",
+        "licence": "LicenseRef-public-domain",
+        "credit": "Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.",
+        "used_in": [
+          "world-water/marine",
+          "world-water/lakes",
+          "world-water/rivers"
+        ],
+        "downloads": {
+          "marine": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_geography_marine_polys.zip",
+          "lakes": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_lakes.zip",
+          "lakes_north_america": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_lakes_north_america.zip",
+          "lakes_europe": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_lakes_europe.zip",
+          "rivers": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_rivers_lake_centerlines.zip",
+          "rivers_north_america": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_rivers_north_america.zip",
+          "rivers_europe": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_rivers_europe.zip"
+        },
+        "notes": "Public domain (naturalearthdata.com/about/terms-of-use). Version 5.1 marine polygons (geography_marine_polys: 306 seas, gulfs, bays, straits and ocean halves covering the whole ocean, 271 with Wikidata ids), lakes with the North America and Europe supplements, and river centerlines with the same supplements. Marine names are name_en (from Wikidata labels) except oceans and rivers, which keep name ('North Atlantic Ocean' where name_en says 'Atlantic Ocean'); lakes keep name, which holds the generic ('Lake Ontario' where name_en says 'Ontario'); unnamed features and lake centerlines are left out. namealt holds alternatives such as Persian Gulf / Arabian Gulf and Sea of Japan / East Sea (aliases; per-worldview water names are not applied yet). These replace the Marine Regions IHO Sea Areas, which are CC BY-NC-SA 4.0 (non-commercial: rejected)."
+      },
+      {
+        "id": "hydrolakes",
+        "name": "HydroLAKES v1.0",
+        "url": "https://www.hydrosheds.org/products/hydrolakes",
+        "licence": "CC-BY-4.0",
+        "credit": "HydroLAKES: Messager, M.L., Lehner, B., Grill, G., Nedeva, I., Schmitt, O. (2016): Estimating the volume and age of water stored in global lakes using a geo-statistical approach. Nature Communications 7: 13603. doi:10.1038/ncomms13603. Data at www.hydrosheds.org, CC BY 4.0",
+        "used_in": [
+          "world-water/lakes"
+        ],
+        "downloads": {
+          "polygons": "https://data.hydrosheds.org/file/hydrolakes/HydroLAKES_polys_v10_shp.zip"
+        },
+        "notes": "CC BY 4.0 (HydroLAKES Technical Documentation v1.0, section 4.1), which also asks users \"to refrain from redistributing the data in whole in its original format on other websites without the explicit written permission from the authors\": the pack carries a filtered, simplified derivative in placewise's own format (lakes of 10 km² or more, about 1.2% of the 1.43 million lakes, outlines simplified to 30 m), not the original files. The build reads only the start of the 820 MB archive by HTTP range requests (its records run largest first), about 220 MB in all. Names are joined from Natural Earth and Wikidata (packbuild.sources.water.names); HydroLAKES' Country field is the country of the outflow (Lake Ontario: United States), so it is not used: a lake's country comes from the world pack's polygons and the worldview."
+      },
+      {
+        "id": "wikidata",
+        "name": "Wikidata",
+        "url": "https://www.wikidata.org",
+        "licence": "CC0-1.0",
+        "credit": "Wikidata (wikidata.org), CC0",
+        "used_in": [
+          "world-water/lakes"
+        ],
+        "downloads": {
+          "water_lakes": "https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fitem%20%3Flabel%20%3Fcoord%20WHERE%20%7B%20VALUES%20%3Fclass%20%7B%20wd%3AQ23397%20%7D%20%3Fitem%20wdt%3AP31%20%3Fclass%3B%20wdt%3AP625%20%3Fcoord%3B%20rdfs%3Alabel%20%3Flabel.%20FILTER%28LANG%28%3Flabel%29%20%3D%20%22en%22%29%20%3Farticle%20schema%3Aabout%20%3Fitem%3B%20schema%3AisPartOf%20%3Chttps%3A%2F%2Fen.wikipedia.org%2F%3E.%20%7D",
+          "water_reservoirs": "https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fitem%20%3Flabel%20%3Fcoord%20WHERE%20%7B%20VALUES%20%3Fclass%20%7B%20wd%3AQ131681%20wd%3AQ187223%20wd%3AQ188025%20wd%3AQ1898470%20wd%3AQ3215290%20wd%3AQ204324%20%7D%20%3Fitem%20wdt%3AP31%20%3Fclass%3B%20wdt%3AP625%20%3Fcoord%3B%20rdfs%3Alabel%20%3Flabel.%20FILTER%28LANG%28%3Flabel%29%20%3D%20%22en%22%29%20%3Farticle%20schema%3Aabout%20%3Fitem%3B%20schema%3AisPartOf%20%3Chttps%3A%2F%2Fen.wikipedia.org%2F%3E.%20%7D"
+        },
+        "notes": "English names of lakes (Q23397), reservoirs (Q131681), lagoons (Q187223), salt lakes (Q188025), marine lakes (Q1898470), artificial lakes (Q3215290) and crater lakes (Q204324) that have coordinates and an English Wikipedia article, two queries (about 14,000 and 4,000 items, November 2026). An item names a HydroLAKES outline its point falls in when neither Natural Earth nor another item already names it (Dal Lake, Wular Lake, Loktak Lake)."
+      }
+    ]
+  },
+  "gaps": {}
+}

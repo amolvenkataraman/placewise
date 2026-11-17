@@ -27,4 +27,12 @@ SHARE_ALIKE = frozenset({"ODbL-1.0", "CC-BY-SA-4.0"})
 # ODbL makes whoever distributes a derived database offer it (and its recipe) somewhere
 NEEDS_DERIVED_DATABASE = frozenset({"ODbL-1.0"})
 # sources whose terms forbid redistribution or commercial use: never shipped, never used to clean others
-DENIED_SOURCES = frozenset({"wdpa", "gadm", "wikivoyage"})
+DENIED_SOURCES = frozenset(
+    {
+        "gadm",
+        "hydrorivers",  # HydroSHEDS v1 licence: no stand-alone redistribution (constants.water)
+        "marineregions-iho",  # IHO Sea Areas: CC BY-NC-SA 4.0 (constants.water)
+        "wdpa",
+        "wikivoyage",
+    }
+)

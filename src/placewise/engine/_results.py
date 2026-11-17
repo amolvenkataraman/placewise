@@ -3,7 +3,8 @@
 The label is "<name>, <admin1>, <country>", consecutive repeats dropped ("New York, United States"),
 where <name> is the locality (label.style "locality", the default) or the city (style "city"),
 each falling back to the other; label.template formats any field instead. Far offshore, the label
-names a reference place: "Offshore, 15 km S of Toronto".
+names a reference place: "Offshore, 15 km S of Toronto". On a sea or lake, the label names it
+("Over Lake Ontario"; placewise.engine._water).
 """
 
 import numpy as np
@@ -33,6 +34,7 @@ def build(geo, lat, lon, a, named, order, locked):
     near_rows = nearby.near_rows(
         cities_layer, a, lat, lon, city, geo.settings.near.max_near, geo._near_km(PlaceKind.LOCALITY)
     )
+    water_rows = geo.water.rows(a, lat, lon) if "wet_layer" in a else [None] * n
 
     cidx, view, aidx, foreign = (a[k].tolist() for k in ("cidx", "view", "aidx", "foreign"))
     cmode, amode = a["cmode"].tolist(), a["amode"].tolist()
@@ -116,6 +118,8 @@ def build(geo, lat, lon, a, named, order, locked):
             label = f"{const.OFFSHORE_LABEL}, {km} {word} of {water_near.place.name}"
         else:
             label = const.OFFSHORE_LABEL
+        if water_rows[i] is not None:  # on a sea or lake, or beside water (placewise.engine._water)
+            label, near = water_rows[i].apply(fields, label, near, sources, ci >= 0)
         results.append(
             Result(
                 lat=lats[i], lon=lons[i], label=label, tz=tz, near=near, disputed=disputed, sources=sources,

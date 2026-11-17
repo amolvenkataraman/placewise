@@ -18,12 +18,14 @@ should still read each licence for its own obligations.
 | [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/regions |
 | [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated) |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
-| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts |
+| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-water/lakes |
 | [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
 | [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/pincodes, ind/regions |
 | [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/pincodes, ind/post_offices, ind/regions |
 | [placewise curated datasets: regions (datasets/regions)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | usa/regions, can/regions, ind/regions |
+| [Natural Earth 1:10m Physical Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world-water/marine, world-water/lakes, world-water/rivers |
+| [HydroLAKES v1.0](https://www.hydrosheds.org/products/hydrolakes) | CC-BY-4.0 | world-water/lakes |
 
 ## Coverage
 
@@ -44,6 +46,7 @@ should still read each licence for its own obligations.
 | regions | can | Statistics Canada, 2021 Census Boundary Files (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts, placewise curated datasets: regions (datasets/regions) |
 | regions | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India), placewise curated datasets: regions (datasets/regions) |
 | regions | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations, placewise curated datasets: regions (datasets/regions) |
+| water | world | Natural Earth 1:10m Physical Vectors, HydroLAKES v1.0, Wikidata |
 
 ## OurAirports
 
@@ -105,6 +108,8 @@ The cldr-json packages (github.com/unicode-org/cldr-json), pinned to release 49.
 
 Driving side (property P1622, values Q11920728 left and Q14565199 right) of every item with an ISO 3166-1 alpha-2 code (P297), leaving out deprecated statements and ones with an end time (P582). A code whose current statements disagree gets no driving side. The query result is cached on the first build; rebuilding with --refresh asks again.
 
+English names of lakes (Q23397), reservoirs (Q131681), lagoons (Q187223), salt lakes (Q188025), marine lakes (Q1898470), artificial lakes (Q3215290) and crater lakes (Q204324) that have coordinates and an English Wikipedia article, two queries (about 14,000 and 4,000 items, November 2026). An item names a HydroLAKES outline its point falls in when neither Natural Earth nor another item already names it (Dal Lake, Wular Lake, Loktak Lake).
+
 ## Statistics Canada, 2021 Census of Population, population and dwelling counts
 
 - Credit: Adapted from Statistics Canada, Census of Population 2021, Population and dwelling counts (tables 98-10-0002-01, 98-10-0005-01 and 98-10-0019-01), reference date May 11, 2021. This does not constitute an endorsement by Statistics Canada of this product.
@@ -148,3 +153,19 @@ The directory's district column decides which PIN areas make up a district.
 - Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
 
 Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.
+
+## Natural Earth 1:10m Physical Vectors
+
+- Credit: Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.
+- Licence: LicenseRef-public-domain
+- Website: https://www.naturalearthdata.com
+
+Public domain (naturalearthdata.com/about/terms-of-use). Version 5.1 marine polygons (geography_marine_polys: 306 seas, gulfs, bays, straits and ocean halves covering the whole ocean, 271 with Wikidata ids), lakes with the North America and Europe supplements, and river centerlines with the same supplements. Marine names are name_en (from Wikidata labels) except oceans and rivers, which keep name ('North Atlantic Ocean' where name_en says 'Atlantic Ocean'); lakes keep name, which holds the generic ('Lake Ontario' where name_en says 'Ontario'); unnamed features and lake centerlines are left out. namealt holds alternatives such as Persian Gulf / Arabian Gulf and Sea of Japan / East Sea (aliases; per-worldview water names are not applied yet). These replace the Marine Regions IHO Sea Areas, which are CC BY-NC-SA 4.0 (non-commercial: rejected).
+
+## HydroLAKES v1.0
+
+- Credit: HydroLAKES: Messager, M.L., Lehner, B., Grill, G., Nedeva, I., Schmitt, O. (2016): Estimating the volume and age of water stored in global lakes using a geo-statistical approach. Nature Communications 7: 13603. doi:10.1038/ncomms13603. Data at www.hydrosheds.org, CC BY 4.0
+- Licence: CC-BY-4.0
+- Website: https://www.hydrosheds.org/products/hydrolakes
+
+CC BY 4.0 (HydroLAKES Technical Documentation v1.0, section 4.1), which also asks users "to refrain from redistributing the data in whole in its original format on other websites without the explicit written permission from the authors": the pack carries a filtered, simplified derivative in placewise's own format (lakes of 10 km² or more, about 1.2% of the 1.43 million lakes, outlines simplified to 30 m), not the original files. The build reads only the start of the 820 MB archive by HTTP range requests (its records run largest first), about 220 MB in all. Names are joined from Natural Earth and Wikidata (packbuild.sources.water.names); HydroLAKES' Country field is the country of the outflow (Lake Ontario: United States), so it is not used: a lake's country comes from the world pack's polygons and the worldview.

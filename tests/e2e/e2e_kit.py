@@ -27,9 +27,15 @@ def packs_dirs():
 
 
 def pack_path(name):
-    """The newest built pack directory for `name`, or None."""
+    """The newest built pack directory for `name`, or None ("world" never picks "world-water")."""
+    from placewise.store.paths import parse_pack_dir
+
     for root in packs_dirs():
-        found = sorted(p for p in root.glob(f"{name}-*") if (p / "pack.json").is_file())
+        found = sorted(
+            p
+            for p in root.glob(f"{name}-*")
+            if (p / "pack.json").is_file() and (parse_pack_dir(p.name) or ("",))[0] == name
+        )
         if found:
             return found[-1]
     return None
