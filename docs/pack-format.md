@@ -1,7 +1,8 @@
 # Pack format, schema 1
 
 A **pack** is a versioned bundle of geographic data that placewise downloads on demand: `world`,
-`us`, `ca`, `in`, later `us-nature` and so on. This document is the contract between the code that
+`usa`, `can`, `ind`, later `usa-nature` and so on (a country pack is named by the country's
+lower-case ISO 3166-1 alpha-3 code). This document is the contract between the code that
 builds packs (`build/`), the code that stores them (`placewise.store`) and the code that reads them
 (`placewise.packs`). A reader in another language should be implementable from this page alone.
 

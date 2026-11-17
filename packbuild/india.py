@@ -50,11 +50,11 @@ def build_layers(
 
 
 def build_india(cache_dir, out_dir, version, refresh=False, **paths):
-    """Build the layers (see build_layers for the optional file paths) and write `<out_dir>/in-<version>/`."""
+    """Build the layers (see build_layers for the optional file paths); write `<out_dir>/ind-<version>/`."""
     layers = build_layers(cache_dir, refresh=refresh, **paths)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "in", version, layers)
+    return write_pack(Path(out_dir), "ind", version, layers)
 
 
 def main(argv=None):

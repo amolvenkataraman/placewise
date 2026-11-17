@@ -54,7 +54,7 @@ def mississauga_result():
         within=(KARIYA_PARK,),
         near=(Nearby(LAKE_ONTARIO, "near", 4.0), Nearby(RATTRAY_MARSH, "near", 6.0)),
         airport=Nearby(PEARSON, "near", 7.0),
-        sources={"locality": "data:ca-2026.11"},
+        sources={"locality": "data:can-2026.11"},
     )
 
 

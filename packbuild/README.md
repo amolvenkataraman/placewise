@@ -46,10 +46,10 @@ Plan:
   derived-database offer that licence requires. When it is installed, polygons win; the
   nearest-city rule stays as the fallback.
 
-## US pack
+## US pack (`usa`)
 
 ```
-uv run python -m packbuild.us --version 2026.11        # writes .cache/packbuild/out/us-2026.11/
+uv run python -m packbuild.us --version 2026.11        # writes .cache/packbuild/out/usa-2026.11/
 ```
 
 Everything comes from the US Census Bureau (registry id `uscensus`, public domain):
@@ -89,10 +89,10 @@ same id as the world pack's admin1. Member lists (`counties`, `cbsas`) are comma
   outside the clipped shape (San Francisco's is on the Farallon Islands).
 - **Delineation.** OMB list 1 is an .xlsx; it is read with the standard library (zip + XML).
 
-## Canada pack
+## Canada pack (`can`)
 
 ```
-uv run python -m packbuild.ca --version 2026.11 --via service   # writes .cache/packbuild/out/ca-2026.11/
+uv run python -m packbuild.ca --version 2026.11 --via service   # writes .cache/packbuild/out/can-2026.11/
 ```
 
 | Layer | Kind | Source | Licence |
@@ -157,10 +157,10 @@ islets) are dropped, but a feature never loses its last ring.
   code is M5V). Full six-character postal codes and their coordinates are Canada Post data and are
   not open data in Canada; placewise uses no postal-code-to-coordinate dataset.
 
-## India pack
+## India pack (`ind`)
 
 ```
-uv run python -m packbuild.india --version 2026.11     # writes .cache/packbuild/out/in-2026.11/
+uv run python -m packbuild.india --version 2026.11     # writes .cache/packbuild/out/ind-2026.11/
 uv run python -m packbuild.india --version 2026.11 \
     --pincode-boundaries All_India_pincode_Boundary-19312.geojson --pincode-directory pincode.csv
 ```
@@ -204,7 +204,7 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
   third-party material, and its SHP and GeoJSON are projected (EPSG:7755, refused; its KMZ is
   WGS84). geoBoundaries' India ADM1 is CC BY 2.5 India (not an accepted licence) and ADM2 is
   ODbL (share-alike pack only); LGD/Bharatmaps and Bhuvan layers carry no licence; GADM is denied.
-  `--states`/`--districts` are refused until `boundaries.json` lists an `nwdp-soi-boundaries` entry for `in`.
+  `--states`/`--districts` are refused until `boundaries.json` lists an `nwdp-soi-boundaries` entry for `ind`.
   Survey of India boundaries show India's official view, including areas India claims that other
   countries administer; Natural Earth's world admin1 is de facto.
 - *Census 2011 towns.* The Town Directory has no coordinates; GeoNames in the world pack covers
@@ -224,7 +224,7 @@ uv run python -m packbuild.us --version 2026.11
 
 # 2. prepare: verify, archive, index (nothing is uploaded; prints the gh command it would run)
 uv run python -m packbuild.release \
-    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/us-2026.11 \
+    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/usa-2026.11 \
     --out .cache/packbuild/release/2026.11
 
 # 3. test the release directory as placewise would use it
@@ -235,7 +235,7 @@ uv run placewise --data-dir /tmp/pw-test \
 
 # 4. publish (needs both the flag and the environment switch; uses gh's login)
 PLACEWISE_ALLOW_PUBLISH=1 uv run python -m packbuild.release \
-    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/us-2026.11 \
+    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/usa-2026.11 \
     --out .cache/packbuild/release/2026.11 --publish [--tag 2026.11]
 ```
 

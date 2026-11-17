@@ -51,9 +51,9 @@ def test_remove_one_version_or_all(data_dir, release):
 
 
 def test_verify_reports_tampering_and_extra_files(data_dir, release):
-    release.add("ca", "2026.11")
+    release.add("can", "2026.11")
     store = install_versions(data_dir, release, "2026.11")
-    store.install("ca")
+    store.install("can")
     assert store.verify() == [] and store.verify("world") == []
     world = store.current("world")
     (world / "countries" / "layer.json").write_text("tampered")
@@ -62,6 +62,6 @@ def test_verify_reports_tampering_and_extra_files(data_dir, release):
     assert len(problems) == 2
     assert all(p.startswith("world-2026.11") for p in problems)
     assert any("countries/layer.json" in p for p in problems) and any("extra.txt" in p for p in problems)
-    assert store.verify("ca") == []
+    assert store.verify("can") == []
     with pytest.raises(PackNotInstalled):
         store.verify("nowhere")

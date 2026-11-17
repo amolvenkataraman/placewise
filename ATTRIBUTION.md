@@ -9,15 +9,15 @@ should still read each licence for its own obligations.
 |---|---|---|
 | [OurAirports](https://ourairports.com/data/) | LicenseRef-public-domain | world/airports |
 | [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/country_facts |
-| [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | us/states, us/counties, us/places, us/cbsa, us/csa, us/zcta |
-| [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | ca/provinces, ca/cd, ca/csd, ca/cma |
+| [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | usa/states, usa/counties, usa/places, usa/cbsa, usa/csa, usa/zcta |
+| [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma |
 | [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated) |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
 | [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts |
-| [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | ca/provinces, ca/cd, ca/csd, ca/cma, ca/fsa |
-| [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | ca/fsa |
-| [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | in/pincodes |
-| [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | in/pincodes, in/post_offices |
+| [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
+| [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
+| [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/pincodes |
+| [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/pincodes, ind/post_offices |
 
 ## Coverage
 
@@ -25,18 +25,18 @@ should still read each licence for its own obligations.
 |---|---|---|
 | airports | world | OurAirports |
 | boundaries | world | Natural Earth 1:10m Cultural Vectors |
-| boundaries | ca | Statistics Canada, 2021 Census Boundary Files (cartographic) |
-| boundaries | in | none: No openly licensed, redistributable state or district boundaries found yet (Survey of India data is not under an open licence; NWDP's terms are unclear; geoBoundaries is CC BY 2.5 IN or ODbL). Natural Earth admin1 covers states in the world pack. See packbuild/README.md, India pack. |
-| boundaries | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| boundaries | can | Statistics Canada, 2021 Census Boundary Files (cartographic) |
+| boundaries | ind | none: No openly licensed, redistributable state or district boundaries found yet (Survey of India data is not under an open licence; NWDP's terms are unclear; geoBoundaries is CC BY 2.5 IN or ODbL). Natural Earth admin1 covers states in the world pack. See packbuild/README.md, India pack. |
+| boundaries | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 | countries | world | GeoNames, Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0, Wikidata, Natural Earth 1:10m Cultural Vectors |
 | places | world | GeoNames |
-| places | ca | Statistics Canada, 2021 Census of Population, population and dwelling counts |
-| places | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
-| postal | ca | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
-| postal | in | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India) |
-| postal | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
-| regions | ca | Statistics Canada, 2021 Census Boundary Files (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
-| regions | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts |
+| places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| postal | can | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
+| postal | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India) |
+| postal | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| regions | can | Statistics Canada, 2021 Census Boundary Files (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
+| regions | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 
 ## OurAirports
 

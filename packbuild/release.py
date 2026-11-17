@@ -1,7 +1,7 @@
 """Prepare a data release from built packs and, only when asked twice, publish it with `gh`.
 
     uv run python -m packbuild.release --packs .cache/packbuild/out/world-2026.11 \\
-        .cache/packbuild/out/us-2026.11 --out .cache/packbuild/release/2026.11
+        .cache/packbuild/out/usa-2026.11 --out .cache/packbuild/release/2026.11
 
 writes, into --out, one `<name>-<version>.tar.xz` per pack, `index.json` (relative URLs),
 `ATTRIBUTION.md` (only the sources these packs use), `SHA256SUMS`, and `release-notes.md` (the

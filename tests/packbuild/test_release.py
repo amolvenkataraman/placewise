@@ -32,7 +32,7 @@ def _pack(out, name, version="2026.11", sources=("naturalearth",)):
 def built(tmp_path):
     out = tmp_path / "built"
     world = _pack(out, "world", sources=("naturalearth", "geonames"))
-    return [world, _pack(out, "us", sources=("uscensus",))]
+    return [world, _pack(out, "usa", sources=("uscensus",))]
 
 
 @pytest.fixture(autouse=True)
@@ -51,11 +51,11 @@ def test_prepare_writes_archives_index_attribution_and_sums(tmp_path, built):
     out = tmp_path / "release"
     plan = release.prepare_release(built, out)
     names = {p.name for p in out.iterdir()}
-    assets = {"index.json", "ATTRIBUTION.md", "SHA256SUMS", "world-2026.11.tar.xz", "us-2026.11.tar.xz"}
+    assets = {"index.json", "ATTRIBUTION.md", "SHA256SUMS", "world-2026.11.tar.xz", "usa-2026.11.tar.xz"}
     assert assets <= names
-    assert [p.name for p in plan.packs] == ["world", "us"]
+    assert [p.name for p in plan.packs] == ["world", "usa"]
     assert plan.version == "2026.11"
-    assert [a.name for a in plan.archives] == ["world-2026.11.tar.xz", "us-2026.11.tar.xz"]
+    assert [a.name for a in plan.archives] == ["world-2026.11.tar.xz", "usa-2026.11.tar.xz"]
     assert all(a.parent == out for a in plan.archives)
     assert plan.assets == (plan.index, plan.attribution, plan.sums, *plan.archives)
     assert plan.notes.is_file() and plan.notes not in plan.assets
@@ -64,7 +64,7 @@ def test_prepare_writes_archives_index_attribution_and_sums(tmp_path, built):
 def test_index_lists_each_pack_with_a_relative_url_and_the_archive_hash(tmp_path, built):
     plan = release.prepare_release(built, tmp_path / "release")
     doc = json.loads(plan.index.read_text())
-    assert doc["schema"] == 1 and set(doc["packs"]) == {"world", "us"}
+    assert doc["schema"] == 1 and set(doc["packs"]) == {"world", "usa"}
     world = doc["packs"]["world"]
     assert world["url"] == "world-2026.11.tar.xz"  # relative: a mirror is a copy of the directory
     assert world["sha256"] == _sha(tmp_path / "release" / "world-2026.11.tar.xz")
@@ -84,11 +84,11 @@ def test_sha256sums_covers_every_asset_in_sha256sum_format(tmp_path, built):
 
 
 def test_attribution_covers_only_the_sources_the_packs_use(tmp_path, built):
-    plan = release.prepare_release(built[1:], tmp_path / "release")  # the us pack alone
+    plan = release.prepare_release(built[1:], tmp_path / "release")  # the usa pack alone
     text = plan.attribution.read_text()
     assert "## US Census Bureau" in text
     assert "Natural Earth" not in text and "GeoNames" not in text and "Statistics Canada" not in text
-    assert "| boundaries | us |" in text and "| boundaries | world |" not in text
+    assert "| boundaries | usa |" in text and "| boundaries | world |" not in text
 
 
 def test_a_release_is_reproducible(tmp_path, built):
@@ -109,7 +109,7 @@ def test_the_built_packs_are_left_in_place(tmp_path, built):
 def test_the_store_installs_from_the_prepared_directory(tmp_path, built):
     plan = release.prepare_release(built, tmp_path / "release")
     store = Store(data_dir=tmp_path / "data", index_url=plan.index.as_uri())
-    for name in ("world", "us"):
+    for name in ("world", "usa"):
         pack = open_pack(store.install(name), verify=True)
         assert pack.name == name and pack["spots"].value("name", 1) == "Spot B"
     assert store.verify() == []
@@ -158,7 +158,7 @@ def test_refuses_nothing_to_release(tmp_path):
 
 def test_the_default_tag_is_the_newest_pack_version(tmp_path):
     out = tmp_path / "built"
-    packs = [_pack(out, "world", "2026.11"), _pack(out, "us", "2026.11.1")]
+    packs = [_pack(out, "world", "2026.11"), _pack(out, "usa", "2026.11.1")]
     plan = release.prepare_release(packs, tmp_path / "r")
     assert plan.version == "2026.11.1"
 

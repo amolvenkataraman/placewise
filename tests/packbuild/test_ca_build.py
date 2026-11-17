@@ -82,10 +82,10 @@ def test_build_ca_fetches_from_the_registry_and_hands_five_layers_to_the_writer(
 
     monkeypatch.setattr(ca, "write_pack", fake_write_pack)
     out = ca.build_ca(tmp_path / "cache", tmp_path / "out", "2026.11")
-    assert out == tmp_path / "out" / "ca-2026.11"
+    assert out == tmp_path / "out" / "can-2026.11"
     assert sorted(offline) == sorted(url(s, n) for s, n in [*BOUNDARY_DOWNLOADS, *POPULATION_DOWNLOADS])
     [(out_dir, name, version, layers)] = calls
-    assert (out_dir, name, version) == (tmp_path / "out", "ca", "2026.11")
+    assert (out_dir, name, version) == (tmp_path / "out", "can", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
     assert {layer.name: len(layer.columns["id"]) for layer in layers} == COUNTS
     for layer in layers:

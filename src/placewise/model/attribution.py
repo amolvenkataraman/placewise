@@ -40,7 +40,7 @@ class Source(Model):
 
 @dataclass(frozen=True, slots=True)
 class PackInfo(Model):
-    name: str  # "world", "ca", "us-nature" ...
+    name: str  # "world", "can", "usa-nature" ... (countries by lower-case ISO alpha-3)
     version: str  # CalVer data version, e.g. "2026.11"
     schema: int  # pack format version; code refuses schemas it can't read
     sha256: str

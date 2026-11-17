@@ -52,13 +52,13 @@ def test_build_india_fetches_both_sources_from_the_registry(tmp_path, offline, m
 
     monkeypatch.setattr(india, "write_pack", fake_write_pack)
     out = india.build_india(tmp_path / "cache", tmp_path / "out", "2026.11")
-    assert out == tmp_path / "out" / "in-2026.11"
+    assert out == tmp_path / "out" / "ind-2026.11"
     assert offline == [
         SOURCES["indiapost-pincode-boundary"].downloads["boundary_mirror"],
         SOURCES["indiapost-pincode-directory"].downloads["directory_mirror"],
     ]
     [(name, version, layers)] = calls
-    assert (name, version) == ("in", "2026.11")
+    assert (name, version) == ("ind", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
     for layer in layers:
         assert set(layer.sources) <= set(SOURCES)
