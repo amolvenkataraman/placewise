@@ -49,7 +49,7 @@ def test_local_file_overrides_a_repo_rule(tmp_path, empty_repo):
                     "fields": {"sublocality": "Port Credit"},
                 }
             ],
-            "alias": [{"text": "GTA", "means": "placewise:region/gta"}],
+            "alias": [{"text": "GTA", "means": "region:gta"}],
         },
     )
     local = write(
@@ -61,7 +61,7 @@ def test_local_file_overrides_a_repo_rule(tmp_path, empty_repo):
                     "fields": {"sublocality": "Port Credit Village"},
                 }
             ],
-            "alias": [{"text": "gta", "means": "placewise:region/gtha"}],
+            "alias": [{"text": "gta", "means": "region:gtha"}],
         },
     )
     eng = load_overrides(repo_dir=empty_repo, local_path=local)
@@ -69,7 +69,7 @@ def test_local_file_overrides_a_repo_rule(tmp_path, empty_repo):
     out = apply(eng, port_credit)
     assert out.sublocality.name == "Port Credit Village"
     assert out.sources["sublocality"] == "override:local:overrides.json#1"
-    assert eng.resolve_name("GTA") == ["placewise:region/gtha", "placewise:region/gta"]
+    assert eng.resolve_name("GTA") == ["region:gtha", "region:gta"]
 
 
 def test_default_local_path_is_the_store_overrides_file(tmp_path, monkeypatch, empty_repo):
@@ -126,8 +126,8 @@ def test_app_rule_errors_name_the_app_layer(empty_repo, tmp_path):
 def test_shipped_repo_overrides_load(tmp_path):
     eng = load_overrides(local_path=False)
     assert REPO_DIR.is_dir()
-    assert eng.resolve_name("GTA") == ["placewise:region/gta"]
-    assert eng.resolve_name("Bay Area") == ["placewise:region/sf-bay-area"]
+    assert eng.resolve_name("GTA") == ["region:gta"]
+    assert eng.resolve_name("Bay Area") == ["region:sf-bay-area"]
     assert all(r["origin"].startswith("repo:") for r in eng.explain())
 
 
@@ -153,7 +153,7 @@ def test_without_a_toml_parser_the_repo_layer_reads_json_twins_and_cites_the_tom
     monkeypatch.setitem(sys.modules, "tomllib", None)
     monkeypatch.setitem(sys.modules, "tomli", None)
     eng = load_overrides(local_path=False)
-    assert eng.resolve_name("GTA") == ["placewise:region/gta"]
+    assert eng.resolve_name("GTA") == ["region:gta"]
     assert eng.rules[0].origin == "repo:aliases.toml#1"
     # a TOML file with no twin, or a TOML local file, gets the clear error
     local = tmp_path / "overrides.toml"

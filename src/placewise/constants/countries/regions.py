@@ -10,11 +10,12 @@ from ._records import Metro
 # fmt: off
 REGIONS = (
     Metro(
-        id="placewise:region/gta",
+        id="region:gta",
         key="GTA", name="Greater Toronto Area", country="CA",
         admin1=("ON",),
         aliases=(
             "Greater Toronto", "Toronto Area", "Toronto Metro", "GTHA", "Greater Toronto and Hamilton Area",
+            "Greater Toronto Hamilton Area",
         ),
         city_aliases={
             "TOR": "Toronto", "YYZ": "Toronto", "North York": "Toronto",
@@ -28,7 +29,15 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/metro-vancouver",
+        id="region:golden-horseshoe",
+        key="Golden Horseshoe", name="Greater Golden Horseshoe", country="CA",
+        admin1=("ON",),
+        aliases=(
+            "GGH", "Greater Golden Horseshoe Area",
+        ),
+    ),
+    Metro(
+        id="region:metro-vancouver",
         key="Metro Vancouver", name="Metro Vancouver", country="CA",
         admin1=("BC",),
         aliases=(
@@ -44,7 +53,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/greater-montreal",
+        id="region:greater-montreal",
         key="Greater Montreal", name="Greater Montreal", country="CA",
         admin1=("QC",),
         aliases=(
@@ -59,7 +68,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/ottawa-gatineau",
+        id="region:ottawa-gatineau",
         key="Ottawa-Gatineau", name="National Capital Region (Canada)", country="CA",
         admin1=("ON", "QC",),
         aliases=(
@@ -74,7 +83,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/waterloo-region",
+        id="region:waterloo-region",
         key="Waterloo Region", name="Waterloo Region", country="CA",
         admin1=("ON",),
         aliases=(
@@ -89,7 +98,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/greater-london",
+        id="region:greater-london",
         key="Greater London", name="Greater London", country="GB",
         admin1=("ENG",),
         aliases=(
@@ -103,12 +112,13 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/delhi-ncr",
+        id="region:delhi-ncr",
         key="NCR", name="National Capital Region (India)", country="IN",
         admin1=("DL", "HR", "UP", "RJ",),
         aliases=(
             "Delhi NCR", "Delhi-NCR", "NCR Delhi", "National Capital Region",
-            "Delhi National Capital Region",
+            "Delhi National Capital Region", "Delhi NCR core", "Delhi NCR (core)", "Central NCR",
+            "Core NCR",
         ),
         city_aliases={
             "Gurgaon": "Gurugram",
@@ -119,7 +129,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/mumbai-metro-region",
+        id="region:mumbai-metro-region",
         key="MMR", name="Mumbai Metropolitan Region", country="IN",
         admin1=("MH",),
         aliases=(
@@ -133,11 +143,12 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/bengaluru",
+        id="region:bengaluru",
         key="Bengaluru", name="Bengaluru", country="IN",
         admin1=("KA",),
         aliases=(
             "Bengaluru Urban", "Bangalore Urban", "Greater Bengaluru", "Bengaluru Area", "Bangalore Area",
+            "Bengaluru Metropolitan Region", "Bangalore Metropolitan Region", "BMR", "BMRDA Region",
         ),
         city_aliases={
             "Bangalore": "Bengaluru", "Bengaluru": "Bengaluru",
@@ -147,7 +158,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/sf-bay-area",
+        id="region:sf-bay-area",
         key="Bay Area", name="San Francisco Bay Area", country="US",
         admin1=("CA",),
         aliases=(
@@ -169,7 +180,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/greater-los-angeles",
+        id="region:greater-los-angeles",
         key="Greater Los Angeles", name="Greater Los Angeles", country="US",
         admin1=("CA",),
         aliases=(
@@ -187,7 +198,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/new-york-metro",
+        id="region:new-york-metro",
         key="NYC", name="New York metropolitan area", country="US",
         admin1=("NY", "NJ", "CT", "PA",),
         aliases=(
@@ -206,7 +217,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/greater-boston",
+        id="region:greater-boston",
         key="Greater Boston", name="Greater Boston", country="US",
         admin1=("MA", "NH",),
         aliases=(
@@ -220,11 +231,10 @@ REGIONS = (
             "Boston": "MA", "Cambridge": "MA", "Somerville": "MA", "Waltham": "MA", "Newton": "MA",
             "Quincy": "MA", "Burlington": "MA", "Woburn": "MA", "Needham": "MA", "Wellesley": "MA",
             "Framingham": "MA", "Lowell": "MA", "Brookline": "MA", "Watertown": "MA", "Lexington": "MA",
-            "Nashua": "NH",
         },
     ),
     Metro(
-        id="placewise:region/greater-seattle",
+        id="region:greater-seattle",
         key="Greater Seattle", name="Greater Seattle", country="US",
         admin1=("WA",),
         aliases=(
@@ -241,7 +251,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/dallas-fort-worth",
+        id="region:dallas-fort-worth",
         key="DFW", name="Dallas-Fort Worth metroplex", country="US",
         admin1=("TX",),
         aliases=(
@@ -256,7 +266,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/greater-houston",
+        id="region:greater-houston",
         key="Greater Houston", name="Greater Houston", country="US",
         admin1=("TX",),
         aliases=(
@@ -270,7 +280,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/washington-metro",
+        id="region:washington-metro",
         key="DMV", name="Washington metropolitan area", country="US",
         admin1=("DC", "MD", "VA", "WV",),
         aliases=(
@@ -287,7 +297,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/greater-philadelphia",
+        id="region:greater-philadelphia",
         key="Greater Philadelphia", name="Greater Philadelphia", country="US",
         admin1=("PA", "NJ", "DE", "MD",),
         aliases=(
@@ -302,7 +312,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/chicagoland",
+        id="region:chicagoland",
         key="Chicagoland", name="Chicago metropolitan area", country="US",
         admin1=("IL", "IN", "WI",),
         aliases=(
@@ -319,7 +329,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/metro-atlanta",
+        id="region:metro-atlanta",
         key="Metro Atlanta", name="Metro Atlanta", country="US",
         admin1=("GA",),
         aliases=(
@@ -334,7 +344,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/twin-cities",
+        id="region:twin-cities",
         key="Twin Cities", name="Minneapolis–Saint Paul", country="US",
         admin1=("MN", "WI",),
         aliases=(
@@ -350,7 +360,7 @@ REGIONS = (
         },
     ),
     Metro(
-        id="placewise:region/research-triangle",
+        id="region:research-triangle",
         key="Research Triangle", name="Research Triangle", country="US",
         admin1=("NC",),
         aliases=(
@@ -364,6 +374,14 @@ REGIONS = (
             "Raleigh": "NC", "Durham": "NC", "Chapel Hill": "NC", "Cary": "NC", "Morrisville": "NC",
             "Apex": "NC",
         },
+    ),
+    Metro(
+        id="region:las-vegas",
+        key="Greater Las Vegas", name="Las Vegas metropolitan area", country="US",
+        admin1=("NV",),
+        aliases=(
+            "Las Vegas Metro", "Las Vegas Area", "Las Vegas Metropolitan Area", "Las Vegas Valley",
+        ),
     ),
 )
 # fmt: on

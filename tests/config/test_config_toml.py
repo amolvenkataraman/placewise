@@ -11,13 +11,13 @@ from placewise.config import _toml
 HAS_TOML = any(importlib.util.find_spec(name) for name in ("tomllib", "tomli"))
 needs_toml = pytest.mark.skipif(not HAS_TOML, reason="needs tomllib (3.11+) or tomli")
 
-DOC = {"alias": [{"text": "GTA", "means": "placewise:region/gta"}], "near": {"airport": 5.0}}
+DOC = {"alias": [{"text": "GTA", "means": "region:gta"}], "near": {"airport": 5.0}}
 
 
 @needs_toml
 def test_toml_file_loads(tmp_path):
     path = tmp_path / "a.toml"
-    path.write_text('[[alias]]\ntext = "GTA"\nmeans = "placewise:region/gta"\n\n[near]\nairport = 5.0\n')
+    path.write_text('[[alias]]\ntext = "GTA"\nmeans = "region:gta"\n\n[near]\nairport = 5.0\n')
     assert _toml.load(path) == DOC
     assert _toml.available()
 

@@ -56,7 +56,7 @@ def test_relabel_hook_recomposes_the_label_after_name_changes():
 
 def test_explain_lists_rules_with_origins():
     eng = engine(
-        repo={"alias": [{"text": "GTA", "means": "placewise:region/gta"}]},
+        repo={"alias": [{"text": "GTA", "means": "region:gta"}]},
         local={"hide": [{"id": KARIYA_PARK.id}]},
     )
     rows = eng.explain()
@@ -64,4 +64,4 @@ def test_explain_lists_rules_with_origins():
         ("repo", "alias", "repo:repo.toml#1"),
         ("local", "hide", "local:local.toml#1"),
     ]
-    assert rows[0]["rule"] == {"text": "GTA", "means": "placewise:region/gta"}
+    assert rows[0]["rule"] == {"text": "GTA", "means": "region:gta"}

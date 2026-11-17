@@ -3,15 +3,18 @@
     uv run python -m packbuild.regions            # regenerate the module
     uv run python -m packbuild.regions --check    # exit 1 if the module is out of date
 
-The dataset is the source of truth; the generated module holds what text parsing needs offline:
-each region's id, short name, name, country, admin1 codes, aliases, principal cities and city
-aliases. Member municipality ids (`members`) stay in the dataset for the packs.
+The dataset is the source of truth; the generated module holds what location search needs
+offline: each region's id, short name, name, country, admin1 codes, aliases, principal cities and
+city aliases. A region with `search_as` (the GTHA, read as the GTA) gets no entry of its own there:
+its names become aliases of the region it names. Members, kind and definition are for the country
+packs' `regions` layer (packbuild.regions_layer), where every region is drawn on its own.
 """
 
 import argparse
 import json
 import re
 import sys
+import urllib.parse
 from pathlib import Path
 
 from placewise.constants import countries
@@ -27,14 +30,33 @@ FIELDS = {
     "country",
     "admin1",
     "aliases",
+    "kind",
     "members",
+    "districts",
+    "definition",
+    "search_as",
     "principal_cities",
     "city_aliases",
     "notes",
 }
-REQUIRED = {"id", "short_name", "name", "country", "admin1", "aliases", "members", "notes"}
-_ID = re.compile(r"^placewise:region/[a-z0-9]+(?:-[a-z0-9]+)*$")
-_MEMBER = re.compile(r"^(?:census|statcan|geonames|iso|ne):[A-Za-z0-9-]+$")
+REQUIRED = {
+    "id",
+    "short_name",
+    "name",
+    "country",
+    "admin1",
+    "aliases",
+    "kind",
+    "members",
+    "definition",
+    "notes",
+}
+# metro: a statistical metro area (OMB MSA or CSA, StatCan CMA); official-planning: an area a public
+# body plans or governs as one (ABAG, the NCR Planning Board, Metrolinx, a regional municipality);
+# vernacular: a name in common use, drawn with official units
+KINDS = ("metro", "official-planning", "vernacular")
+_ID = re.compile(r"^region:[a-z0-9]+(?:-[a-z0-9]+)*$")
+_MEMBER = re.compile(r"^(?:census|statcan|pin|geonames|iso|ne):[A-Za-z0-9-]+$")
 HEADER = '''"""GENERATED from datasets/regions by packbuild.regions; do not edit.
 
 Metro and vernacular regions ("GTA", "SF Bay Area", "NYC", "Delhi NCR"): id, short name, name,
@@ -51,23 +73,26 @@ REGIONS = (
 
 def load(dataset=DATASET):
     """Every region in the dataset, validated, in file then entry order."""
-    regions, ids, names = [], set(), {}
+    regions, ids = [], set()
     for path in sorted(dataset.glob("*.json")):
         for entry in json.loads(path.read_text(encoding="utf-8"))["regions"]:
-            _validate(path.name, entry, ids, names)
+            _validate(f"{path.name}: {entry.get('id', '?')}", entry, ids)
             regions.append(entry)
+    _check_search(regions)
     return regions
 
 
-def _validate(file, entry, ids, names):
-    where = f"{file}: {entry.get('id', '?')}"
+def _validate(where, entry, ids):
     if missing := REQUIRED - set(entry):
         raise ValueError(f"{where}: missing {sorted(missing)}")
     if extra := set(entry) - FIELDS:
         raise ValueError(f"{where}: unknown fields {sorted(extra)}")
     if not _ID.match(entry["id"]) or entry["id"] in ids:
-        raise ValueError(f"{where}: id must be a new placewise:region/<slug>")
+        raise ValueError(f"{where}: id must be a new region:<slug>")
     ids.add(entry["id"])
+    if entry["kind"] not in KINDS:
+        raise ValueError(f"{where}: kind {entry['kind']!r} is not one of {', '.join(KINDS)}")
+    _check_definition(where, entry["definition"])
     country = entry["country"]
     if country not in countries.BY_ALPHA2:
         raise ValueError(f"{where}: unknown country {country!r}")
@@ -78,6 +103,11 @@ def _validate(file, entry, ids, names):
     for member in entry["members"]:
         if not _MEMBER.match(member):
             raise ValueError(f"{where}: member {member!r} is not a pack id")
+    if len(set(entry["members"])) != len(entry["members"]):
+        raise ValueError(f"{where}: a member is listed twice")
+    for code, names in entry.get("districts", {}).items():
+        if code not in entry["admin1"] or not names:
+            raise ValueError(f"{where}: districts of {code!r}: not an admin1 the region reaches, or none")
     cities = entry.get("principal_cities", {})
     for city, code in cities.items():
         if code not in entry["admin1"]:
@@ -85,10 +115,53 @@ def _validate(file, entry, ids, names):
     for alias, city in entry.get("city_aliases", {}).items():
         if city not in cities:
             raise ValueError(f"{where}: alias {alias!r} names {city!r}, not a principal city")
-    for name in [entry["short_name"], entry["name"], *entry["aliases"], *entry.get("city_aliases", {})]:
-        k = city_key(name)
-        if names.setdefault(k, entry["id"]) != entry["id"]:
-            raise ValueError(f"{where}: {name!r} also names {names[k]}")
+
+
+def _check_definition(where, definition):
+    ok = (
+        isinstance(definition, dict)
+        and set(definition) == {"title", "url"}
+        and bool(definition["title"])
+        and urllib.parse.urlparse(str(definition["url"])).scheme == "https"
+        and bool(urllib.parse.urlparse(str(definition["url"])).netloc)
+    )
+    if not ok:
+        raise ValueError(f"{where}: definition must be {{title, url}} with an https:// url")
+
+
+def _check_search(regions):
+    """search_as names another region of the same country with its own entry, and every name
+    location search reads (folded ones included) means one region."""
+    by_id = {r["id"]: r for r in regions}
+    names = {}
+    for r in regions:
+        target = r.get("search_as")
+        if target is not None:
+            other = by_id.get(target)
+            if other is None or other is r or "search_as" in other or other["country"] != r["country"]:
+                raise ValueError(f"{r['id']}: search_as must name another region of {r['country']}")
+            if r.get("principal_cities") or r.get("city_aliases"):
+                raise ValueError(f"{r['id']}: a region read as another lists no cities")
+        means = target or r["id"]
+        for name in [r["short_name"], r["name"], *r["aliases"], *r.get("city_aliases", {})]:
+            k = city_key(name)
+            if names.setdefault(k, means) != means:
+                raise ValueError(f"{r['id']}: {name!r} also names {names[k]}")
+
+
+def searchable(regions):
+    """The regions location search has an entry for, in order, each with the names of the regions
+    read as it (search_as) appended to its aliases."""
+    out = {r["id"]: {**r, "aliases": list(r["aliases"])} for r in regions if "search_as" not in r}
+    for r in regions:
+        if (target := r.get("search_as")) is not None:
+            entry = out[target]
+            known = {city_key(n) for n in [entry["short_name"], entry["name"], *entry["aliases"]]}
+            for name in [r["short_name"], r["name"], *r["aliases"]]:
+                if city_key(name) not in known:
+                    known.add(city_key(name))
+                    entry["aliases"].append(name)
+    return list(out.values())
 
 
 def _items(pairs, indent, width=108):
@@ -112,7 +185,7 @@ def _q(text):
 def render(regions):
     """The generated module's text."""
     out = [HEADER]
-    for r in regions:
+    for r in searchable(regions):
         out.append("    Metro(\n")
         out.append(f"        id={_q(r['id'])},\n")
         out.append(f"        key={_q(r['short_name'])}, name={_q(r['name'])}, country={_q(r['country'])},\n")
