@@ -1,0 +1,40 @@
+[project]
+name = "placewise"
+version = "0.0.1"
+description = "Offline, two-way geocoding and geo toolkit: the place people would name, plus distances, bearings, shapes and coordinates."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+# Karney's ellipsoidal geodesics; pure Python, MIT. Optional so the core stays numpy-only.
+geodesic = ["geographiclib>=2.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "geographiclib>=2.0",
+    "pyshp>=3.1.9",
+]
+
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/placewise"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "NPY", "RUF"]
+# SIM300 misreads `x == pytest.approx(y)` as a Yoda condition; RUF001-003 flag the prime
+# symbols (′ ″) that DMS notation needs
+ignore = ["SIM300", "RUF001", "RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
