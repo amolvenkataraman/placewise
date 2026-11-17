@@ -110,6 +110,27 @@ def test_query_all_equals_brute_force(tmp_path, kind):
 
 
 @pytest.mark.parametrize("kind", list(LAYERS))
+def test_query_every_equals_brute_force(tmp_path, kind):
+    """The vectorised query_all: every (point, feature) pair, sorted by point then feature."""
+    features = LAYERS[kind]
+    layer = _open(tmp_path, features)
+    lats, lons = _random_points(features, np.random.default_rng(4), 500)
+    hits = np.array([np.asarray(f.contains(lats, lons)) for f in features])
+    point, feature = layer.query_every(lats, lons)
+    want_feature, want_point = np.nonzero(hits)
+    order = np.lexsort((want_feature, want_point))
+    np.testing.assert_array_equal(point, want_point[order])
+    np.testing.assert_array_equal(feature, want_feature[order])
+
+
+def test_query_every_overlaps_and_empty_input(tmp_path):
+    layer = _open(tmp_path, [SQUARE, ISLANDS, OVERLAP])
+    point, feature = layer.query_every([9, 5, 11, 50], [9, 5, 11, 50])
+    assert point.tolist() == [0, 0, 2] and feature.tolist() == [0, 2, 2]
+    assert [a.tolist() for a in layer.query_every([], [])] == [[], []]
+
+
+@pytest.mark.parametrize("kind", list(LAYERS))
 def test_inside_cells_never_change_an_answer(tmp_path, kind):
     features = LAYERS[kind]
     layer = _open(tmp_path, features, cell_deg=0.5)
