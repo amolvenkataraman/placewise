@@ -22,7 +22,8 @@ from fit_writer import (
 )
 
 from placewise.constants import fit as fit_constants
-from placewise.io.fit import FitError, FitFile, _crc16, read_fit
+from placewise.io._fit_decode import crc16 as _crc16
+from placewise.io.fit import FitError, FitFile, read_fit
 from placewise.tracks import Track
 
 START = fit_time("2024-06-01T09:00:00Z")

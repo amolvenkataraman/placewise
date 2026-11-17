@@ -1,3 +1,4 @@
+# ruff: noqa: E501  (data rows are longer than a line)
 """A synthetic world and country packs for the naming tests: invented boxes in open Pacific water
 that carry the real packs' layer names, columns and id schemes (packbuild/README.md). The ISO
 codes are real so the rules recognise the countries; every place and coordinate is made up.
@@ -110,47 +111,36 @@ US_COUNTIES = [
 US_PLACES = [
     # box, id, name, class, state, population, intpt_lat, intpt_lon
     ((10.3, -150, 10.5, -149.8), "census:3240000", "Las Vegas", "incorporated", "NV", 650_000, 10.4, -149.9),
-    ((10.0, -150, 10.3, -149.8), "census:3254600", "Paradise", "cdp", "NV", None, 10.15, -149.9),
-    (
-        (10.0, -149.7, 10.2, -149.5),
-        "census:3231900",
-        "Henderson",
-        "incorporated",
-        "NV",
-        330_000,
-        10.1,
-        -149.6,
-    ),
-    ((10.0, -149.45, 10.1, -149.4), "census:3240600", "Laughlin", "cdp", "NV", None, 10.05, -149.42),
+    ((10.0, -150, 10.3, -149.8), "census:3254600", "Paradise", "cdp", "NV", 185_000, 10.15, -149.9),
+    ((10.0, -149.7, 10.2, -149.5), "census:3231900", "Henderson", "incorporated", "NV", 330_000, 10.1, -149.6),
+    ((10.0, -149.45, 10.1, -149.4), "census:3240600", "Laughlin", "cdp", "NV", 8_000, 10.05, -149.42),
+    # a CDP named after its postal city (like East Los Angeles); a big and a small CDP whose ZIP
+    # Code says Paradise (another CDP)
+    ((10.3, -149.8, 10.45, -149.7), "census:3299901", "East Las Vegas", "cdp", "NV", 110_000, 10.4, -149.75),
+    ((10.1, -149.8, 10.2, -149.7), "census:3284600", "Winchester", "cdp", "NV", 36_000, 10.15, -149.75),
+    ((10.0, -149.8, 10.1, -149.7), "census:3206500", "Blue Diamond", "cdp", "NV", 290, 10.05, -149.75),
     (KINGS, "census:3651000", "New York", "incorporated", "NY", 8_500_000, 10.75, -149.75),
-    (
-        (10.5, -149.3, 10.55, -149.25),
-        "census:0622594",
-        "Emeryville",
-        "incorporated",
-        "CA",
-        13_000,
-        10.52,
-        -149.27,
-    ),
-    (
-        (10.6, -149.3, 10.9, -149.1),
-        "census:0667000",
-        "San Francisco",
-        "incorporated",
-        "CA",
-        826_000,
-        10.75,
-        -149.2,
-    ),
+    ((10.5, -149.3, 10.55, -149.25), "census:0622594", "Emeryville", "incorporated", "CA", 13_000, 10.52, -149.27),
+    ((10.6, -149.3, 10.9, -149.1), "census:0667000", "San Francisco", "incorporated", "CA", 826_000, 10.75, -149.2),
+]  # fmt: skip
+US_ZCTA = [
+    # box, id, name, postal_city, postal_place
+    ((10.22, -150, 10.3, -149.8), "census:zcta:89109", "89109", "Las Vegas", "census:3240000"),
+    ((10.3, -149.8, 10.45, -149.7), "census:zcta:89110", "89110", "Las Vegas", "census:3240000"),
+    ((10.0, -149.8, 10.2, -149.7), "census:zcta:89118", "89118", "Paradise", "census:3254600"),
+    # Laughlin's ZIP Code names a city 35 km off: too far to stand for it
+    ((10.0, -149.45, 10.1, -149.4), "census:zcta:89029", "89029", "Las Vegas", "census:3240000"),
+    ((10.5, -149.25, 10.6, -149.1), "census:zcta:94128", "94128", "San Francisco", "census:0667000"),
+    ((10.6, -149.3, 10.9, -149.1), "census:zcta:94103", "94103", "San Francisco", "census:0667000"),
+    ((10.5, -150, 11, -149.5), "census:zcta:11211", "11211", "Brooklyn", ""),  # no census place of that name
 ]
 US_CBSA = [
     (CLARK, "census:cbsa:29820", "Las Vegas-Henderson-North Las Vegas, NV Metro Area",
-     "Las Vegas-Henderson-North Las Vegas, NV", "29820", "metro"),
+     "Las Vegas-Henderson-North Las Vegas, NV", "29820", "metro", "census:3240000,census:3231900,census:3254600"),
     (KINGS, "census:cbsa:35620", "New York-Newark-Jersey City, NY-NJ Metro Area",
-     "New York-Newark-Jersey City, NY-NJ", "35620", "metro"),
+     "New York-Newark-Jersey City, NY-NJ", "35620", "metro", "census:3651000"),
     (SAN_MATEO, "census:cbsa:41860", "San Francisco-Oakland-Fremont, CA Metro Area",
-     "San Francisco-Oakland-Fremont, CA", "41860", "metro"),
+     "San Francisco-Oakland-Fremont, CA", "41860", "metro", "census:0667000"),
 ]  # fmt: skip
 US_CSA = [(CLARK, "census:csa:332", "Las Vegas-Henderson, NV CSA", "Las Vegas-Henderson, NV", "332")]
 
@@ -163,10 +153,8 @@ def write_us(out, regions=None):
         ("id", "name", "class", "state", "population", "intpt_lat", "intpt_lon"),
         "uscensus",
     )
-    zcta = polygons(
-        "zcta", [((10.0, -150, 10.3, -149.8), "census:zcta:89109", "89109")], ("id", "name"), "uscensus"
-    )
-    cbsa = polygons("cbsa", US_CBSA, ("id", "name", "title", "code", "type"), "uscensus")
+    zcta = polygons("zcta", US_ZCTA, ("id", "name", "postal_city", "postal_place"), "uscensus")
+    cbsa = polygons("cbsa", US_CBSA, ("id", "name", "title", "code", "type", "principal_cities"), "uscensus")
     csa = polygons("csa", US_CSA, ("id", "name", "title", "code"), "uscensus")
     layers = [counties, places, zcta, cbsa, csa, *([regions] if regions else [])]
     return write_pack(out / "us", "us", VERSION, layers, created=CREATED)
@@ -199,6 +187,26 @@ CA_CMA = [
 ]
 
 
+CA_NAMED = [
+    # id, name, generic, scale, lat, lon: CGNDB-like populated places
+    ("cgndb:A1", "Lake Lucerne", "Hamlet", 1_200_000, 10.70, -148.10),  # in Banff ID
+    ("cgndb:A2", "Scarbrook", "Community", 1_200_000, 10.80, -148.75),  # a former borough of Toronto
+    ("cgndb:A3", "Toronto Junction", "Locality", 1_200_000, 10.83, -148.73),  # a locality: never named
+    ("cgndb:A4", "Maltby", "Urban Community", 145_000, 10.45, -148.90),  # in Mississauga
+    ("cgndb:A5", "Kettle", "Dispersed Rural Community", 250_000, 10.88, -148.20),  # in King TP
+    ("cgndb:A6", "Toronto", "Community", 250_000, 10.70, -148.60),  # the locality's own name
+]
+
+
+def named_places(rows=CA_NAMED):
+    return LayerData(
+        "populated_places", "point",
+        {"id": [r[0] for r in rows], "name": [r[1] for r in rows], "generic": [r[2] for r in rows],
+         "province": ["ON"] * len(rows), "scale": np.array([r[3] for r in rows], dtype=np.int64)},
+        ("synthetic",), lat=np.array([r[4] for r in rows]), lon=np.array([r[5] for r in rows]),
+    )  # fmt: skip
+
+
 def write_ca(out, regions=None):
     provinces = polygons(
         "provinces", [((10, -149, 11, -148), "statcan:35", "Ontario", "ON")], ("id", "name", "code")
@@ -209,7 +217,7 @@ def write_ca(out, regions=None):
     fsa = polygons(
         "fsa", [((10, -149, 10.5, -148.75), "statcan:L4T", "L4T", "ON")], ("id", "name", "province")
     )
-    layers = [provinces, cd, csd, cma, fsa, *([regions] if regions else [])]
+    layers = [provinces, cd, csd, cma, fsa, named_places(), *([regions] if regions else [])]
     return write_pack(out / "ca", "ca", VERSION, layers, created=CREATED)
 
 

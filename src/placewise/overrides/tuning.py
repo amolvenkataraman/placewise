@@ -29,13 +29,50 @@ def knobs(entries, place, id_, kind):
     return out
 
 
-def apply_tuning(entries, state):
-    """Retier places and drop near entries beyond their near_km, citing the rule that did it."""
-    if not any(isinstance(e.rule, Tune) for e in entries):
-        return
+class Tunes:
+    """The Tune rules, indexed by the id and the kind they target."""
+
+    def __init__(self, entries):
+        self.entries = tuple(e for e in entries if isinstance(e.rule, Tune))
+        self._by_id, self._by_kind = {}, {}
+        for i, entry in enumerate(self.entries):
+            rule = entry.rule
+            if rule.id is not None:
+                self._by_id.setdefault(rule.id, []).append(i)
+            elif (kind := _kind(rule.kind)) is not None:
+                self._by_kind.setdefault(kind, []).append(i)
+
+    def knobs(self, place):
+        """knobs(entries, place, None, None), from just the rules aimed at this place."""
+        hits = (*self._by_id.get(place.id, ()), *self._by_kind.get(place.kind, ()))
+        out = {}
+        for i in sorted(hits):
+            rule = self.entries[i].rule
+            for knob in TUNE_KNOBS:
+                if (value := getattr(rule, knob)) is not None:
+                    out[knob] = (value, rule.origin)
+        return out
+
+    def apply(self, state):
+        """Retier places and drop near entries beyond their near_km, citing the rule that did it."""
+        if self.entries:
+            apply_tuning(state, self.knobs)
+
+
+def _kind(kind):
+    """The PlaceKind a rule's kind equals, or None (then it matches no place)."""
+    try:
+        return PlaceKind(kind)
+    except ValueError:
+        return None
+
+
+def apply_tuning(state, knobs_for):
+    """Retier places and drop near entries beyond their near_km; `knobs_for(place)` gives a place's
+    merged knobs."""
 
     def retier(place):
-        tier = knobs(entries, place, None, None).get("tier")
+        tier = knobs_for(place).get("tier")
         if tier is None or place.tier == tier[0]:
             return None
         return dataclasses.replace(place, tier=tier[0]), tier[1]
@@ -43,7 +80,7 @@ def apply_tuning(entries, state):
     state.map_places(retier)
 
     def too_far(nearby):
-        limit = knobs(entries, nearby.place, None, None).get("near_km")
+        limit = knobs_for(nearby.place).get("near_km")
         if nearby.relation is Relation.NEAR and limit is not None and nearby.distance_km > limit[0]:
             return limit[1]
         return None

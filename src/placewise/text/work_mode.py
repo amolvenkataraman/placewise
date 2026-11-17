@@ -20,8 +20,11 @@ _REMOTE = _compile(_rules.DESCRIPTION_REMOTE)
 _ONSITE = _compile(_rules.DESCRIPTION_ONSITE)
 
 
+_NOT_LOWER = re.compile(r"[^a-z]+")
+
+
 def _words(value):
-    return re.sub(r"[^a-z]+", " ", value.lower()).strip()
+    return _NOT_LOWER.sub(" ", value.lower()).strip()
 
 
 # every spelling, as words ("on site") and run together ("onsite")

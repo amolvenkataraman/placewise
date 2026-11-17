@@ -1,4 +1,5 @@
-"""US naming over the synthetic us pack (naming_kit): places, counties, ZCTAs, metro roll-ups."""
+"""US naming over the synthetic us pack (naming_kit): places, counties, ZCTAs and their postal
+cities, principal cities."""
 
 from placewise.model import PlaceKind
 
@@ -12,31 +13,66 @@ def test_incorporated_place_is_locality_and_city(geo):
     assert r.label == "Emeryville, California, United States"
 
 
-def test_cdp_in_a_metro_takes_the_principal_city(geo):
-    """Paradise CDP (the Strip) -> Las Vegas, the CBSA title's first city in the same state."""
-    r = geo.lookup(10.27, -149.85)  # 3.3 km from Las Vegas
+def test_cdp_in_a_metro_takes_its_zip_codes_postal_city(geo):
+    """Paradise CDP (the Strip), ZIP Code 89109: its addresses say Las Vegas, an incorporated city."""
+    r = geo.lookup(10.27, -149.85)
     assert r.locality.name == "Las Vegas" and r.city.name == "Las Vegas"
     assert r.locality.id == "census:3240000"
-    assert r.sources["locality"] == r.sources["city"] == "us/places:metro"
+    assert r.sources["locality"] == r.sources["city"] == "us/places:postal"
     assert r.sublocality.name == "Paradise" and r.sublocality.id == "census:3254600"
     assert r.sublocality.kind == PlaceKind.SUBLOCALITY
     assert r.label == "Las Vegas, Nevada, United States"
 
 
-def test_cdp_far_from_its_principal_city_stays_itself(geo):
-    assert geo.lookup(10.2, -149.85).locality.name == "Paradise"  # 11 km from Las Vegas
-    r = geo.lookup(10.05, -149.43)  # Laughlin, 48 km from Las Vegas
+def test_cdp_without_a_postal_city_stays_itself(geo):
+    r = geo.lookup(10.2, -149.85)  # Paradise, in no ZCTA
+    assert (r.locality.name, r.city.name) == ("Paradise", "Paradise")
+    assert r.sources["locality"] == "us/places:polygon"
+
+
+def test_a_postal_city_too_far_away_is_not_used(geo):
+    r = geo.lookup(10.05, -149.43)  # Laughlin, whose ZIP Code names Las Vegas, 35 km off
     assert r.locality.name == "Laughlin" and r.city.name == "Laughlin"
     assert r.sources["locality"] == "us/places:polygon"
 
 
-def test_unincorporated_land_has_no_locality_but_a_metro_city(geo):
-    """Like SFO: unincorporated San Mateo County, 33 km from San Francisco."""
+def test_cdp_named_after_its_postal_city_keeps_its_name_under_that_city(geo):
+    """Like East Los Angeles (ZIP Code city Los Angeles): the name already says where it is."""
+    r = geo.lookup(10.4, -149.75)
+    assert (r.locality.name, r.city.name) == ("East Las Vegas", "Las Vegas")
+    assert r.sources["locality"] == "us/places:polygon" and r.sources["city"] == "us/places:postal"
+    assert r.label == "East Las Vegas, Nevada, United States"
+
+
+def test_a_postal_city_that_is_a_cdp_names_only_small_cdps(geo):
+    big = geo.lookup(10.15, -149.75)  # Winchester, 36,000 people; ZIP Code city Paradise (a CDP)
+    assert (big.locality.name, big.city.name) == ("Winchester", "Winchester")
+    small = geo.lookup(10.05, -149.75)  # Blue Diamond, 290 people
+    assert (small.locality.name, small.city.name) == ("Paradise", "Paradise")
+    assert small.sources["locality"] == "us/places:postal"
+    assert small.sublocality.name == "Blue Diamond"
+
+
+def test_unincorporated_land_in_a_metro_takes_its_postal_city(geo):
+    """Like SFO: unincorporated San Mateo County, addressed San Francisco 94128."""
+    r = geo.lookup(10.55, -149.15)
+    assert r.locality.name == "San Francisco" and r.city.name == "San Francisco"
+    assert r.sources["locality"] == "us/places:postal"
+    assert r.postal.name == "94128"
+
+
+def test_unincorporated_land_without_a_postal_city_has_a_metro_city(geo):
+    """No ZCTA: no locality; the city is the metro's largest principal city in the state."""
     r = geo.lookup(10.45, -149.2)
     assert r.locality is None
     assert r.city.name == "San Francisco" and r.sources["city"] == "us/places:metro"
     assert r.admin2.name == "San Mateo County" and r.admin2.kind == PlaceKind.ADMIN2
     assert r.label == "San Francisco, California, United States"
+
+
+def test_incorporated_places_ignore_the_postal_city(geo):
+    r = geo.lookup(10.705, -149.8)  # New York; ZIP Code city Brooklyn
+    assert r.locality.name == "New York" and r.sources["locality"] == "us/places:polygon"
 
 
 def test_rural_unincorporated_land_falls_back_to_geonames(geo):
@@ -70,7 +106,7 @@ def test_sublocality_must_be_near_and_inside_the_locality(geo):
 
 
 def test_postal_code_and_regions(geo):
-    r = geo.lookup(10.2, -149.85)
+    r = geo.lookup(10.27, -149.85)
     assert r.postal.name == "89109" and r.postal.kind == PlaceKind.POSTAL_CODE
     assert r.sources["postal"] == "us/zcta:polygon"
     assert [p.id for p in r.regions] == ["census:cbsa:29820", "census:csa:332"]  # smallest first

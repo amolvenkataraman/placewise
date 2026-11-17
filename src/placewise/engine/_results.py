@@ -3,17 +3,19 @@
 The label is "<name>, <admin1>, <country>", consecutive repeats dropped ("New York, United States"),
 where <name> is the locality (label.style "locality", the default) or the city (style "city"),
 each falling back to the other; label.template formats any field instead. Far offshore, the label
-names a reference place: "Offshore, 15 km S of Toronto".
+names a reference place: "Offshore, 15 km S of Toronto". On a sea or lake, the label names it
+("Over Lake Ontario"; placewise.engine._water).
 """
 
 import numpy as np
 
 from placewise.constants import lookup as const
+from placewise.constants.worldviews import WORLDVIEW_RULE
 from placewise.model import Nearby, PlaceKind, Relation, Result
 
 from . import _nearby as nearby
 
-NAMED = ("sublocality", "locality", "city", "borough", "admin2", "postal")
+NAMED = ("sublocality", "locality", "city", "borough", "admin2", "postal", "admin1")
 
 
 def build(geo, lat, lon, a, named, order, locked):
@@ -34,18 +36,14 @@ def build(geo, lat, lon, a, named, order, locked):
     near_rows = nearby.near_rows(
         cities_layer, a, lat, lon, city, geo.settings.near.max_near, geo._near_km(PlaceKind.LOCALITY)
     )
+    water_rows = geo.water.rows(a, lat, lon) if "wet_layer" in a else [None] * n
     # the Places of every point at once, each made once
     country_l = _places(layers, const.COUNTRIES, a["view"])
     admin1_l = _places(layers, const.ADMIN1, a["aidx"])
     city_l0 = _places(layers, const.CITIES, np.where(land, city, -1))
     tz_l = _tz(geo, a, land, minus)
-    # admin.disputed answers None unless the polygon is disputed or the admin1 is another country's
-    wv = admin.worldviews
-    maybe_disputed = (
-        (land & (wv.disputed[np.maximum(a["cidx"], 0)] | (a["foreign"] >= 0))).tolist() if wv else [False] * n
-    )
 
-    cidx, aidx, foreign = (a[k].tolist() for k in ("cidx", "aidx", "foreign"))
+    cidx = a["cidx"].tolist()
     cmode, amode = a["cmode"].tolist(), a["amode"].tolist()
     far_city = far_city.tolist()
     city_km = a.get("city_km", np.full(n, np.inf)).tolist()
@@ -54,9 +52,8 @@ def build(geo, lat, lon, a, named, order, locked):
     water, water_km = a["water"].tolist(), a["water_km"].tolist()
     water_deg, water_word, back_word = water_deg.tolist(), water_word.tolist(), back_word.tolist()
     lats, lons = lat.tolist(), lon.tolist()
-    applied = a.get("applied")
-    view_rows = wv.resolve(order)[0].tolist() if wv is not None else None
-    rules = (const.POLYGON, const.OFFSHORE, const.NEAREST, const.SCORE)
+    view_rows = admin.worldviews.resolve(order)[0].tolist() if admin.worldviews is not None else None
+    rules = (const.POLYGON, const.OFFSHORE, const.NEAREST, const.SCORE, WORLDVIEW_RULE)
     src = {(role, rule): layers.source(role, rule) for role in _ROLES if layers.has(role) for rule in rules}
     src_country = {r: src[const.COUNTRIES, r] for r in rules if (const.COUNTRIES, r) in src}
     src_admin1 = {r: src[const.ADMIN1, r] for r in rules if (const.ADMIN1, r) in src}
@@ -64,7 +61,7 @@ def build(geo, lat, lon, a, named, order, locked):
     place = layers.place
     named_lists = {k: v.tolist() for k, v in named.items()}
     empty = [None] * n
-    sub_l, loc_l, city_l, bor_l, adm2_l, post_l = (named_lists.get(k, empty) for k in NAMED)
+    sub_l, loc_l, city_l, bor_l, adm2_l, post_l, adm1_l = (named_lists.get(k, empty) for k in NAMED)
     regions_l, sources_l = named_lists.get("regions", empty), named_lists.get("sources", empty)
     label_settings, data_version = geo.settings.label, geo.data_version
     by_locality, template = label_settings.style == "locality", label_settings.template
@@ -81,8 +78,7 @@ def build(geo, lat, lon, a, named, order, locked):
             sources["admin1"] = src_admin1[amode[i]]
         city_place = locality = city_l0[i]
         if ci >= 0:
-            if maybe_disputed[i]:
-                disputed = admin.disputed(ci, aidx[i], foreign[i], applied, locked)
+            disputed = admin.disputed(a, i, locked)
             if city_place is not None:
                 sources["city"] = sources["locality"] = src_city
             tz = tz_l[i]
@@ -103,6 +99,7 @@ def build(geo, lat, lon, a, named, order, locked):
             sources.pop("city", None)
             sources.pop("locality", None)
             sources.update(named_sources)
+            admin1 = adm1_l[i] or admin1  # a country pack's own admin1 (COD-AB), where it has one
         if airport[i] >= 0:
             km = airport_km[i]
             rel = Relation.AT if km <= const.AIRPORT_AT_KM else Relation.NEAR
@@ -115,22 +112,19 @@ def build(geo, lat, lon, a, named, order, locked):
                 for row, km, deg, word in near_rows[i]
             )
             sources["near"] = src[const.CITIES, const.NEAREST]
-        admin2, sublocality, borough, postal = adm2_l[i], sub_l[i], bor_l[i], post_l[i]
-        regions = regions_l[i] or ()
+        fields = {
+            "country": country, "admin1": admin1, "admin2": adm2_l[i], "city": city_place,
+            "locality": locality, "sublocality": sub_l[i], "borough": bor_l[i], "postal": post_l[i],
+            "regions": regions_l[i] or (), "airport": air, "water": water_near,
+        }  # fmt: skip
         if ci >= 0:
             if template:
-                label = compose(label_settings, {
-                    "country": country, "admin1": admin1, "admin2": admin2, "city": city_place,
-                    "locality": locality, "sublocality": sublocality, "borough": borough, "postal": postal,
-                    "regions": regions, "airport": air, "water": water_near,
-                })  # fmt: skip
+                label = compose(label_settings, fields)
             else:
                 first, second = (locality, city_place) if by_locality else (city_place, locality)
-                name = first if first is not None else second
-                key = (id(name), id(admin1), id(country))
+                key = (id(first if first is not None else second), id(admin1), id(country))
                 label = labels.get(key)
                 if label is None:
-                    fields = {"city": city_place, "locality": locality, "admin1": admin1, "country": country}
                     label = labels[key] = compose(label_settings, fields)
         elif far_city[i] >= 0:
             ref = place(const.CITIES, far_city[i]).name
@@ -141,12 +135,12 @@ def build(geo, lat, lon, a, named, order, locked):
             label = f"{const.OFFSHORE_LABEL}, {km} {word} of {water_near.place.name}"
         else:
             label = const.OFFSHORE_LABEL
+        if water_rows[i] is not None:  # on a sea or lake, or beside water (placewise.engine._water)
+            label, near = water_rows[i].apply(fields, label, near, sources, ci >= 0)
         results.append(
             Result(
-                lat=lats[i], lon=lons[i], label=label, country=country, admin1=admin1, admin2=admin2,
-                city=city_place, locality=locality, sublocality=sublocality, borough=borough,
-                postal=postal, tz=tz, regions=regions, near=near, airport=air, water=water_near,
-                disputed=disputed, sources=sources, data_version=data_version,
+                lat=lats[i], lon=lons[i], label=label, tz=tz, near=near, disputed=disputed, sources=sources,
+                data_version=data_version, **fields,
             )
         )  # fmt: skip
     return results

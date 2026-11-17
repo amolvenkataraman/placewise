@@ -1,5 +1,6 @@
 """The world pack: countries and admin-1 polygons (Natural Earth), cities (GeoNames), airports
 (OurAirports) and country facts (GeoNames, Unicode CLDR, Wikidata: packbuild.country_profiles).
+Natural Earth's disputed areas are the `worldviews` layer.
 
     uv run python -m packbuild.world --version 2026.11
 
@@ -21,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 def build_layers(cache_dir, refresh=False):
-    """The five world layers, fetching (or reusing) the source files in `cache_dir`."""
+    """The six world layers, fetching (or reusing) the source files in `cache_dir`."""
 
     def get(url):
         return fetch(url, cache_dir, refresh=refresh)
@@ -33,6 +34,7 @@ def build_layers(cache_dir, refresh=False):
     countries_shp = shapefile(url("naturalearth", "countries"))
     countries = naturalearth.countries(countries_shp)
     admin1 = naturalearth.admin1(shapefile(url("naturalearth", "admin1")))
+    worldviews = naturalearth.disputed_areas(shapefile(url("naturalearth", "disputed_areas")))
     cities_zip = get(url("geonames", "cities"))
     cities_txt = unzip(cities_zip) / f"{cities_zip.stem}.txt"
     cities = geonames.cities(
@@ -48,7 +50,7 @@ def build_layers(cache_dir, refresh=False):
         refresh=refresh,
         fetcher=lambda u, d, refresh: fetch(u, d, refresh),
     )
-    return [countries, admin1, cities, airports, facts]
+    return [countries, admin1, worldviews, cities, airports, facts]
 
 
 def build_world(cache_dir, out_dir, version, refresh=False):

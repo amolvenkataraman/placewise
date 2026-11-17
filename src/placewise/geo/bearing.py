@@ -39,15 +39,15 @@ def along(lat1, lon1, lat2, lon2, fraction):
     point 1 to point 2. Spherical interpolation of unit vectors, so it works across poles and the
     antimeridian."""
     lat1, lon1, lat2, lon2, f = np.broadcast_arrays(*as_floats(lat1, lon1, lat2, lon2, fraction))
-    a, b = _unit_vector(lat1, lon1), _unit_vector(lat2, lon2)  # shape (3, *broadcast shape)
-    omega = np.arccos(np.clip(np.sum(a * b, axis=0), -1.0, 1.0))
+    (ax, ay, az), (bx, by, bz) = _unit_vector(lat1, lon1), _unit_vector(lat2, lon2)
+    omega = np.arccos(np.clip(ax * bx + ay * by + az * bz, -1.0, 1.0))
     with np.errstate(invalid="ignore", divide="ignore"):
         sin_omega = np.sin(omega)
         wa = np.where(sin_omega > 1e-15, np.sin((1 - f) * omega) / sin_omega, 1 - f)
         wb = np.where(sin_omega > 1e-15, np.sin(f * omega) / sin_omega, f)
-    v = wa * a + wb * b
-    lat = np.degrees(np.arctan2(v[2], np.hypot(v[0], v[1])))
-    lon = np.degrees(np.arctan2(v[1], v[0]))
+    vx, vy, vz = wa * ax + wb * bx, wa * ay + wb * by, wa * az + wb * bz
+    lat = np.degrees(np.arctan2(vz, np.hypot(vx, vy)))
+    lon = np.degrees(np.arctan2(vy, vx))
     return out(lat), out(wrap_lon(lon))
 
 
@@ -90,5 +90,7 @@ def compass(bearing, points=8):
 
 
 def _unit_vector(lat, lon):
+    """(x, y, z) components of the unit vectors of same-shaped lat / lon arrays."""
     phi, lam = np.radians(lat), np.radians(lon)
-    return np.array([np.cos(phi) * np.cos(lam), np.cos(phi) * np.sin(lam), np.sin(phi) * np.ones_like(lam)])
+    cos_phi = np.cos(phi)
+    return cos_phi * np.cos(lam), cos_phi * np.sin(lam), np.sin(phi)

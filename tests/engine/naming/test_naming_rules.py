@@ -1,39 +1,9 @@
-"""The pure naming rules: metro titles, roll-ups, census subdivision kinds, post-office names."""
+"""The pure naming rules: CMA names, roll-ups, census subdivision kinds, post-office names."""
 
 import pytest
 
 from placewise.constants import naming as const
 from placewise.engine.naming import rules
-
-
-def known(*names):
-    return set(names).__contains__
-
-
-def test_metro_title_cities_and_states():
-    title = "Las Vegas-Henderson-North Las Vegas, NV"
-    assert rules.title_cities(title, known("Las Vegas", "Henderson", "North Las Vegas")) == [
-        "Las Vegas",
-        "Henderson",
-        "North Las Vegas",
-    ]
-    assert rules.title_states(title) == ["NV"]
-    assert rules.title_states("New York-Newark-Jersey City, NY-NJ") == ["NY", "NJ"]
-
-
-def test_metro_title_keeps_hyphenated_names_whole():
-    assert rules.title_cities("Winston-Salem, NC", known("Winston-Salem")) == ["Winston-Salem"]
-    nashville = "Nashville-Davidson--Murfreesboro--Franklin, TN"
-    assert rules.title_cities(nashville, known("Nashville-Davidson", "Murfreesboro", "Franklin")) == [
-        "Nashville-Davidson",
-        "Murfreesboro",
-        "Franklin",
-    ]
-
-
-def test_metro_title_skips_names_that_are_no_place():
-    assert rules.title_cities("Amherst Town-Northampton, MA", known("Northampton")) == ["Northampton"]
-    assert rules.title_cities("Nowhere, ZZ", known()) == []
 
 
 def test_census_metropolitan_area_names():
@@ -95,3 +65,18 @@ def test_same_name_ignores_case_and_accents():
     assert rules.same_name("Montréal", "MONTREAL")
     assert not rules.same_name("Niagara", "Niagara Falls")
     assert not rules.same_name(None, "Toronto")
+
+
+@pytest.mark.parametrize(
+    ("name", "base", "expected"),
+    [
+        ("East Los Angeles", "Los Angeles", True),
+        ("North Las Vegas", "las vegas", True),
+        ("Los Angeles", "Los Angeles", False),  # the same name doesn't extend itself
+        ("Paradise", "Las Vegas", False),
+        ("Losa Angeles", "Los Angeles", False),  # whole words only
+        ("East Los", "", False),
+    ],
+)
+def test_a_name_extends_another(name, base, expected):
+    assert rules.extends(name, base) is expected

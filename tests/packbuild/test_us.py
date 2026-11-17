@@ -2,6 +2,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
+import us_depth_fixtures
 import us_fixtures as fx
 from regions_kit import US_REGIONS, use_regions
 
@@ -30,9 +31,10 @@ def _zip_one(dest, path):
 def offline(tmp_path, monkeypatch):
     """fetch() replaced by fixture files laid out like the real downloads; no network."""
     inputs = fx.all_inputs(tmp_path / "fixtures")
+    inputs.update(us_depth_fixtures.write(tmp_path / "fixtures"))
     store = tmp_path / "downloads"
     store.mkdir()
-    files = {}
+    files = {"US.zip": _zip_one(store / "US.zip", inputs["postal_us"])}  # GeoNames postal codes
     for name in us.DOWNLOADS:
         basename = url("uscensus", name).rsplit("/", 1)[1]
         target = store / basename
@@ -70,15 +72,15 @@ def test_build_us_fetches_every_registry_url_and_hands_seven_layers_to_the_write
     monkeypatch.setattr(us, "write_pack", fake_write_pack)
     out = us.build_us(tmp_path / "cache", tmp_path / "out", "2026.11")
     assert out == tmp_path / "out" / "usa-2026.11"
-    assert sorted(offline) == sorted(SOURCES["uscensus"].downloads.values())
+    geonames = SOURCES["geonames"].downloads[us.GEONAMES_POSTAL]
+    assert sorted(offline) == sorted([*SOURCES["uscensus"].downloads.values(), geonames])
     [(out_dir, name, version, layers)] = calls
     assert (out_dir, name, version) == (tmp_path / "out", "usa", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
     assert {layer.name: len(layer.columns["id"]) for layer in layers} == COUNTS
+    expected = {"regions": ("placewise-regions", "uscensus"), "zcta": ("uscensus", "geonames")}
     for layer in layers:
-        assert layer.sources == (
-            ("placewise-regions", "uscensus") if layer.name == "regions" else ("uscensus",)
-        )
+        assert layer.sources == expected.get(layer.name, ("uscensus",))
         assert all(len(column) == COUNTS[layer.name] for column in layer.columns.values())
         assert set(layer.columns) == set(layer.types)
 
@@ -90,7 +92,7 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     pack = open_pack(path, verify=True)
     assert [layer.name for layer in pack] == LAYERS
     assert {layer.name: len(layer) for layer in pack} == COUNTS
-    assert set(pack.sources) == {"uscensus", "placewise-regions"}
+    assert set(pack.sources) == {"uscensus", "geonames", "placewise-regions"}
 
     def at(layer, lat, lon):
         i = pack[layer].query(lat, lon)
@@ -103,10 +105,23 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     assert at("cbsa", *park)["type"] == "metro"
     assert at("states", *park)["usps"] == "CA"
     strip = at("places", 36.1147, -115.1728)
-    assert (strip["name"], strip["lsad"], strip["population"]) == ("Paradise", "CDP", None)
-    assert at("zcta", 36.1147, -115.1728)["name"] == "89109"
+    assert (strip["name"], strip["lsad"], strip["population"]) == ("Paradise", "CDP", 185913)  # ACS
+    assert (strip["population_source"], strip["principal"]) == ("acs5y2024", "29820")
+    zip_ = at("zcta", 36.1147, -115.1728)
+    assert (zip_["name"], zip_["population"], zip_["postal_city"]) == ("89109", 6504, "Las Vegas")
+    assert (zip_["postal_place"], zip_["postal_source"]) == ("census:3240000", "zbp")
+    yosemite = at("zcta", 37.7456, -119.5936)  # Business Patterns has no row: GeoNames' name
+    assert (yosemite["postal_city"], yosemite["postal_place"], yosemite["postal_source"]) == (
+        "Yosemite National Park",
+        None,
+        "geonames",
+    )  # fmt: skip  ("" reads back as None)
     reno = at("places", 39.5296, -119.8138)
-    assert (reno["name"], reno["population"], reno["state"]) == ("Reno", 283621, "NV")
+    assert (reno["name"], reno["population"], reno["state"]) == ("Reno", 283621, "NV")  # SUB-EST
+    assert reno["population_source"] == "sub-est2025"
+    # largest first; Henderson and Berkeley are not in the fixture's places
+    assert at("cbsa", 36.1147, -115.1728)["principal_cities"] == "census:3240000,census:3254600"
+    assert at("cbsa", *park)["principal_cities"] == "census:0667000,census:0653000"
     assert at("places", 37.7456, -119.5936) is None  # Yosemite Valley: no incorporated place or CDP
     assert at("counties", 37.7456, -119.5936)["name"] == "Mariposa County"
 

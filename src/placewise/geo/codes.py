@@ -8,12 +8,15 @@ from placewise.constants.geohash import ALPHABET as _GEOHASH
 from placewise.constants.web_mercator import MAX_LAT as MAX_MERCATOR_LAT
 
 _GEOHASH_INDEX = {c: i for i, c in enumerate(_GEOHASH)}
+_GEOHASH_BYTES = np.frombuffer(_GEOHASH.encode("ascii"), dtype=np.uint8)
 
 
 def geohash_encode(lat, lon, precision=10):
     """Geohash of a point (precision 10 is about 1 m); arrays give string arrays."""
     if np.ndim(lat) or np.ndim(lon):
         lats, lons = np.broadcast_arrays(np.asarray(lat, float), np.asarray(lon, float))
+        if lats.size and precision >= 1:
+            return _encode_many(lats.ravel(), lons.ravel(), int(precision))
         return np.array([_encode(a, b, precision) for a, b in zip(lats.ravel(), lons.ravel(), strict=True)])
     return _encode(float(lat), float(lon), precision)
 
@@ -80,6 +83,27 @@ def from_quadkey(key):
         x |= mask if digit in "13" else 0
         y |= mask if digit in "23" else 0
     return x, y, len(key)
+
+
+def _encode_many(lat, lon, precision):
+    """_encode for flat arrays: the same bisection, one bit of every point per numpy step. The
+    cell edges are dyadic fractions of the full range, so every midpoint is exact either way."""
+    bounds = {"lon": [np.full(lat.shape, -180.0), np.full(lat.shape, 180.0)]}
+    bounds["lat"] = [np.full(lat.shape, -90.0), np.full(lat.shape, 90.0)]
+    values = {"lon": lon, "lat": lat}
+    chars = np.empty((len(lat), precision), dtype=np.uint8)
+    axis = "lon"  # bits alternate lon, lat, lon, ...
+    for c in range(precision):
+        code = np.zeros(lat.shape, dtype=np.intp)
+        for _ in range(5):
+            lo, hi = bounds[axis]
+            mid = (lo + hi) / 2
+            bit = values[axis] >= mid
+            bounds[axis] = [np.where(bit, mid, lo), np.where(bit, hi, mid)]
+            code = (code << 1) | bit
+            axis = "lat" if axis == "lon" else "lon"
+        chars[:, c] = _GEOHASH_BYTES[code]
+    return chars.view(f"S{precision}").ravel().astype(f"U{precision}")
 
 
 def _encode(lat, lon, precision):

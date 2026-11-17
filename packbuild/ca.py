@@ -1,5 +1,6 @@
 """The Canada pack: provinces, census divisions, census subdivisions (municipalities), CMAs/CAs and
-forward sortation areas from Statistics Canada's 2021 Census, with 2021 populations, and the
+forward sortation areas from Statistics Canada's 2021 Census, with 2021 populations, the populated
+places of the Canadian Geographical Names Database (hamlets, communities, neighbourhoods), and the
 curated regions (GTA, GTHA ...) as unions of those units.
 
     uv run python -m packbuild.ca --version 2026.11
@@ -21,6 +22,7 @@ from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .projection import STATCAN_LAMBERT
 from .sources import statcan, url
+from .sources.can import cgndb
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +43,8 @@ def build_layers(
     cache_dir, refresh=False, via="files", tolerance_m=statcan.DEFAULT_TOLERANCE_M, regions=None
 ):
     """The Canada layers, fetching (or reusing) the source files in `cache_dir`: the five StatCan
-    layers, then `regions`. via="files" reads the zipped shapefiles; via="service" the same
+    layers, CGNDB's `populated_places`, then `regions`. via="files" reads the zipped shapefiles;
+    via="service" the same
     boundaries from StatCan's map service."""
     if via not in VIAS:
         raise ValueError(f"via must be one of {', '.join(VIAS)}, not {via!r}")
@@ -76,22 +79,25 @@ def build_layers(
         tables.append(unzip(archive) / f"{table}.csv")
     population = statcan.read_population(*tables)
     paths = {layer: boundaries(source_id, name) for layer, (source_id, name, _) in LAYERS.items()}
-    layers = [loader(paths[layer], population, tolerance_m) for layer, (_, _, loader) in LAYERS.items()]
-    return [*layers, regions_layer_of(layers, paths, regions, tolerance_m)]
+    curated = regions_layer.for_country(regions, "CA")
+    # the members' rings, unsimplified, collected while their layers are read
+    raw = {m: [] for r in curated for m in r["members"]}
+    layers = [
+        loader(paths[layer], population, tolerance_m, raw if layer in REGION_MEMBER_LAYERS else None)
+        for layer, (_, _, loader) in LAYERS.items()
+    ]
+    named = cgndb.populated_places(get(url(cgndb.SOURCE, "populated_places")))
+    return [*layers, named, regions_layer_of(layers, curated, raw, tolerance_m)]
 
 
-def regions_layer_of(layers, paths, regions=None, tolerance_m=statcan.DEFAULT_TOLERANCE_M):
-    """The curated regions (`regions` None reads datasets/regions) as unions of census divisions,
-    subdivisions or CMAs. Members are checked against the built layers, then their rings read again
-    unsimplified (statcan.raw_rings): each feature is simplified on its own, so simplified
+def regions_layer_of(layers, curated, rings, tolerance_m=statcan.DEFAULT_TOLERANCE_M):
+    """The curated regions of Canada as unions of census divisions, subdivisions or CMAs. Members
+    are checked against the built layers; `rings` holds each member's projected rings as read,
+    unsimplified (see statcan's `raw`): each feature is simplified on its own, so simplified
     neighbours overlap or gap by up to the tolerance, while the raw files share their borders'
     vertices exactly. The union is simplified once, like every other boundary."""
-    curated = regions_layer.for_country(regions, "CA")
     built = {layer.name: set(layer.columns["id"]) for layer in layers if layer.name in REGION_MEMBER_LAYERS}
     regions_layer.check_members(curated, set().union(*built.values()))
-    members = {m for r in curated for m in r["members"]}
-    needed = {name: paths[name] for name, ids in built.items() if ids & members}
-    rings = statcan.raw_rings(needed, members)
     shapes = {
         r["id"]: regions_layer.union(
             r["id"], [ring for m in r["members"] for ring in rings[m]], tolerance_m, STATCAN_LAMBERT
@@ -121,7 +127,7 @@ def build_ca(
     """Fetch the sources, build the layers and write `<out_dir>/can-<version>/`."""
     layers = build_layers(cache_dir, refresh=refresh, via=via, tolerance_m=tolerance_m, regions=regions)
     for layer in layers:
-        vertices = sum(len(r) for f in layer.features for o in f.outlines for r in o.rings)
+        vertices = sum(len(r) for f in layer.features or () for o in f.outlines for r in o.rings)
         log.info("%s: %d features, %d vertices", layer.name, len(layer.columns["id"]), vertices)
     return write_pack(Path(out_dir), "can", version, layers)
 

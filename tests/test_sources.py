@@ -29,7 +29,12 @@ def test_each_file_is_one_purpose_listing_sources_per_region():
     assert [s.id for s in registry["boundaries"]["world"]] == ["naturalearth"]
     assert [s.id for s in registry["airports"]["world"]] == ["ourairports"]
     # a source serves several purposes but only lists that purpose's downloads in each file
-    assert set(registry["postal"]["usa"][0].downloads) == {"zcta", "gazetteer_zcta"}
+    assert set(registry["postal"]["usa"][0].downloads) == {
+        "zcta",
+        "gazetteer_zcta",
+        "zip_cities",
+        "zcta_place",
+    }
 
 
 @pytest.mark.parametrize("region", ["us", "IND", "xyz", "world2"])
@@ -43,12 +48,15 @@ def test_a_region_is_world_or_a_lower_case_iso_alpha3_code(tmp_path, region):
 
 
 def test_each_source_is_used_in_the_packs_of_the_regions_listing_it():
-    # used_in names "<pack>/<layer>"; a region's sources go in that region's pack (or world)
+    # used_in names "<pack>/<layer>"; a region's sources go in that region's packs (or world's):
+    # "<region>" or a topic pack "<region>-<topic>" ("world-water")
     for purpose, regions in attribution.load_registry().items():
         for region, sources in regions.items():
             for s in sources:
                 packs = {e.split("/")[0] for e in s.used_in if not e.startswith("package:")}
-                assert packs <= {"world", region}, f"{purpose}/{region}: {s.id} used in {packs}"
+                assert all(p.split("-")[0] in {"world", region} for p in packs), (
+                    f"{purpose}/{region}: {s.id} used in {packs}"
+                )
 
 
 def test_the_folder_holds_only_purpose_files():

@@ -10,7 +10,6 @@ reference implementations exactly instead of drifting with float division.
 
 import math
 from dataclasses import dataclass
-from fractions import Fraction
 
 import numpy as np
 
@@ -209,6 +208,8 @@ def _units(lat, lon):
     Floors the decimal the float stands for (its shortest repr), not the float product: 40.6 *
     2.5e7 comes out as 1014999999.99... in floats, which would drop a 40.6 deg point into the cell
     below. The reference implementations accept a few such misses; this matches all their data."""
+    from fractions import Fraction  # exact decimal arithmetic; loaded only when encoding
+
     lat_units = math.floor(Fraction(repr(float(lat))) * LAT_UNITS_PER_DEGREE) + 90 * LAT_UNITS_PER_DEGREE
     lat_units = min(max(lat_units, 0), 180 * LAT_UNITS_PER_DEGREE - 1)  # 90 itself goes in the top cell
     lon_units = math.floor(Fraction(repr(float(lon))) * LON_UNITS_PER_DEGREE) + 180 * LON_UNITS_PER_DEGREE

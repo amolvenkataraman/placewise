@@ -83,6 +83,24 @@ def admin1():
     write("ne_admin1", fields, rows)
 
 
+def disputed_areas():
+    """Natural Earth's disputed-areas file: invented areas inside the countries above."""
+    c = ("C", 80)
+    fields = [
+        ("NE_ID", "N", 10, 0), ("ADM0_A3", *c), ("BRK_NAME", *c), ("NAME", *c), ("TYPE", *c),
+        ("NOTE_BRK", *c), ("ADM0_A3_IN", *c), ("ADM0_A3_US", *c), ("FCLASS_IN", *c),
+    ]  # fmt: skip
+    rows = [
+        (box(9.0, 44.0, 10.0, 45.0), (1000000001, "SOL", "Somaliland", "Somaliland", "Disputed",
+         "Self admin.; Claimed by Somalia", "SOM", "SOM", "Unrecognized")),
+        # Natural Earth starts a few names with a byte-order mark
+        (box(50.0, -80.0, 51.0, -79.0), (1000000002, "CAN", "\ufeffTest Island", "Canada", "Indeterminate",
+         "", "CAN", "-99", "Admin-0 country")),
+    ]  # fmt: skip
+    write("ne_disputed_areas", fields, rows)
+
+
 if __name__ == "__main__":
     countries()
     admin1()
+    disputed_areas()
