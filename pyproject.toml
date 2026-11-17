@@ -6,6 +6,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
 
+[project.scripts]
+placewise = "placewise.cli:main"
+
 [project.optional-dependencies]
 # Karney's ellipsoidal geodesics; pure Python, MIT. Optional so the core stays numpy-only.
 geodesic = ["geographiclib>=2.0"]
@@ -38,4 +41,5 @@ ignore = ["SIM300", "RUF001", "RUF002", "RUF003"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]  # packbuild/ (pack building, not shipped in the wheel) is importable in tests
 addopts = "-q"
