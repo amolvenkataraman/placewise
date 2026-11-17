@@ -13,7 +13,6 @@ from pathlib import Path
 
 import numpy as np
 
-from placewise.geo import shapes
 from placewise.model import Feature, Outline
 
 _POLYGON_TYPES = {5, 15, 25}  # Polygon, PolygonZ, PolygonM (Z and M values are ignored)
@@ -89,7 +88,8 @@ def _read_shp(path):
 
 def _signed_area(ring):
     x, y = ring[:, 0], ring[:, 1]
-    return 0.5 * float(np.dot(x, np.roll(y, -1)) - np.dot(np.roll(x, -1), y))  # > 0 counter-clockwise
+    x_next, y_next = np.concatenate((x[1:], x[:1])), np.concatenate((y[1:], y[:1]))  # np.roll(-1)
+    return 0.5 * float(np.dot(x, y_next) - np.dot(x_next, y))  # > 0 counter-clockwise
 
 
 def _group_rings(rings):
@@ -102,10 +102,21 @@ def _group_rings(rings):
     for i, ring in enumerate(rings):
         if i in holes:
             continue
-        lat, lon = ring[0, 1], ring[0, 0]
-        owner = next((o for o in outer if shapes.contains([latlon[o]], lat, lon)), outer[0])
+        owner = next((o for o in outer if _ring_contains(rings[o], ring[0])), outer[0])
         holes[owner].append(latlon[i])
     return tuple(Outline((latlon[o], *holes[o])) for o in outer)
+
+
+def _ring_contains(ring, point):
+    """geo.shapes.contains of one point against one (x, y) = (lon, lat) ring, with the same
+    arithmetic edge by edge (so the same answer), vectorised over the edges."""
+    x, y = ring[:, 0], ring[:, 1]
+    xn, yn = np.concatenate((x[1:], x[:1])), np.concatenate((y[1:], y[:1]))
+    lon, lat = point
+    crosses = (y > lat) != (yn > lat)  # never true for a horizontal edge, which contains skips
+    with np.errstate(divide="ignore", invalid="ignore"):
+        x_cross = x + (lat - y) * (xn - x) / (yn - y)
+    return bool(np.count_nonzero(crosses & (lon < x_cross)) % 2)
 
 
 def _read_dbf(path, encoding):
