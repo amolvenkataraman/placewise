@@ -65,8 +65,13 @@ class Can:
         pop = common.population(self.layers.layer(self.csd))
         for r in np.argsort(-np.nan_to_num(pop, nan=-1.0), kind="stable").tolist():
             by_name.setdefault((provinces[r], rules.fold(self._col(self.csd, "name")[r])), r)
+        cd_row = {pid: i for i, pid in enumerate(self._col(self.cd, "id"))} if self.cd is not None else {}
+        cduid = self.layers.column(self.csd, "cduid") or [
+            i.rpartition(":")[2][:4] for i in self._col(self.csd, "id")
+        ]
         return {
             "admin1": np.array([row_of.get(f"iso:CA-{p}", -1) for p in provinces], dtype=np.int64),
+            "cd": np.array([cd_row.get(f"statcan:{c}", -1) for c in cduid], dtype=np.int64),
             "kind": kind,
             "population": pop,
             "by_name": by_name,
@@ -99,9 +104,9 @@ class Can:
         every, csd = out.every, st["csd"]
         for i in np.flatnonzero(st["admin1"]).tolist():
             out.sources[i]["admin1"] = f"{self.csd}:{const.STATE}"
-        if self.cd is not None:
-            cd, rule = common.polygon(self.layers.layer(self.cd), lat, lon)
-            out.put("admin2", every, self.cd, cd, rule)
+        if self.cd is not None:  # a CSD's division is its CSDUID's first four digits
+            cd = np.where(csd >= 0, self._csd["cd"][np.maximum(csd, 0)], -1)
+            out.put("admin2", every, self.cd, cd, st["rule"])
         local, local_km = a["local"][pts], a["local_km"][pts]
         kind = np.where(csd >= 0, self._csd["kind"][np.maximum(csd, 0)], "")
         # rural and unorganised subdivisions: the GeoNames place inside them, if one is near
@@ -139,7 +144,7 @@ class Can:
             out.sources[i]["city"] = out.sources[i]["locality"]
         if self.cma is None:
             return city
-        cma, _ = common.polygon(self.layers.layer(self.cma), lat, lon)
+        cma, _ = common.polygon(self.layers.layer(self.cma), lat, lon, snap_km=0)
         if self.regions is None:  # the CMA stands in for curated regions
             found = common.places_for(self.layers, self.cma, cma)
             for i in np.flatnonzero(cma >= 0).tolist():

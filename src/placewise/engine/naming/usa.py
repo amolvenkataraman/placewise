@@ -2,12 +2,12 @@
 
 - admin1: the county's state ("us/counties:state").
 - locality: the census place containing the point. A census-designated place (CDP) inside a metro
-  area takes the CBSA title's first city in its state, when the point is within METRO_CITY_KM of
-  that city and the CDP isn't named in the title itself (Paradise -> Las Vegas; Arlington VA
-  stays): the stand-in for the ZIP Code's postal city. The CDP is then the sublocality.
+  area takes the CBSA title's first city in its state, when the point is within METRO_CDP_KM of
+  that city and the CDP isn't named in the title itself (Paradise -> Las Vegas; Arlington VA and
+  Stanford stay): the stand-in for the ZIP Code's postal city. The CDP is then the sublocality.
   Unincorporated land (no place) has no locality.
-- city: the locality; on unincorporated land the metro's city by the same rule, else the GeoNames
-  score. Incorporated places are always their own city (Emeryville).
+- city: the locality; on unincorporated land the metro's city within METRO_CITY_KM (SFO -> San
+  Francisco), else the GeoNames score. Incorporated places are always their own city (Emeryville).
 - sublocality: the nearest GeoNames place within SUBLOCALITY_KM inside the same census place.
 - borough (New York City's five counties), admin2 (county), postal (ZCTA), regions (CBSA, CSA;
   or the pack's curated `regions` layer when it has one).
@@ -171,10 +171,12 @@ class Usa:
         # near enough: within METRO_CITY_KM of the city's boundary (internal points can be far
         # off: San Francisco's is on the Farallon Islands)
         layer = self.layers.layer(self.place)
+        limit = np.where(place >= 0, const.METRO_CDP_KM, const.METRO_CITY_KM)
+        out[~common.near_bbox(layer.bboxes(), out, lat, lon, limit)] = -1  # cheap test first
         for head in np.unique(out[out >= 0]).tolist():
             group = np.flatnonzero(out == head)
             km = np.atleast_1d(layer.nearest_edge_km(lat[group], lon[group], head))
-            out[group[km > const.METRO_CITY_KM]] = -1
+            out[group[km > limit[group]]] = -1
         return out
 
     def _borough(self, out, county):

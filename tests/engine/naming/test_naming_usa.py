@@ -14,7 +14,7 @@ def test_incorporated_place_is_locality_and_city(geo):
 
 def test_cdp_in_a_metro_takes_the_principal_city(geo):
     """Paradise CDP (the Strip) -> Las Vegas, the CBSA title's first city in the same state."""
-    r = geo.lookup(10.2, -149.85)
+    r = geo.lookup(10.27, -149.85)  # 3.3 km from Las Vegas
     assert r.locality.name == "Las Vegas" and r.city.name == "Las Vegas"
     assert r.locality.id == "census:3240000"
     assert r.sources["locality"] == r.sources["city"] == "us/places:metro"
@@ -24,7 +24,8 @@ def test_cdp_in_a_metro_takes_the_principal_city(geo):
 
 
 def test_cdp_far_from_its_principal_city_stays_itself(geo):
-    r = geo.lookup(10.05, -149.43)  # Laughlin, 60 km from Las Vegas' internal point
+    assert geo.lookup(10.2, -149.85).locality.name == "Paradise"  # 11 km from Las Vegas
+    r = geo.lookup(10.05, -149.43)  # Laughlin, 48 km from Las Vegas
     assert r.locality.name == "Laughlin" and r.city.name == "Laughlin"
     assert r.sources["locality"] == "us/places:polygon"
 

@@ -75,12 +75,60 @@ def polygon(layer, lat, lon, snap_km=const.SHORE_KM):
     rule = np.where(rows >= 0, lookup_const.POLYGON, "").astype(object)
     miss = np.flatnonzero(rows < 0)
     if len(miss) and snap_km:
-        q, f, d = layer.near_boundary(lat[miss], lon[miss], snap_km)
+        q, f, d = _near_features(layer, lat[miss], lon[miss], snap_km)
         best = best_per_query(q, d, len(miss))
         hit = best >= 0
         rows[miss[hit]] = f[best[hit]]
         rule[miss[hit]] = lookup_const.NEAREST
     return rows, rule
+
+
+_PAIRS_PER_BLOCK = 4_000_000
+
+
+def near_bbox(boxes, rows, lat, lon, km):
+    """Per point, whether it lies within km (roughly, never too strict) of the bounding box of its
+    feature `rows` (False where the row is -1): the cheap test before an exact distance."""
+    ok = rows >= 0
+    b = boxes[np.maximum(rows, 0)]
+    dlat = np.asarray(km) / 110.0
+    dlon = dlat / np.maximum(np.cos(np.radians(np.minimum(np.abs(lat) + dlat, 89.9))), 0.01)
+    in_lat = (lat >= b[:, 0] - dlat) & (lat <= b[:, 2] + dlat)
+    wraps = b[:, 1] > b[:, 3]
+    in_lon = np.where(
+        wraps,
+        (lon >= b[:, 1] - dlon) | (lon <= b[:, 3] + dlon),
+        (lon >= b[:, 1] - dlon) & (lon <= b[:, 3] + dlon),
+    )
+    return ok & in_lat & in_lon
+
+
+def _near_features(layer, lat, lon, km):
+    """(point, feature, km) for features whose boundary is within km of each point. Few points
+    miss every feature (water by the shore), so this tests their bounding boxes and then measures
+    the few candidates exactly, instead of indexing every edge of the layer
+    (PolygonLayer.near_boundary), which costs seconds for big layers."""
+    boxes = layer.bboxes()
+    dlat = km / 111.0
+    dlon = dlat / np.maximum(np.cos(np.radians(np.abs(lat))), 0.01)
+    q_all, f_all = [], []
+    step = max(1, _PAIRS_PER_BLOCK // max(len(boxes), 1))
+    for s in range(0, len(lat), step):
+        y, x, w = lat[s : s + step, None], lon[s : s + step, None], dlon[s : s + step, None]
+        south, west, north, east = (boxes[None, :, k] for k in range(4))
+        near_lat = (y >= south - dlat) & (y <= north + dlat)
+        wraps = west > east  # crosses the antimeridian
+        near_lon = np.where(wraps, (x >= west - w) | (x <= east + w), (x >= west - w) & (x <= east + w))
+        q, f = np.nonzero(near_lat & near_lon)
+        q_all.append(q + s)
+        f_all.append(f)
+    q, f = np.concatenate(q_all), np.concatenate(f_all)
+    d = np.full(len(q), np.inf)
+    for feature in np.unique(f).tolist():
+        sel = np.flatnonzero(f == feature)
+        d[sel] = np.atleast_1d(layer.nearest_edge_km(lat[q[sel]], lon[q[sel]], feature))
+    keep = d <= km
+    return q[keep], f[keep], d[keep]
 
 
 def places_for(layers, key, rows, kind=None):
@@ -140,7 +188,7 @@ def regions(layers, key, lat, lon):
     out = np.full(len(lat), None, dtype=object)
     if not len(point):
         return out
-    bbox = np.array([_box(layer.bbox(f)) for f in range(layer.count)], dtype=float).reshape(-1, 4)
+    bbox = layer.bboxes()
     width = np.where(bbox[:, 3] >= bbox[:, 1], bbox[:, 3] - bbox[:, 1], bbox[:, 3] - bbox[:, 1] + 360)
     area = (bbox[:, 2] - bbox[:, 0]) * width * np.cos(np.radians((bbox[:, 0] + bbox[:, 2]) / 2))
     order = np.lexsort((area[feature], point))
@@ -150,10 +198,6 @@ def regions(layers, key, lat, lon):
     for p, found in groups.items():
         out[p] = tuple(found)
     return out
-
-
-def _box(b):
-    return b.south, b.west, b.north, b.east
 
 
 def set_regions(out, layers, key, lat, lon):

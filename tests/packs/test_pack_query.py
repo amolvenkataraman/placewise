@@ -21,6 +21,15 @@ ISLANDS = Feature(outlines=(*box_feature(0, 20, 2, 22).outlines, *box_feature(0,
 OVERLAP = box_feature(8, 8, 12, 12)
 
 
+def test_bboxes_is_every_bbox_at_once(tmp_path):
+    layer = _open(tmp_path, [SQUARE, ISLANDS, OVERLAP])
+    boxes = layer.bboxes()
+    assert boxes.shape == (3, 4) and not boxes.flags.writeable
+    for i in range(3):
+        b = layer.bbox(i)
+        assert boxes[i].tolist() == [b.south, b.west, b.north, b.east]
+
+
 def test_scalar_queries_holes_overlaps_and_query_all(tmp_path):
     layer = _open(tmp_path, [SQUARE, ISLANDS, OVERLAP])
     assert layer.query(2, 2) == 0 and type(layer.query(2, 2)) is int

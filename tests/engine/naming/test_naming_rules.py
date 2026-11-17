@@ -80,6 +80,9 @@ def test_census_subdivision_kinds():
         ("Peddakotla B.O", "Peddakotla"),
         ("Bangalore H.O", "Bangalore"),
         ("Industrial Complex Dundahera S.O.", "Industrial Complex Dundahera"),
+        ("Bengaluru G.P.O.", "Bengaluru"),
+        ("Gandhi Bazar SO Amritsar", "Gandhi Bazar"),  # the type, then the town it reports to
+        ("Old Town S.O (Khorda)", "Old Town"),
         ("Sohna", "Sohna"),
         ("SO", "SO"),  # nothing left: keep the name
     ],

@@ -59,13 +59,14 @@ def csd_kind(csdtype):
 
 
 def office_area_name(name):
-    """A post office's name without its type suffix ("Whitefield S.O" -> "Whitefield")."""
-    text = name.strip()
-    for suffix in const.OFFICE_SUFFIXES:
-        if text.upper().endswith(" " + suffix):
-            stripped = text[: -len(suffix)].strip()
-            return stripped or text
-    return text
+    """A post office's name without its type ("Whitefield S.O" -> "Whitefield"): the words before
+    the first type word, which may be followed by the town it reports to ("Gandhi Bazar SO
+    Amritsar") or a district in brackets ("Old Town S.O (Khorda)"). Nothing left: the name."""
+    words = name.split()
+    types = {t.upper() for t in const.OFFICE_SUFFIXES}
+    cut = next((i for i, w in enumerate(words) if i and w.upper() in types), len(words))
+    area = " ".join(words[:cut]).strip()
+    return area or name.strip()
 
 
 def fold(name):

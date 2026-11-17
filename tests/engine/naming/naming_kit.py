@@ -179,6 +179,9 @@ CA_CD = [
     ((10, -149, 10.5, -148.5), "statcan:3521", "Peel", "RM", "ON", 1_451_022),
     ((10, -148.5, 10.5, -148), "statcan:3526", "Niagara", "RM", "ON", 477_941),
     ((10.5, -148.5, 11, -148), "statcan:4815", "Division No. 15", "CDR", "ON", 37_735),
+    # a CSD's division comes from its CSDUID, not from these shapes: Pickering is in Durham
+    ((10, -148.75, 10.5, -148.5), "statcan:3518", "Durham", "RM", "ON", 696_992),
+    ((10.75, -148.5, 11, -148), "statcan:3519", "York", "RM", "ON", 1_173_334),
 ]
 CA_CSD = [
     ((10.5, -149, 11, -148.5), "statcan:3520005", "Toronto", "C", "ON", 2_794_356),

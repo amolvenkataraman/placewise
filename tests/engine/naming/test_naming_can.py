@@ -18,6 +18,7 @@ def test_small_city_rolls_up_to_its_cma(geo):
     r = geo.lookup(10.25, -148.6)  # Pickering: 99k, Toronto 28x bigger
     assert r.locality.name == "Pickering" and r.city.name == "Toronto"
     assert r.city.id == "statcan:3520005" and r.sources["city"] == "ca/csd:metro"
+    assert r.admin2.name == "Durham"  # from the CSDUID, though the Peel box covers it too
     assert [p.name for p in r.regions] == ["Toronto"] and r.regions[0].kind == PlaceKind.REGION
 
 

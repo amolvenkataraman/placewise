@@ -41,6 +41,9 @@ CITY_ROLL_UP_RATIO = 10
 # the ZIP Code's postal city (Paradise -> Las Vegas, SFO -> San Francisco) until postal cities are
 # in the pack
 METRO_CITY_KM = 25.0
+# a CDP is that city's suburb only when it is this close to the city (East Los Angeles, Paradise);
+# farther out it stays itself (Stanford, Brandon FL)
+METRO_CDP_KM = 5.0
 
 # New York City's boroughs are its five counties (county GEOID -> the name people use)
 NYC_BOROUGHS = {
@@ -76,6 +79,8 @@ CSD_UNORGANIZED = frozenset(
     }
 )
 
-# post-office type suffixes India Post appends to office names ("Whitefield S.O"): sub, branch and
-# head office, general post office; a PIN area's name without them names its neighbourhood
-OFFICE_SUFFIXES = ("S.O.", "B.O.", "H.O.", "S.O", "B.O", "H.O", "GPO", "SO", "BO", "HO", "PO")
+# post-office type words India Post writes after office names ("Whitefield S.O"): sub, branch and
+# head office, general post office; a PIN area's name before them names its neighbourhood
+OFFICE_SUFFIXES = (
+    "S.O.", "B.O.", "H.O.", "S.O", "B.O", "H.O", "SO", "BO", "HO", "PO", "GPO", "G.P.O.", "G.P.O", "HPO",
+)  # fmt: skip

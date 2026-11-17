@@ -1,0 +1,137 @@
+"""The design page's example points (design: "Three names per point", the EX table) over the real
+world, US, Canada and India packs: what each answers now. Public places only.
+
+Where the answer still differs from the design's target, the test says why (the data or the
+rule that's missing) so a fix shows up as a test to update, not a silent change."""
+
+import pytest
+from e2e_kit import geocoder
+
+
+@pytest.fixture(scope="module")
+def geo():
+    return geocoder("world", "usa", "can", "ind")
+
+
+def names(r):
+    return {
+        f: (getattr(r, f).name if getattr(r, f) is not None else None)
+        for f in ("sublocality", "locality", "city", "borough", "admin1", "country")
+    }
+
+
+def test_fort_erie_is_in_canada_not_buffalo(geo):
+    r = geo.lookup(42.905, -78.929)
+    assert names(r) | {"tz": r.tz} == {
+        "sublocality": None, "locality": "Fort Erie", "city": "Fort Erie", "borough": None,
+        "admin1": "Ontario", "country": "Canada", "tz": "America/Toronto",
+    }  # fmt: skip
+    assert r.label == "Fort Erie, Ontario, Canada"
+    assert [p.name for p in r.regions] == ["St. Catharines - Niagara"]  # the CMA, until Niagara Region
+
+
+def test_las_vegas_strip_is_las_vegas(geo):
+    r = geo.lookup(36.1147, -115.1728)
+    assert r.label == "Las Vegas, Nevada, United States"
+    assert (r.locality.name, r.city.name, r.sublocality.name) == ("Las Vegas", "Las Vegas", "Paradise")
+    assert r.sources["locality"] == "us/places:metro"  # Paradise CDP next to the principal city
+    assert r.postal.name == "89109" and r.admin2.name == "Clark County"
+    assert r.regions[0].id == "census:cbsa:29820"
+
+
+def test_emeryville_is_its_own_city(geo):
+    """The design page rolls Emeryville's city up to San Francisco; incorporated US places stay
+    their own city here (docs/naming.md)."""
+    r = geo.lookup(37.8313, -122.2852)
+    assert (r.locality.name, r.city.name) == ("Emeryville", "Emeryville")
+    assert r.label == "Emeryville, California, United States"
+    assert r.regions[0].name == "San Francisco-Oakland-Fremont, CA Metro Area"
+
+
+def test_mission_district(geo):
+    r = geo.lookup(37.7599, -122.4148)
+    assert names(r)["sublocality"] == "Mission District"
+    assert (r.locality.name, r.city.name) == ("San Francisco", "San Francisco")
+
+
+def test_toronto_pearson_is_in_mississauga(geo):
+    r = geo.lookup(43.6777, -79.6248)
+    assert (r.locality.name, r.city.name) == ("Mississauga", "Mississauga")
+    assert r.airport.place.codes["iata"] == "YYZ" and r.airport.relation.value == "at"
+    assert r.label == "Mississauga, Ontario, Canada"
+
+
+def test_markham_civic_centre(geo):
+    r = geo.lookup(43.8564, -79.3374)
+    assert (r.locality.name, r.city.name, r.admin2.name) == ("Markham", "Markham", "York")
+
+
+def test_lake_louise_province_and_zone(geo):
+    r = geo.lookup(51.4254, -116.1773)
+    assert (r.admin1.name, r.country.name, r.tz) == ("Alberta", "Canada", "America/Edmonton")
+    assert r.admin2.name == "Division No. 15"
+
+
+@pytest.mark.xfail(strict=True, reason="no data: Lake Louise (pop. < 1,000) isn't in GeoNames cities1000")
+def test_lake_louise_has_a_locality(geo):
+    assert geo.lookup(51.4254, -116.1773).locality.name == "Lake Louise"
+
+
+def test_rouge_park_is_in_toronto(geo):
+    r = geo.lookup(43.82, -79.17)
+    assert (r.locality.name, r.city.name) == ("Toronto", "Toronto")
+    assert r.sublocality.name == "Rouge"  # GeoNames' neighbourhood; the design says Scarborough
+
+
+def test_gurugram_is_in_haryana(geo):
+    r = geo.lookup(28.495, 77.089)
+    assert (r.admin1.id, r.city.name, r.locality.name) == ("iso:IN-HR", "Gurugram", "Gurugram")
+    assert r.sources["admin1"] == "in/pincodes:state"
+    assert r.label == "Gurugram, Haryana, India"
+
+
+def test_whitefield_bengaluru(geo):
+    r = geo.lookup(12.9958, 77.7608)
+    assert (r.sublocality.name, r.city.name, r.admin1.name) == ("Whitefield", "Bengaluru", "Karnataka")
+    assert r.postal.name == "560066"
+
+
+def test_horseshoe_falls_canadian_side(geo):
+    r = geo.lookup(43.0799, -79.0747)
+    assert (r.locality.name, r.admin1.name, r.country.name, r.tz) == (
+        "Niagara Falls", "Ontario", "Canada", "America/Toronto",
+    )  # fmt: skip
+    assert r.sources["locality"] == "ca/csd:nearest"  # the falls are off the clipped shore
+
+
+def test_williamsburg_brooklyn(geo):
+    r = geo.lookup(40.7081, -73.9571)
+    assert names(r) == {
+        "sublocality": "Williamsburg", "locality": "New York", "city": "New York", "borough": "Brooklyn",
+        "admin1": "New York", "country": "United States",
+    }  # fmt: skip
+    assert r.admin2.name == "Kings County" and r.postal.name == "11211"
+
+
+def test_sfo_unincorporated_with_its_metro_city(geo):
+    r = geo.lookup(37.6155, -122.39)
+    assert r.locality is None and r.city.name == "San Francisco"
+    assert r.admin2.name == "San Mateo County"
+    assert r.airport.place.codes["iata"] == "SFO" and r.airport.relation.value == "at"
+
+
+def test_yosemite_valley(geo):
+    r = geo.lookup(37.7456, -119.5936)
+    assert (r.locality.name, r.admin1.name) == ("Yosemite Valley", "California")
+
+
+def test_lookup_many_agrees_with_lookup(geo):
+    points = [
+        (42.905, -78.929),
+        (36.1147, -115.1728),
+        (43.6777, -79.6248),
+        (28.495, 77.089),
+        (40.7081, -73.9571),
+    ]
+    many = geo.lookup_many([p[0] for p in points], [p[1] for p in points])
+    assert [r.to_dict() for r in many] == [geo.lookup(*p).to_dict() for p in points]

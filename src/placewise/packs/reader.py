@@ -424,6 +424,13 @@ class PolygonLayer(Layer):
         """The feature's bounding box; west > east when it crosses the antimeridian."""
         return BBox(*self._bbox[self._row_index(i)].tolist())
 
+    def bboxes(self):
+        """Every feature's bounding box at once: a read-only (count, 4) array of (south, west,
+        north, east) degrees, as bbox(i) gives one at a time."""
+        boxes = self._bbox.view()
+        boxes.flags.writeable = False
+        return boxes
+
     def feature(self, i):
         """Feature i with its full geometry, its row as properties and its id."""
         i = self._row_index(i)
