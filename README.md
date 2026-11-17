@@ -1,28 +1,88 @@
 # placewise
 
-Offline, two-way geocoding and a geo toolkit. Given a point it answers the way a person would
-(the city you'd say, the region, the park or lake you were in, the airport you were at); given a
-name it returns where that is. Everything runs locally.
+Offline, two-way geocoding and a one-stop geo toolkit. Given a point it answers the way a person
+would (the city you'd say, the region, the park or lake you were in, the airport you were at);
+given a name it returns where that is. Everything runs locally: the code installs from PyPI, and
+the data downloads on first use as versioned, checksummed packs (about 1 GB for the world plus
+full detail for a few countries).
 
-Status: early development. The first slice is the toolkit in `placewise.geo`, which needs no data.
+It is built for everyone from someone who just wants their Yosemite photos to GIS professionals:
+plain words on the simple path, precise terms (EPSG codes, ellipsoids, error bounds) one step away.
+
+**Status: early development.** The toolkit, tracks, privacy tools, data store and pack format are
+done; reverse lookup over the world pack is being built now. See the design doc for the roadmap.
+
+## Geo toolkit (`placewise.geo`), no data needed
 
 ```python
+from datetime import date
 from placewise import geo
 
-geo.distance(43.6532, -79.3832, 45.5019, -73.5674)  # km, haversine
-geo.distance(43.6532, -79.3832, 45.5019, -73.5674, method="geodesic")
-geo.initial_bearing(43.65, -79.38, 45.50, -73.57)  # degrees
+geo.distance(43.6532, -79.3832, 45.5019, -73.5674)                       # km, haversine
+geo.distance(43.6532, -79.3832, 45.5019, -73.5674, method="geodesic")    # Karney, WGS84
+geo.initial_bearing(43.65, -79.38, 45.50, -73.57)                        # degrees
 geo.destination(43.65, -79.38, bearing=45, distance_km=10)
-geo.bbox_around(43.65, -79.38, distance_km=25)
-geo.parse("43°38′33.2″N 79°23′13.4″W")
-geo.geohash_encode(43.65, -79.38)
+geo.parse("43°38′33.2″N 79°23′13.4″W")                                   # also Google/Apple/OSM URLs
+geo.to_utm(43.6426, -79.3871)                                            # also UPS, MGRS, ECEF, ENU
+geo.plus_code_encode(43.6426, -79.3871)
+geo.sun_times(43.6426, -79.3871, date(2026, 6, 21))
 ```
 
-Conventions:
+Also: geohash, map tiles and quadkeys, encoded polylines, line simplification, nearest point on a
+line, spherical areas, antimeridian-aware bounding boxes, a two-stage polygon index for detailed
+GeoJSON or shapefile boundaries, and a registry of every coordinate system used with its EPSG code
+(`placewise.constants.crs`).
+
+## Tracks (`placewise.tracks`, `placewise.io`)
+
+```python
+from placewise.tracks import Track
+
+track = Track.read("ride.fit")        # GPX, FIT, TCX, KML/KMZ, GeoJSON, NMEA or CSV, detected from content
+track = track.clean()                 # sort, dedupe, drop invalid fixes, remove spikes, split gaps
+track.stats()                         # distance, moving time, elevation gain, speeds, heart rate
+track.position_at(photo_times)        # where you were at each time (great-circle interpolation)
+track.stays()                         # places you stopped, with gap bridging
+```
+
+Readers and writers need no dependencies (FIT is decoded from the public spec). Operations include
+Kalman smoothing, thinning, resampling, splits and best efforts, camera clock-offset estimation for
+photo geotagging, trips, travel modes, flights, time inside an area, border crossings, days per
+country, merging recordings from several devices, and route comparison (Hausdorff, Fréchet,
+corridor overlap, deviations).
+
+## Privacy (`placewise.privacy`)
+
+```python
+from placewise import privacy
+
+key = b"..."                          # at least 16 secret bytes, kept and reused
+shared = privacy.apply(track, privacy.preset("public_share"), key)
+```
+
+Privacy zones whose cut points don't give away the hidden place, secret-length trimming, keyed grid
+snapping, geo-indistinguishable noise, time coarsening, and an audit of what a track reveals. Every
+tool documents what it does *not* protect against.
+
+## Data
+
+```
+placewise data install world          # download, verify and install a pack
+placewise data list                   # installed and available packs
+placewise data update                 # newer versions (never automatic, never deletes)
+placewise attribution                 # the sources, licences and credit lines to show
+```
+
+Packs are memory-mapped and checksummed (format: `docs/pack-format.md`). Every source is one JSON
+file in `src/placewise/sources/`, and `ATTRIBUTION.md` is generated from them, so an app that
+ships placewise data can link to that one file.
+
+## Conventions
 
 - Coordinates are WGS84 degrees, always in `(lat, lon)` order (GeoJSON uses `(lon, lat)`).
 - Every function accepts scalars or numpy arrays and broadcasts; scalars in, plain floats out.
-- Distances are kilometres unless a function says otherwise.
+- Distances are kilometres unless a name ends in `_m`.
+- English names only; standard coordinate systems only (no obfuscated ones like GCJ-02).
 
 ## Development
 
@@ -33,5 +93,5 @@ uv run ruff check .     # lint
 uv run ruff format .    # format
 ```
 
-Requires Python 3.10+. The core depends on numpy only; `pip install placewise[geodesic]` adds
-GeographicLib for ellipsoidal distances.
+Requires Python 3.10+. The runtime depends on numpy only; `pip install placewise[geodesic]` adds
+GeographicLib for ellipsoidal distances. `packbuild/` (not shipped) turns public datasets into packs.
