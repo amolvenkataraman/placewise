@@ -9,6 +9,7 @@ import re
 import warnings
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -74,6 +75,18 @@ def decode_text(data):
 
 def parse_iso_time(text):
     """UTC unix seconds from an ISO 8601 date-time; a missing offset is taken as UTC."""
+    # fast path for the overwhelmingly common "2024-05-01T12:00:00Z", read exactly as below
+    if (
+        len(text) == 20
+        and text[19] in "Zz"
+        and text[10] in "Tt "
+        and text[4] == text[7] == "-"
+        and text[13] == text[16] == ":"
+        and (digits := text[:4] + text[5:7] + text[8:10] + text[11:13] + text[14:16] + text[17:19]).isascii()
+        and digits.isdigit()
+    ):
+        clock = int(text[11:13]) * 3600 + int(text[14:16]) * 60 + int(text[17:19])
+        return float(_day_seconds(int(text[:4]), int(text[5:7]), int(text[8:10])) + clock)
     match = _ISO.match(text)
     if not match:
         raise ValueError(f"not an ISO 8601 time: {text!r}")
@@ -89,6 +102,12 @@ def parse_iso_time(text):
         offset = int(digits[:2]) * 3600 + (int(digits[2:4]) * 60 if len(digits) > 2 else 0)
         seconds -= sign * offset
     return float(seconds)
+
+
+@lru_cache(maxsize=4096)
+def _day_seconds(year, month, day):
+    """calendar.timegm of midnight on a day (it adds hours, minutes and seconds linearly)."""
+    return calendar.timegm((year, month, day, 0, 0, 0, 0, 0, 0))
 
 
 def format_iso_time(seconds):
