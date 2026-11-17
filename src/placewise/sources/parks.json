@@ -1,0 +1,96 @@
+{
+  "purpose": "parks",
+  "description": "Parks and protected areas: national, state / provincial, regional and local parks, forests, refuges and reserves, as outlines in the usa-parks and can-parks packs and as points with an approximate radius in world-parks (docs/parks.md).",
+  "regions": {
+    "usa": [
+      {
+        "id": "nps-boundaries",
+        "name": "National Park Service Administrative Boundaries of National Park System Units",
+        "url": "https://irma.nps.gov/DataStore/Reference/Profile/2321443",
+        "licence": "LicenseRef-public-domain",
+        "credit": "National Park Service, Land Resources Division (public domain)",
+        "used_in": [
+          "usa-parks/parks_national",
+          "usa-parks/parks_regional",
+          "usa-parks/parks_local"
+        ],
+        "downloads": {
+          "boundary": "https://services1.arcgis.com/fBc8EJBxQRMcHlei/arcgis/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2"
+        },
+        "notes": "Works of the US federal government are not subject to copyright (17 U.S.C. 105); data.gov labels the dataset with the US public domain mark. Read from the Land Resources Division's ArcGIS feature service (layer nps_boundary, the same administrative boundaries IRMA publishes as a File Geodatabase, which placewise can't read without GDAL), in Web Mercator, generalised by the service to 10 m (maxAllowableOffset). Ids are nps:<UNIT_CODE> (nps:YOSE)."
+      },
+      {
+        "id": "usfs-forests",
+        "name": "USDA Forest Service Administrative Forest Boundaries",
+        "url": "https://data.fs.usda.gov/geodata/edw/datasets.php",
+        "licence": "LicenseRef-public-domain",
+        "credit": "USDA Forest Service (public domain)",
+        "used_in": [
+          "usa-parks/parks_state"
+        ],
+        "downloads": {
+          "forests": "https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.AdministrativeForest.zip"
+        },
+        "notes": "A US federal work (17 U.S.C. 105); the FGDC metadata's access constraints are 'None' and its use constraints a no-warranty disclaimer. Shapefile in NAD83 longitude/latitude, read as WGS84 (1-2 m apart in the US), simplified by the build to 10 m. One feature per administrative forest (the unit the Forest Service runs, which can join several proclaimed forests); ids are usfs:<FORESTORGCODE>."
+      },
+      {
+        "id": "padus",
+        "name": "Protected Areas Database of the United States (PAD-US) 4.1",
+        "url": "https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e",
+        "licence": "LicenseRef-public-domain",
+        "credit": "U.S. Geological Survey (USGS) Gap Analysis Project (GAP), 2024, Protected Areas Database of the United States (PAD-US) 4.1: U.S. Geological Survey data release, https://doi.org/10.5066/P96WBCHS",
+        "used_in": [
+          "usa-parks/parks_state",
+          "usa-parks/parks_regional",
+          "usa-parks/parks_local"
+        ],
+        "downloads": {
+          "fee": "https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/Fee_Managers_PADUS/FeatureServer/0",
+          "proclamation": "https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/Proclamation_and_Other_Planning_Boundaries_PADUS/FeatureServer/0"
+        },
+        "notes": "ScienceBase rights: 'Public Domain.' The credit is USGS's requested citation (not a legal requirement). PAD-US 4.1 (published 2025-03-31) ships as a File Geodatabase only, so the build reads USGS's own ArcGIS feature services of the same edition: the Fee layer (PADUS4_1FeeManagers) for state parks, state and local conservation and recreation areas and local parks, and the Proclamation layer for national wildlife refuges, in Web Mercator, generalised by the service to 10 m. USGS: not for regulatory use, not finer than 1:24,000. PAD-US has no persistent unit ids; the build derives pad-us:<state>:<designation type>:<name>:<geohash> ids (docs/parks.md)."
+      }
+    ],
+    "can": [
+      {
+        "id": "cpcad",
+        "name": "Canadian Protected and Conserved Areas Database (CPCAD), December 2025",
+        "url": "https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c",
+        "licence": "OGL-Canada-2.0",
+        "credit": "Contains information licensed under the Open Government Licence - Canada. Environment and Climate Change Canada, Canadian Protected and Conserved Areas Database (CPCAD), December 2025.",
+        "used_in": [
+          "can-parks/parks_national",
+          "can-parks/parks_state",
+          "can-parks/parks_regional",
+          "can-parks/parks_local"
+        ],
+        "downloads": {
+          "service": "https://maps-cartes.ec.gc.ca/arcgis/rest/services/CWS_SCF/CPCAD/MapServer/0"
+        },
+        "notes": "The Open Government Portal record and the map service's copyright text give the Open Government Licence - Canada. The database is published as a File Geodatabase, so the build reads ECCC's map service of it in its native EPSG:3978 (NAD83 / Canada Atlas Lambert), generalised by the service to 10 m, and unprojects it (packbuild/projection.py; NAD83 used as WGS84). Only public protected areas are kept: private, NGO and habitat-only designations and OECMs are dropped (docs/parks.md). Ids are cpcad:<PARENT_ID>. CPCAD has no city parks apart from some municipal natural areas and British Columbia's municipal parks."
+      }
+    ],
+    "world": [
+      {
+        "id": "wikidata",
+        "name": "Wikidata",
+        "url": "https://www.wikidata.org",
+        "licence": "CC0-1.0",
+        "credit": "Wikidata (wikidata.org), CC0",
+        "used_in": [
+          "world-parks/park_points"
+        ],
+        "downloads": {
+          "parks_national": "https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fitem%20%3Fname%20%3Fcoord%20%3Farea%20%3Fcc%20%3Fsitelinks%20WHERE%20%7B%20%3Fitem%20wdt%3AP31%2Fwdt%3AP279%2A%20wd%3AQ46169%20.%20%3Fitem%20wdt%3AP625%20%3Fcoord%20%3B%20wikibase%3Asitelinks%20%3Fsitelinks%20%3B%20rdfs%3Alabel%20%3Fname%20.%20FILTER%28LANG%28%3Fname%29%20%3D%20%22en%22%29%20OPTIONAL%20%7B%20%3Fitem%20p%3AP2046%2Fpsn%3AP2046%2Fwikibase%3AquantityAmount%20%3Farea%20%7D%20OPTIONAL%20%7B%20%3Fitem%20wdt%3AP17%2Fwdt%3AP297%20%3Fcc%20%7D%20FILTER%20NOT%20EXISTS%20%7B%20%3Fitem%20wdt%3AP576%20%3Fend%20%7D%20%7D",
+          "parks_tiger_reserves": "https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fitem%20%3Fname%20%3Fcoord%20%3Farea%20%3Fcc%20%3Fsitelinks%20WHERE%20%7B%20%3Fitem%20wdt%3AP31%2Fwdt%3AP279%2A%20wd%3AQ5533772%20.%20%3Fitem%20wdt%3AP625%20%3Fcoord%20%3B%20wikibase%3Asitelinks%20%3Fsitelinks%20%3B%20rdfs%3Alabel%20%3Fname%20.%20FILTER%28LANG%28%3Fname%29%20%3D%20%22en%22%29%20OPTIONAL%20%7B%20%3Fitem%20p%3AP2046%2Fpsn%3AP2046%2Fwikibase%3AquantityAmount%20%3Farea%20%7D%20OPTIONAL%20%7B%20%3Fitem%20wdt%3AP17%2Fwdt%3AP297%20%3Fcc%20%7D%20FILTER%20NOT%20EXISTS%20%7B%20%3Fitem%20wdt%3AP576%20%3Fend%20%7D%20%7D",
+          "parks_wildlife_refuges": "https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fitem%20%3Fname%20%3Fcoord%20%3Farea%20%3Fcc%20%3Fsitelinks%20WHERE%20%7B%20%3Fitem%20wdt%3AP31%20%3Fk%20.%20%3Fk%20wdt%3AP279%3F%20wd%3AQ1377575%20.%20%3Fitem%20wdt%3AP625%20%3Fcoord%20%3B%20wikibase%3Asitelinks%20%3Fsitelinks%20%3B%20rdfs%3Alabel%20%3Fname%20.%20FILTER%28LANG%28%3Fname%29%20%3D%20%22en%22%29%20OPTIONAL%20%7B%20%3Fitem%20p%3AP2046%2Fpsn%3AP2046%2Fwikibase%3AquantityAmount%20%3Farea%20%7D%20OPTIONAL%20%7B%20%3Fitem%20wdt%3AP17%2Fwdt%3AP297%20%3Fcc%20%7D%20FILTER%20NOT%20EXISTS%20%7B%20%3Fitem%20wdt%3AP576%20%3Fend%20%7D%20%7D",
+          "parks_india": "https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fitem%20%3Fname%20%3Fcoord%20%3Farea%20%3Fcc%20%3Fsitelinks%20WHERE%20%7B%20%3Fitem%20wdt%3AP17%20wd%3AQ668%20%3B%20wdt%3AP31%2Fwdt%3AP279%2A%20wd%3AQ473972%20.%20%3Fitem%20wdt%3AP625%20%3Fcoord%20%3B%20wikibase%3Asitelinks%20%3Fsitelinks%20%3B%20rdfs%3Alabel%20%3Fname%20.%20FILTER%28LANG%28%3Fname%29%20%3D%20%22en%22%29%20OPTIONAL%20%7B%20%3Fitem%20p%3AP2046%2Fpsn%3AP2046%2Fwikibase%3AquantityAmount%20%3Farea%20%7D%20OPTIONAL%20%7B%20%3Fitem%20wdt%3AP17%2Fwdt%3AP297%20%3Fcc%20%7D%20FILTER%20NOT%20EXISTS%20%7B%20%3Fitem%20wdt%3AP576%20%3Fend%20%7D%20%7D"
+        },
+        "notes": "Parks known only by a point: items that are national parks or tiger reserves of India (or subclasses), wildlife refuges, and India's protected areas, with an English label, a coordinate (P625) and no dissolution date, outside the US and Canada (whose parks have outlines in usa-parks and can-parks). The radius is that of a circle of the item's area (P2046), capped at 30 km; such parks are only ever 'near' (in the area of), never 'within'. Country (P17) is read only to leave out the US and Canada: the packs carry no park's country, which comes from the boundary layers and the chosen worldview."
+      }
+    ]
+  },
+  "gaps": {
+    "ind": "No openly licensed outlines: WII/ENVIS publishes lists marked All Rights Reserved, and Bhuvan, PARIVESH and NTCA maps are view-only; OpenStreetMap's outlines are ODbL (share-alike pack only, not built yet). India's national parks, tiger reserves and sanctuaries are Wikidata points in world-parks."
+  }
+}

@@ -10,10 +10,13 @@ PLACEWISE_* variables.
 """
 
 import os
+import re
 from functools import cache
 from pathlib import Path
 
 import pytest
+
+from placewise.constants.packs import VERSION_PATTERN
 
 ENV_PACKS_DIR = "E2E_PACKS_DIR"
 
@@ -29,7 +32,11 @@ def packs_dirs():
 def pack_path(name):
     """The newest built pack directory for `name`, or None."""
     for root in packs_dirs():
-        found = sorted(p for p in root.glob(f"{name}-*") if (p / "pack.json").is_file())
+        # "<name>-<version>" only: "can-*" also matches can-parks-2026.11
+        found = sorted(
+            p for p in root.glob(f"{name}-*")
+            if re.fullmatch(VERSION_PATTERN, p.name[len(name) + 1 :]) and (p / "pack.json").is_file()
+        )  # fmt: skip
         if found:
             return found[-1]
     return None

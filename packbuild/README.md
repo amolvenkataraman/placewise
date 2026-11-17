@@ -280,6 +280,15 @@ of a point (CN Tower: GTA, GTHA, Golden Horseshoe). Regions overlap freely.
   same files. A region with `search_as` (the GTHA, the Delhi NCR core, the Bengaluru Metropolitan
   Region) has no entry there: location search reads its names as the region it names.
 
+## Park packs (`usa-parks`, `can-parks`, `world-parks`)
+
+```
+uv run python -m packbuild.parks usa can world --version 2026.11
+```
+
+NPS, USFS and PAD-US 4.1 (US), CPCAD (Canada) as one polygon layer per tier, Wikidata points
+elsewhere; tiers, ids, sources and gaps in `docs/parks.md`.
+
 ## Releasing data
 
 Packs are published as GitHub release assets of `amolvenkataraman/placewise-data` (no data in its

@@ -18,7 +18,11 @@ should still read each licence for its own obligations.
 | [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/regions |
 | [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated) |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
-| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts |
+| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-parks/park_points |
+| [National Park Service Administrative Boundaries of National Park System Units](https://irma.nps.gov/DataStore/Reference/Profile/2321443) | LicenseRef-public-domain | usa-parks/parks_national, usa-parks/parks_regional, usa-parks/parks_local |
+| [USDA Forest Service Administrative Forest Boundaries](https://data.fs.usda.gov/geodata/edw/datasets.php) | LicenseRef-public-domain | usa-parks/parks_state |
+| [Protected Areas Database of the United States (PAD-US) 4.1](https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e) | LicenseRef-public-domain | usa-parks/parks_state, usa-parks/parks_regional, usa-parks/parks_local |
+| [Canadian Protected and Conserved Areas Database (CPCAD), December 2025](https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c) | OGL-Canada-2.0 | can-parks/parks_national, can-parks/parks_state, can-parks/parks_regional, can-parks/parks_local |
 | [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
 | [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/pincodes, ind/regions |
@@ -35,6 +39,10 @@ should still read each licence for its own obligations.
 | boundaries | ind | none: No openly licensed, redistributable state or district boundaries found yet (Survey of India data is not under an open licence; NWDP's terms are unclear; geoBoundaries is CC BY 2.5 IN or ODbL). Natural Earth admin1 covers states in the world pack. See packbuild/README.md, India pack. |
 | boundaries | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 | countries | world | GeoNames, Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0, Wikidata, Natural Earth 1:10m Cultural Vectors |
+| parks | world | Wikidata |
+| parks | can | Canadian Protected and Conserved Areas Database (CPCAD), December 2025 |
+| parks | ind | none: No openly licensed outlines: WII/ENVIS publishes lists marked All Rights Reserved, and Bhuvan, PARIVESH and NTCA maps are view-only; OpenStreetMap's outlines are ODbL (share-alike pack only, not built yet). India's national parks, tiger reserves and sanctuaries are Wikidata points in world-parks. |
+| parks | usa | National Park Service Administrative Boundaries of National Park System Units, USDA Forest Service Administrative Forest Boundaries, Protected Areas Database of the United States (PAD-US) 4.1 |
 | places | world | GeoNames |
 | places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts |
 | places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
@@ -104,6 +112,40 @@ The cldr-json packages (github.com/unicode-org/cldr-json), pinned to release 49.
 - Website: https://www.wikidata.org
 
 Driving side (property P1622, values Q11920728 left and Q14565199 right) of every item with an ISO 3166-1 alpha-2 code (P297), leaving out deprecated statements and ones with an end time (P582). A code whose current statements disagree gets no driving side. The query result is cached on the first build; rebuilding with --refresh asks again.
+
+Parks known only by a point: items that are national parks or tiger reserves of India (or subclasses), wildlife refuges, and India's protected areas, with an English label, a coordinate (P625) and no dissolution date, outside the US and Canada (whose parks have outlines in usa-parks and can-parks). The radius is that of a circle of the item's area (P2046), capped at 30 km; such parks are only ever 'near' (in the area of), never 'within'. Country (P17) is read only to leave out the US and Canada: the packs carry no park's country, which comes from the boundary layers and the chosen worldview.
+
+## National Park Service Administrative Boundaries of National Park System Units
+
+- Credit: National Park Service, Land Resources Division (public domain)
+- Licence: LicenseRef-public-domain
+- Website: https://irma.nps.gov/DataStore/Reference/Profile/2321443
+
+Works of the US federal government are not subject to copyright (17 U.S.C. 105); data.gov labels the dataset with the US public domain mark. Read from the Land Resources Division's ArcGIS feature service (layer nps_boundary, the same administrative boundaries IRMA publishes as a File Geodatabase, which placewise can't read without GDAL), in Web Mercator, generalised by the service to 10 m (maxAllowableOffset). Ids are nps:<UNIT_CODE> (nps:YOSE).
+
+## USDA Forest Service Administrative Forest Boundaries
+
+- Credit: USDA Forest Service (public domain)
+- Licence: LicenseRef-public-domain
+- Website: https://data.fs.usda.gov/geodata/edw/datasets.php
+
+A US federal work (17 U.S.C. 105); the FGDC metadata's access constraints are 'None' and its use constraints a no-warranty disclaimer. Shapefile in NAD83 longitude/latitude, read as WGS84 (1-2 m apart in the US), simplified by the build to 10 m. One feature per administrative forest (the unit the Forest Service runs, which can join several proclaimed forests); ids are usfs:<FORESTORGCODE>.
+
+## Protected Areas Database of the United States (PAD-US) 4.1
+
+- Credit: U.S. Geological Survey (USGS) Gap Analysis Project (GAP), 2024, Protected Areas Database of the United States (PAD-US) 4.1: U.S. Geological Survey data release, https://doi.org/10.5066/P96WBCHS
+- Licence: LicenseRef-public-domain
+- Website: https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e
+
+ScienceBase rights: 'Public Domain.' The credit is USGS's requested citation (not a legal requirement). PAD-US 4.1 (published 2025-03-31) ships as a File Geodatabase only, so the build reads USGS's own ArcGIS feature services of the same edition: the Fee layer (PADUS4_1FeeManagers) for state parks, state and local conservation and recreation areas and local parks, and the Proclamation layer for national wildlife refuges, in Web Mercator, generalised by the service to 10 m. USGS: not for regulatory use, not finer than 1:24,000. PAD-US has no persistent unit ids; the build derives pad-us:<state>:<designation type>:<name>:<geohash> ids (docs/parks.md).
+
+## Canadian Protected and Conserved Areas Database (CPCAD), December 2025
+
+- Credit: Contains information licensed under the Open Government Licence - Canada. Environment and Climate Change Canada, Canadian Protected and Conserved Areas Database (CPCAD), December 2025.
+- Licence: OGL-Canada-2.0
+- Website: https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c
+
+The Open Government Portal record and the map service's copyright text give the Open Government Licence - Canada. The database is published as a File Geodatabase, so the build reads ECCC's map service of it in its native EPSG:3978 (NAD83 / Canada Atlas Lambert), generalised by the service to 10 m, and unprojects it (packbuild/projection.py; NAD83 used as WGS84). Only public protected areas are kept: private, NGO and habitat-only designations and OECMs are dropped (docs/parks.md). Ids are cpcad:<PARENT_ID>. CPCAD has no city parks apart from some municipal natural areas and British Columbia's municipal parks.
 
 ## Statistics Canada, 2021 Census of Population, population and dwelling counts
 

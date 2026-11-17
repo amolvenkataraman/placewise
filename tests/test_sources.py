@@ -43,11 +43,12 @@ def test_a_region_is_world_or_a_lower_case_iso_alpha3_code(tmp_path, region):
 
 
 def test_each_source_is_used_in_the_packs_of_the_regions_listing_it():
-    # used_in names "<pack>/<layer>"; a region's sources go in that region's pack (or world)
+    # used_in names "<pack>/<layer>"; a region's sources go in that region's packs (or world's):
+    # "usa", or one named after it ("usa-parks")
     for purpose, regions in attribution.load_registry().items():
         for region, sources in regions.items():
             for s in sources:
-                packs = {e.split("/")[0] for e in s.used_in if not e.startswith("package:")}
+                packs = {e.split("/")[0].split("-")[0] for e in s.used_in if not e.startswith("package:")}
                 assert packs <= {"world", region}, f"{purpose}/{region}: {s.id} used in {packs}"
 
 
