@@ -4,7 +4,7 @@ Turns public datasets into pack layers (see `docs/pack-format.md`). Build-time o
 the wheel. Tests live in `tests/packbuild/` and never touch the network.
 
 ```
-uv run python -m packbuild.world --version 2026.11     # writes .cache/packbuild/out/world-2026.11/
+uv run python -m packbuild.world --version 2026.11     # writes ~/.placewise/packbuild/out/world-2026.11/
 ```
 
 **Curated datasets** (country groups, regions, city aliases) live in the
@@ -14,7 +14,8 @@ folder (CC BY 4.0). Clone it beside this repository (`../placewise-data`) or poi
 generators (`python -m packbuild.country_groups`, `packbuild.regions`, `packbuild.cities`) write the
 offline copies the package ships into `src/placewise/constants/countries/`.
 
-Downloads are cached once in `.cache/packbuild/` (gitignored) with a `<file>.json` sidecar holding
+Downloads are cached once in `~/.placewise/packbuild/` (`packbuild.fetch.DEFAULT_CACHE`; set
+`$PACKBUILD_CACHE` or pass `--cache-dir` to use another place) with a `<file>.json` sidecar holding
 the URL, SHA-256, size and retrieval date; `--refresh` downloads again. Nothing downloaded is
 committed.
 
@@ -57,7 +58,7 @@ Plan:
 ## US pack (`usa`)
 
 ```
-uv run python -m packbuild.us --version 2026.11        # writes .cache/packbuild/out/usa-2026.11/
+uv run python -m packbuild.us --version 2026.11        # writes ~/.placewise/packbuild/out/usa-2026.11/
 ```
 
 Everything comes from the US Census Bureau (registry id `uscensus`, public domain):
@@ -101,7 +102,7 @@ same id as the world pack's admin1. Member lists (`counties`, `cbsas`) are comma
 ## Canada pack (`can`)
 
 ```
-uv run python -m packbuild.ca --version 2026.11 --via service   # writes .cache/packbuild/out/can-2026.11/
+uv run python -m packbuild.ca --version 2026.11 --via service   # writes ~/.placewise/packbuild/out/can-2026.11/
 ```
 
 | Layer | Kind | Source | Licence |
@@ -130,7 +131,7 @@ Cloudflare browser check (HTTP 403, seen November 2026), so `--via files` (the d
 where that check lets you through. `--via service` reads the same 2021 cartographic files from
 Statistics Canada's own ArcGIS REST service (geo.statcan.gc.ca, layers `lcsd000b21s_e` etc.: the
 `s` is StatCan's file-name code for "services"), in pages of Esri JSON in the native projection,
-cached under `.cache/packbuild/<layer>/` with a `<layer>.json` sidecar. The service's gateway gives
+cached under `~/.placewise/packbuild/<layer>/` with a `<layer>.json` sidecar. The service's gateway gives
 up after 60 s, which the largest boundaries don't fit in at full resolution (Ontario alone times
 out; Nunavut has 190,000 km of coastline), so requests are planned by perimeter (`SHAPE_Length`):
 OBJECTID ranges of at most 8,000 km, features over 10,000 km alone, and features over 15,000 km
@@ -170,7 +171,7 @@ Horseshoe are curated as unions of census divisions (and one CSD) in the `region
 ## India pack (`ind`)
 
 ```
-uv run python -m packbuild.india --version 2026.11     # writes .cache/packbuild/out/ind-2026.11/
+uv run python -m packbuild.india --version 2026.11     # writes ~/.placewise/packbuild/out/ind-2026.11/
 uv run python -m packbuild.india --version 2026.11 \
     --pincode-boundaries All_India_pincode_Boundary-19312.geojson --pincode-directory pincode.csv
 ```
@@ -287,25 +288,25 @@ git history; see its README). placewise's default index URL is that repository's
 pack is released again under the new tag.
 
 ```
-# 1. build the packs (each writes .cache/packbuild/out/<name>-<version>/)
+# 1. build the packs (each writes ~/.placewise/packbuild/out/<name>-<version>/)
 uv run python -m packbuild.world --version 2026.11
 uv run python -m packbuild.us --version 2026.11
 
 # 2. prepare: verify, archive, index (nothing is uploaded; prints the gh command it would run)
 uv run python -m packbuild.release \
-    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/usa-2026.11 \
-    --out .cache/packbuild/release/2026.11
+    --packs ~/.placewise/packbuild/out/world-2026.11 ~/.placewise/packbuild/out/usa-2026.11 \
+    --out ~/.placewise/packbuild/release/2026.11
 
 # 3. test the release directory as placewise would use it
 uv run placewise --data-dir /tmp/pw-test \
-    --index-url file://$PWD/.cache/packbuild/release/2026.11/index.json data install world
+    --index-url file://$HOME/.placewise/packbuild/release/2026.11/index.json data install world
 uv run placewise --data-dir /tmp/pw-test \
-    --index-url file://$PWD/.cache/packbuild/release/2026.11/index.json data verify
+    --index-url file://$HOME/.placewise/packbuild/release/2026.11/index.json data verify
 
 # 4. publish (needs both the flag and the environment switch; uses gh's login)
 PLACEWISE_ALLOW_PUBLISH=1 uv run python -m packbuild.release \
-    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/usa-2026.11 \
-    --out .cache/packbuild/release/2026.11 --publish [--tag 2026.11]
+    --packs ~/.placewise/packbuild/out/world-2026.11 ~/.placewise/packbuild/out/usa-2026.11 \
+    --out ~/.placewise/packbuild/release/2026.11 --publish [--tag 2026.11]
 ```
 
 `packbuild.release.prepare_release(pack_dirs, out_dir)` re-hashes every pack (`open_pack(verify=True)`)

@@ -15,7 +15,9 @@ import zipfile
 from pathlib import Path
 
 USER_AGENT = "placewise-build"
-DEFAULT_CACHE = Path(".cache/packbuild")  # gitignored (/.cache/ at the repo root)
+ENV_CACHE = "PACKBUILD_CACHE"  # not PLACEWISE_*: placewise's config loader rejects unknown ones
+# downloads and built packs live with everything else placewise downloads, unless configured
+DEFAULT_CACHE = Path(os.environ.get(ENV_CACHE) or Path.home() / ".placewise" / "packbuild").expanduser()
 _CHUNK = 1 << 20
 
 

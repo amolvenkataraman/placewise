@@ -5,7 +5,8 @@ curated regions (GTA, GTHA ...) as unions of those units.
     uv run python -m packbuild.ca --version 2026.11
     uv run python -m packbuild.ca --version 2026.11 --via service   # StatCan's map service instead
 
-Downloads land once in .cache/packbuild/ (gitignored); the pack is written to --out.
+Downloads land once in ~/.placewise/packbuild/ (packbuild.fetch.DEFAULT_CACHE, $PACKBUILD_CACHE);
+the pack is written to --out.
 """
 
 import argparse

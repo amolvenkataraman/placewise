@@ -3,7 +3,8 @@
 
     uv run python -m packbuild.world --version 2026.11
 
-Downloads land once in .cache/packbuild/ (gitignored); the pack is written to --out.
+Downloads land once in ~/.placewise/packbuild/ (packbuild.fetch.DEFAULT_CACHE, $PACKBUILD_CACHE);
+the pack is written to --out.
 """
 
 import argparse

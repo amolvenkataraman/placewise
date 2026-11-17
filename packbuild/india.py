@@ -5,7 +5,8 @@ curated regions (Delhi NCR ...) as unions of PIN code areas.
     uv run python -m packbuild.india --version 2026.11 \\
         --pincode-boundaries All_India_pincode_Boundary-19312.geojson --pincode-directory pincode.csv
 
-Downloads land once in .cache/packbuild/ (gitignored); the pack is written to --out. data.gov.in
+Downloads land once in ~/.placewise/packbuild/ (packbuild.fetch.DEFAULT_CACHE, $PACKBUILD_CACHE);
+the pack is written to --out. data.gov.in
 can't be fetched automatically (see the registry notes), so by default the registry's mirror copies
 are fetched; a file downloaded by hand from data.gov.in replaces its mirror. State and district
 boundaries (--states, --districts) are read only once their source has a registry file, which

@@ -1,13 +1,12 @@
 """Shared helpers for end-to-end tests: real built packs, public places only.
 
-Packs are found in $E2E_PACKS_DIR, else the repo's .cache/packbuild/out/, else
-~/.placewise/packbuild/out/ (the first that has the pack; the newest `<name>-<version>` wins).
-The variable is deliberately not PLACEWISE_*: placewise's config loader rejects unknown
-PLACEWISE_* variables. A test that needs a pack which isn't
-built is skipped, never failed: build it with `uv run python -m packbuild.<builder>`.
+Packs are found in $E2E_PACKS_DIR, else where packbuild writes them (`packbuild.fetch.DEFAULT_CACHE`
+/ "out", i.e. ~/.placewise/packbuild/out unless $PACKBUILD_CACHE says otherwise). The newest
+`<name>-<version>` directory wins. A test that needs a pack which isn't built is skipped, never
+failed: build it with `uv run python -m packbuild.<builder>`.
 
-Country packs are looked up by their alpha-3 name first and their older alpha-2 name second
-(`ind`, then `in`), so the tests survive the pack-name change.
+The variable is deliberately not PLACEWISE_*: placewise's config loader rejects unknown
+PLACEWISE_* variables.
 """
 
 import os
@@ -16,28 +15,23 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parents[2]
-OLD_NAMES = {"usa": "us", "can": "ca", "ind": "in"}
-
-
 ENV_PACKS_DIR = "E2E_PACKS_DIR"
 
 
 def packs_dirs():
     if os.environ.get(ENV_PACKS_DIR):
         return [Path(os.environ[ENV_PACKS_DIR])]
-    return [REPO / ".cache" / "packbuild" / "out", Path.home() / ".placewise" / "packbuild" / "out"]
+    from packbuild.fetch import DEFAULT_CACHE
+
+    return [DEFAULT_CACHE / "out"]
 
 
 def pack_path(name):
     """The newest built pack directory for `name`, or None."""
     for root in packs_dirs():
-        for candidate in (name, OLD_NAMES.get(name)):
-            if candidate is None:
-                continue
-            found = sorted(p for p in root.glob(f"{candidate}-*") if (p / "pack.json").is_file())
-            if found:
-                return found[-1]
+        found = sorted(p for p in root.glob(f"{name}-*") if (p / "pack.json").is_file())
+        if found:
+            return found[-1]
     return None
 
 

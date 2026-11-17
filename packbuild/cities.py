@@ -9,7 +9,7 @@
 - `src/placewise/constants/countries/city_aliases.py` from `datasets/cities/aliases.json`; every
   alias must name a GeoNames city in the stated country and admin1.
 
-Downloads are cached in .cache/packbuild/ (see packbuild.fetch).
+Downloads are cached in ~/.placewise/packbuild/ (see packbuild.fetch).
 """
 
 import argparse
