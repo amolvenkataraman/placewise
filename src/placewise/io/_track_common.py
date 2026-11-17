@@ -40,18 +40,27 @@ def warn_skipped(skipped, what, reason, fmt):
 
 
 def read_source(source):
-    """Bytes from raw bytes, a binary or text file object, or a path (str or PathLike)."""
+    """Bytes from raw bytes, a file object, text content (see _looks_like_content) or a path."""
     if isinstance(source, bytes | bytearray | memoryview):
         return bytes(source)
     if hasattr(source, "read"):
         data = source.read()
         return data.encode("utf-8") if isinstance(data, str) else bytes(data)
+    if isinstance(source, str) and _looks_like_content(source):
+        return source.encode("utf-8")
     return Path(source).read_bytes()
+
+
+def _looks_like_content(text):
+    """A str is file content, not a path, when it starts like XML, JSON or NMEA, or spans lines:
+    writers return text, so read_x(write_x(track)) must work without a temporary file."""
+    head = text.lstrip("\ufeff \t\r\n")[:1]
+    return head in ("<", "{", "[", "$") or "\n" in text
 
 
 def source_name(source, default):
     """The file name for TrackMeta.source when the source is a path, else the format name."""
-    if isinstance(source, str | os.PathLike):
+    if isinstance(source, os.PathLike) or (isinstance(source, str) and not _looks_like_content(source)):
         return Path(source).name
     name = getattr(source, "name", None)
     return Path(name).name if isinstance(name, str) else default

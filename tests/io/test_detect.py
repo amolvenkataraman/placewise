@@ -140,3 +140,18 @@ def test_gpx_and_fit_are_dispatched_lazily(monkeypatch):
     tracks, detected = read_track(_fit_header())
     assert detected == "fit" and tracks == [track]
     np.testing.assert_array_equal(tracks[0].lat, [40.7812])
+
+
+def test_every_reader_accepts_content_passed_as_a_string():
+    # write_* return text, so read_*(write_*(track)) must work without a temporary file, as read_gpx does
+    from placewise.io import read_csv_track, read_geojson_tracks, read_nmea, read_tcx, write_tcx
+    from placewise.tracks import Track
+
+    track = Track([0.0, 10.0], [43.6426, 43.6430], [-79.3871, -79.3860])  # CN Tower
+    assert len(read_tcx(write_tcx(track))[0]) == 2
+    geojson = '{"type": "LineString", "coordinates": [[-79.3871, 43.6426], [-79.3860, 43.6430]]}'
+    assert len(read_geojson_tracks(geojson)[0]) == 2
+    assert len(read_csv_track("lat,lon,time\n43.6426,-79.3871,0\n43.6430,-79.3860,10\n")) == 2
+    nmea = "$GPRMC,120000,A,4338.556,N,07923.226,W,0.0,0.0,010101,,*00\n"
+    with pytest.warns(Warning):  # the made-up checksum is rejected: the point is that it parsed as text
+        read_nmea(nmea)
