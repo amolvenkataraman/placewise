@@ -10,9 +10,11 @@ It is built for everyone from someone who just wants their Yosemite photos to GI
 plain words on the simple path, precise terms (EPSG codes, ellipsoids, error bounds) one step away.
 
 **Status: early development.** Reverse lookup works on the world pack (countries, states and
-provinces, 172k cities, time zones, airports, worldviews); the US, Canada and India packs and
-naming rules are next. The toolkit, tracks, privacy tools, data store, overrides, config and the
-server are done.
+provinces, 172k cities, time zones, airports, worldviews) and, where they are installed, the US,
+Canada and India packs, with the first naming rules (`docs/naming.md`): three names per point
+(sublocality, locality, city), county or census division, NYC borough, ZIP Code area / FSA / PIN
+code and metro areas. Parks, water and curated regions are next. The toolkit, tracks, privacy
+tools, data store, overrides, config and the server are done.
 
 ```python
 import placewise
@@ -21,6 +23,10 @@ r = placewise.lookup(43.6426, -79.3871)       # downloads the world pack on firs
 r.label                                       # "Toronto, Ontario, Canada"
 r.admin1.codes, r.tz, r.airport               # ISO codes, "America/Toronto", Nearby(YTZ, 1.8 km)
 placewise.Geocoder().lookup_many(lats, lons)  # vectorised, ~30k points/s
+
+r = placewise.lookup(36.1147, -115.1728)      # with the US pack installed: the Las Vegas Strip
+r.locality.name, r.sublocality.name           # "Las Vegas", "Paradise" (the census place)
+r.postal.name, r.admin2.name                  # "89109", "Clark County"
 ```
 
 The same lookups run as a local service or a self-hosted web server (`placewise serve`, see
@@ -82,7 +88,8 @@ tool documents what it does *not* protect against.
 
 ```
 placewise data install world          # download, verify and install a pack
-placewise data list                   # installed and available packs
+placewise data list                   # installed and available packs (country packs: lookups
+                                      # use them once installed)
 placewise data update                 # newer versions (never automatic, never deletes)
 placewise attribution                 # the sources, licences and credit lines to show
 ```

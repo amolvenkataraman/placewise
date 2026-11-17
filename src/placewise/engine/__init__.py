@@ -3,10 +3,11 @@
     from placewise.engine import Geocoder, lookup
 
     lookup(43.6426, -79.3871).label             # "Toronto, Ontario, Canada"
-    geo = Geocoder(packs=[path])                # or the store's "world" pack by default
+    geo = Geocoder(packs=[world, us, ca])       # or the store's world and country packs by default
     geo.lookup_many(lats, lons)                 # vectorised, one Result per point
 
-Rules and their constants: placewise.engine.geocoder and placewise.constants.lookup.
+Rules and their constants: placewise.engine.geocoder (the steps), placewise.engine.naming (the
+country packs' names, docs/naming.md), placewise.constants.lookup and placewise.constants.naming.
 """
 
 import threading
