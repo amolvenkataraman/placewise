@@ -7,6 +7,7 @@ beside the target and renames it into place, so a pack directory is either compl
 import datetime as dt
 import hashlib
 import io
+import itertools
 import json
 import lzma
 import os
@@ -27,6 +28,7 @@ from placewise.constants import packs as consts
 from placewise.model import Feature, PackInfo
 
 from . import _geometry as gm
+from . import _grid_index
 
 
 @dataclass
@@ -221,7 +223,9 @@ def _prepare(layer):
         if f in layer.nulls:
             fields[f]["null"] = int(layer.nulls[f])
         if kind == "str":
-            array = np.fromiter((table.setdefault(s, len(table)) for s in array), dtype=np.int32, count=count)
+            for s in dict.fromkeys(array):  # new strings in order of first use, as setdefault would
+                table.setdefault(s, len(table))
+            array = np.fromiter(map(table.__getitem__, array), dtype=np.int32, count=count)
         arrays[f] = array
 
     if layer.kind == "point":
@@ -254,12 +258,12 @@ def _column(where, name, values, kind, null):
         raise ValueError(f"{label}: only integer fields take a null sentinel (str nulls are '', floats NaN)")
     items = values.tolist() if isinstance(values, np.ndarray) else list(values)
     if kind == "str":
-        if not all(v is None or isinstance(v, str) for v in items):
+        if not _only(items, str, type(None)) and not all(v is None or isinstance(v, str) for v in items):
             raise ValueError(f"{label}: a str field holds only strings (or None)")
         return kind, ["" if v is None else v for v in items]
     dtype = _dtype(kind)
     if kind == "bool":
-        if not all(isinstance(v, bool | np.bool_) for v in items):
+        if not _only(items, bool) and not all(isinstance(v, bool | np.bool_) for v in items):
             raise ValueError(f"{label}: a bool field holds only True / False")
         return kind, np.asarray(items, dtype=dtype)
     if kind in consts.INT_TYPES:
@@ -269,15 +273,25 @@ def _column(where, name, values, kind, null):
         if null is None and any(v is None for v in items):
             raise ValueError(f"{label}: has None but no null sentinel in `nulls`")
         items = [null if v is None else v for v in items]
-        if not all(isinstance(v, Integral) and not isinstance(v, bool | np.bool_) for v in items):
+        if not _only(items, int) and not all(
+            isinstance(v, Integral) and not isinstance(v, bool | np.bool_) for v in items
+        ):
             raise ValueError(f"{label}: an integer field holds only integers")
         if items and not (info.min <= min(items) and max(items) <= info.max):
             raise ValueError(f"{label}: values outside the {kind} range {info.min}..{info.max}")
         return kind, np.asarray(items, dtype=dtype)
     items = [np.nan if v is None else v for v in items]
-    if not all(isinstance(v, Real) and not isinstance(v, bool | np.bool_) for v in items):
+    if not _only(items, float, int) and not all(
+        isinstance(v, Real) and not isinstance(v, bool | np.bool_) for v in items
+    ):
         raise ValueError(f"{label}: a float field holds only numbers (or None / NaN)")
     return kind, np.asarray(items, dtype=dtype)
+
+
+def _only(items, *types):
+    """Whether every item's type is exactly one of `types`: the common case, checked at C speed
+    before the general (subclass-aware, slower) test."""
+    return set(map(type, items)) <= set(types)
 
 
 def _infer_type(label, values):
@@ -335,34 +349,31 @@ def _polygon_geometry(where, layer, count):
     if features is None or len(features) != count:
         got = "none" if features is None else len(features)
         raise ValueError(f"{where}: a polygon layer needs one entry in features per row ({count}), got {got}")
-    lats, lons, ring_off, part_off, feat_off, bbox = [], [], [0], [0], [0], []
-    vertices = 0
+    rings, part_off, feat_off = [], [0], [0]
     for i, feature in enumerate(features):
         if not isinstance(feature, Feature):
             raise ValueError(f"{where}: features[{i}] is a {type(feature).__name__}, not a Feature")
-        spans, south, north = [], [], []
         for outline in feature.outlines:
-            for ring in outline.rings:
-                pts = np.asarray(ring, dtype=np.float64)
-                if len(pts) > 1 and np.array_equal(pts[0], pts[-1]):
-                    pts = pts[:-1]  # rings are stored open; the closing edge is implicit
-                lat, lon = gm.to_e7(pts[:, 0]), gm.to_e7(pts[:, 1])
-                lats.append(lat)
-                lons.append(lon)
-                vertices += len(pts)
-                ring_off.append(vertices)
-                spans.append((lon.min(), lon.max()))
-                south.append(lat.min())
-                north.append(lat.max())
-            part_off.append(len(ring_off) - 1)
+            rings.extend(outline.rings)
+            part_off.append(len(rings))
         feat_off.append(len(part_off) - 1)
-        west, east = gm.circular_lon_range(spans)
-        bbox.append((min(south), west, max(north), east))
-    ring_off = np.asarray(ring_off, dtype=np.int64)
     part_off = np.asarray(part_off, dtype=np.int64)
     feat_off = np.asarray(feat_off, dtype=np.int64)
-    lat = np.concatenate(lats) if lats else np.zeros(0, dtype=np.int32)
-    lon = np.concatenate(lons) if lons else np.zeros(0, dtype=np.int32)
+    lat, lon, ring_off = _flat_rings(rings)
+    bbox = np.zeros((count, 4), dtype=np.int32)
+    if count:
+        # every feature has a ring and every ring a vertex (Outline checks), so no slice is empty
+        starts, feature_rings = ring_off[:-1], part_off[feat_off]
+        ring_south, ring_north = np.minimum.reduceat(lat, starts), np.maximum.reduceat(lat, starts)
+        ring_west, ring_east = np.minimum.reduceat(lon, starts), np.maximum.reduceat(lon, starts)
+        bbox[:, 0] = np.minimum.reduceat(ring_south, feature_rings[:-1])
+        bbox[:, 2] = np.maximum.reduceat(ring_north, feature_rings[:-1])
+        bbox[:, 1], bbox[:, 3] = ring_west[feature_rings[:-1]], ring_east[feature_rings[:-1]]
+        for f in np.flatnonzero(np.diff(feature_rings) > 1):
+            r0, r1 = feature_rings[f], feature_rings[f + 1]
+            bbox[f, 1], bbox[f, 3] = gm.circular_lon_range(
+                zip(ring_west[r0:r1], ring_east[r0:r1], strict=True)
+            )
     _check_antimeridian(where, lat, lon, ring_off, part_off, feat_off)
     return {
         "lat.npy": lat,
@@ -370,8 +381,27 @@ def _polygon_geometry(where, layer, count):
         "ring.npy": ring_off,
         "part.npy": part_off,
         "feature.npy": feat_off,
-        "bbox.npy": np.asarray(bbox, dtype=np.int32).reshape(-1, 4),
+        "bbox.npy": bbox,
     }
+
+
+def _flat_rings(rings):
+    """(lat, lon, ring offsets): every ring's vertices in e7, stored open (a closing vertex that
+    repeats the first is dropped; the closing edge is implicit)."""
+    sizes = np.fromiter(map(len, rings), dtype=np.int64, count=len(rings))
+    flat = np.fromiter(
+        itertools.chain.from_iterable(itertools.chain.from_iterable(rings)),
+        dtype=np.float64,
+        count=2 * int(sizes.sum()),
+    ).reshape(-1, 2)
+    ends = np.cumsum(sizes)
+    starts = ends - sizes
+    closed = (sizes > 1) & np.all(flat[starts] == flat[ends - 1], axis=1)
+    keep = np.ones(len(flat), dtype=bool)
+    keep[ends[closed] - 1] = False
+    ring_off = np.zeros(len(rings) + 1, dtype=np.int64)
+    np.cumsum(sizes - closed, out=ring_off[1:])
+    return gm.to_e7(flat[keep, 0]), gm.to_e7(flat[keep, 1]), ring_off
 
 
 def _check_antimeridian(where, lat, lon, ring_off, part_off, feat_off):
@@ -425,47 +455,13 @@ def _write_layer(layer_dir, p):
 
 
 def _write_grid(grid_dir, geom, cell_deg):
-    """Candidates per cell and the cells one feature answers outright.
-
-    A feature is a candidate in a cell when it may contain some point of it: an edge touches the
-    cell, or it covers the cell wholly (a feature whose bbox touches a cell but whose shape misses
-    it is left out). A cell is marked `inside` f when f covers it wholly (corners inside and no edge
-    touching it, so a cell in a hole is not) and every earlier candidate misses it entirely, so f is
-    the first-match answer for every point in it."""
+    """Candidates per cell and the cells one feature answers outright (see _grid_index)."""
     rows, cols = gm.grid_shape(cell_deg)
-    lat, lon = gm.from_e7(geom["lat.npy"]), gm.from_e7(geom["lon.npy"])
-    ring_off, part_off, feat_off = geom["ring.npy"], geom["part.npy"], geom["feature.npy"]
-    nxt = gm.ring_next(ring_off, len(lat))
-    bbox = gm.from_e7(geom["bbox.npy"])
-    cells, feats, status = [], [], []  # status 1: wholly inside, 2: an edge touches the cell
-    for f in range(len(feat_off) - 1):
-        vs, ve = ring_off[part_off[feat_off[f]]], ring_off[part_off[feat_off[f + 1]]]
-        ya, xa, yb, xb = lat[vs:ve], lon[vs:ve], lat[nxt[vs:ve]], lon[nxt[vs:ve]]
-        candidates = gm.bbox_cells(*bbox[f], cell_deg, rows, cols)
-        on_edge = np.isin(candidates, gm.edge_cells(ya, xa, yb, xb, cell_deg, rows, cols))
-        free = candidates[~on_edge]
-        # no edge touches a free cell, so its centre speaks for all of it
-        centre_lat = -90.0 + (free // cols + 0.5) * cell_deg
-        centre_lon = -180.0 + (free % cols + 0.5) * cell_deg
-        covered = free[gm.even_odd_rows(centre_lat, centre_lon, ya, xa, yb, xb)]
-        cells += [candidates[on_edge], covered]
-        feats.append(np.full(on_edge.sum() + len(covered), f, dtype=np.int64))
-        status += [np.full(on_edge.sum(), 2, dtype=np.int8), np.ones(len(covered), dtype=np.int8)]
-    cell = np.concatenate([np.zeros(0, dtype=np.int64), *cells])
-    feat = np.concatenate([np.zeros(0, dtype=np.int64), *feats])
-    stat = np.concatenate([np.zeros(0, dtype=np.int8), *status])
-    order = np.lexsort((feat, cell))
-    cell, feat, stat = cell[order], feat[order], stat[order]
-    offsets = np.zeros(rows * cols + 1, dtype=np.int64)
-    np.cumsum(np.bincount(cell, minlength=rows * cols), out=offsets[1:])
-    inside = np.full(rows * cols, -1, dtype=np.int32)
-    first_cells, first = np.unique(cell, return_index=True)
-    inside[first_cells] = np.where(stat[first] == 1, feat[first], -1)
-
+    offsets, items, inside = _grid_index.build(geom, cell_deg)
     grid_dir.mkdir()
     _write_json(grid_dir / consts.GRID_META, {"cell_deg": cell_deg, "rows": rows, "cols": cols})
     _save(grid_dir / "cell.npy", offsets)
-    _save(grid_dir / "items.npy", feat.astype(np.int32))
+    _save(grid_dir / "items.npy", items)
     _save(grid_dir / "inside.npy", inside)
 
 
