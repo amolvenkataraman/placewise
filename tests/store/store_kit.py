@@ -1,6 +1,7 @@
 """Hand-built packs, archives and indexes for the store tests, independent of the real pack writer.
 
 A "release" directory mimics what a publisher uploads: one index.json plus one tar.xz per pack.
+`make_store` points a Store at a release; `install_versions` installs several versions of "world".
 """
 
 import functools
@@ -12,6 +13,9 @@ import tarfile
 import threading
 import typing
 from pathlib import Path
+
+from placewise.model import DataSettings
+from placewise.store import Store
 
 
 def sha256(data):
@@ -154,3 +158,25 @@ class LocalServer:
         self.httpd.shutdown()
         self.httpd.server_close()
         self.thread.join()
+
+
+# -- stores fed from a release ----------------------------------------------------------------------
+
+
+def make_store(data_dir, release, **settings):
+    return Store(data_dir, DataSettings(**settings), index_url=release.index_url)
+
+
+def leftovers(data_dir):
+    """Anything in packs/ that isn't a finished pack: temp dirs, partial downloads."""
+    packs = data_dir / "packs"
+    return sorted(p.name for p in packs.iterdir() if p.name.startswith(".")) if packs.exists() else []
+
+
+def install_versions(data_dir, release, *versions, **settings):
+    store = None
+    for v in versions:
+        release.add("world", v)
+        store = make_store(data_dir, release, **settings)
+        store.install("world")
+    return store

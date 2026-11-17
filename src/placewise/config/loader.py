@@ -16,28 +16,20 @@ change anything in [worldview] (that raises WorldviewLockedError), and per-reque
 ignored or rejected downstream (see `effective_worldview`).
 """
 
-import dataclasses
 import os
 import sys
-import types
-import typing
 from pathlib import Path
 
-from placewise import _toml
 from placewise.constants import config as const
 from placewise.model import Settings
 
-_SECTIONS = {f.name: typing.get_type_hints(Settings)[f.name] for f in dataclasses.fields(Settings)}
-_FIELDS = {name: typing.get_type_hints(cls) for name, cls in _SECTIONS.items()}
+from . import _toml
+from .env import base, coerce, from_env
+from .errors import ConfigError
+from .schema import FIELDS, SECTIONS
+from .worldview import WorldviewLockedError
+
 _RANK = {"default": 0, "file": 1, "env": 2, "kwarg": 3}
-
-
-class ConfigError(ValueError):
-    """A configuration value, key or file is wrong; the message says which and where."""
-
-
-class WorldviewLockedError(ConfigError):
-    """Something tried to change a worldview the operator locked."""
 
 
 def config_dir(env=None, platform=None):
@@ -89,26 +81,9 @@ def explain_settings(path=None, env=os.environ, **overrides):
     settings, origins = _resolve(path, env, overrides)
     return {
         f"{section}.{key}": (getattr(getattr(settings, section), key), origins[(section, key)])
-        for section, fields in _FIELDS.items()
+        for section, fields in FIELDS.items()
         for key in fields
     }
-
-
-def effective_worldview(settings, requested=None):
-    """(order, locked) for one request. Without a lock a requested order wins; with one the
-    operator's order stands, and a different request is ignored (conflict = "ignore") or refused
-    (conflict = "reject")."""
-    view = settings.worldview
-    wanted = tuple(requested) if requested else None
-    if not view.lock:
-        if wanted is None:
-            return view.order, False
-        return type(view)(order=wanted).order, False  # validates the request
-    if wanted is not None and wanted != view.order and view.conflict == "reject":
-        raise WorldviewLockedError(
-            f"this instance's worldview is locked to {list(view.order)}; requested {list(wanted)}"
-        )
-    return view.order, True
 
 
 # --- resolution ---------------------------------------------------------------------------------
@@ -117,8 +92,8 @@ def effective_worldview(settings, requested=None):
 def _resolve(path, env, overrides):
     env = os.environ if env is None else env
     defaults = Settings()
-    sections = {name: {} for name in _SECTIONS}  # raw values set so far, per section
-    values = {(s, k): getattr(getattr(defaults, s), k) for s, fields in _FIELDS.items() for k in fields}
+    sections = {name: {} for name in SECTIONS}  # raw values set so far, per section
+    values = {(s, k): getattr(getattr(defaults, s), k) for s, fields in FIELDS.items() for k in fields}
     origins = dict.fromkeys(values, "default")
     lock = None  # (rank, origin) of the layer that locked the worldview
 
@@ -126,7 +101,7 @@ def _resolve(path, env, overrides):
     cfg = find_config(path, env)
     if cfg is not None:
         layers.append(("file", _from_file(cfg)))
-    layers.append(("env", _from_env(env)))
+    layers.append(("env", from_env(env)))
     layers.append(("kwarg", _from_kwargs(overrides)))
 
     for kind, entries in layers:
@@ -144,14 +119,14 @@ def _resolve(path, env, overrides):
         if lock is None and values[("worldview", "lock")]:
             lock = (_RANK[kind], origins[("worldview", "lock")])
 
-    settings = Settings(**{name: cls.from_dict(sections[name]) for name, cls in _SECTIONS.items()})
+    settings = Settings(**{name: cls.from_dict(sections[name]) for name, cls in SECTIONS.items()})
     return settings, origins
 
 
 def _check(current, section, key, raw, origin):
     """The validated value of one setting, given the others already set in its section."""
     try:
-        built = _SECTIONS[section].from_dict({**current, key: raw})
+        built = SECTIONS[section].from_dict({**current, key: raw})
     except (TypeError, ValueError) as e:
         raise ConfigError(f"{origin}: {section}.{key}: {e}") from None
     return getattr(built, key)
@@ -167,104 +142,40 @@ def _from_file(path):
     origin = f"file:{path}"
     entries = []
     for section, table in doc.items():
-        if section not in _SECTIONS:
-            raise ConfigError(f"{path}: unknown section [{section}]; known: {', '.join(_SECTIONS)}")
+        if section not in SECTIONS:
+            raise ConfigError(f"{path}: unknown section [{section}]; known: {', '.join(SECTIONS)}")
         if not isinstance(table, dict):
             raise ConfigError(f"{path}: [{section}] must be a table of settings, not a single value")
         for key, raw in table.items():
-            if key not in _FIELDS[section]:
+            if key not in FIELDS[section]:
                 raise ConfigError(
-                    f"{path}: unknown key {section}.{key}; [{section}] has {', '.join(_FIELDS[section])}"
+                    f"{path}: unknown key {section}.{key}; [{section}] has {', '.join(FIELDS[section])}"
                 )
             entries.append(((section, key), raw, origin))
     return entries
 
 
-def _from_env(env):
-    found = {}
-    # aliases first, so the full PLACEWISE_<SECTION>_<KEY> spelling wins when both are set
-    for name in sorted(env, key=lambda n: n not in const.ENV_ALIASES):
-        if not name.startswith(const.ENV_PREFIX) or name in const.ENV_RESERVED:
-            continue
-        if name in const.ENV_ALIASES:
-            section, key = const.ENV_ALIASES[name]
-        else:
-            section, _, key = name[len(const.ENV_PREFIX) :].lower().partition("_")
-            if section not in _SECTIONS:
-                raise ConfigError(
-                    f"unknown environment variable {name}: no [{section}] section "
-                    f"(known: {', '.join(_SECTIONS)}); settings are PLACEWISE_<SECTION>_<KEY>"
-                )
-            if key not in _FIELDS[section]:
-                raise ConfigError(
-                    f"unknown environment variable {name}: [{section}] has no key {key!r} "
-                    f"(known: {', '.join(_FIELDS[section])})"
-                )
-        try:
-            value = _coerce(_FIELDS[section][key], env[name])
-        except ValueError as e:
-            raise ConfigError(f"{name}={env[name]!r}: {e}") from None
-        found[(section, key)] = (value, f"env:{name}")
-    return [(target, value, origin) for target, (value, origin) in found.items()]
-
-
 def _from_kwargs(overrides):
     entries = []
     for name, value in overrides.items():
-        if name in _SECTIONS and isinstance(value, dict):
+        if name in SECTIONS and isinstance(value, dict):
             for key, raw in value.items():
-                if key not in _FIELDS[name]:
+                if key not in FIELDS[name]:
                     raise ConfigError(f"unknown setting {name}.{key} in keyword argument {name}=")
                 entries.append(((name, key), _kwarg_value(name, key, raw), f"kwarg:{name}"))
             continue
         section, _, key = name.partition("_")
-        if section not in _SECTIONS or key not in _FIELDS[section]:
+        if section not in SECTIONS or key not in FIELDS[section]:
             raise ConfigError(f"unknown setting {name!r}; use section_key=value, e.g. near_airport=5")
         entries.append(((section, key), _kwarg_value(section, key, value), f"kwarg:{name}"))
     return entries
 
 
 def _kwarg_value(section, key, value):
-    tp = _FIELDS[section][key]
-    if isinstance(value, str) and _base(tp) is not str:
+    tp = FIELDS[section][key]
+    if isinstance(value, str) and base(tp) is not str:
         try:
-            return _coerce(tp, value)
+            return coerce(tp, value)
         except ValueError as e:
             raise ConfigError(f"keyword {section}_{key}={value!r}: {e}") from None
     return value
-
-
-def _base(tp):
-    """The non-None type of an optional, else tp itself."""
-    if typing.get_origin(tp) in (typing.Union, types.UnionType):
-        return next(arg for arg in typing.get_args(tp) if arg is not type(None))
-    return tp
-
-
-def _coerce(tp, text):
-    """A setting's value from environment text, by the field's declared type."""
-    optional = _base(tp) is not tp
-    base = _base(tp)
-    text = text.strip()
-    if optional and text == "":
-        return None
-    if base is bool:
-        word = text.lower()
-        if word in const.TRUE_WORDS:
-            return True
-        if word in const.FALSE_WORDS:
-            return False
-        raise ValueError(f"expected one of {sorted(const.TRUE_WORDS | const.FALSE_WORDS)}")
-    if base is int:
-        try:
-            return int(text)
-        except ValueError:
-            raise ValueError("expected a whole number") from None
-    if base is float:
-        try:
-            return float(text)
-        except ValueError:
-            raise ValueError("expected a number") from None
-    if typing.get_origin(base) is tuple:
-        return tuple(part.strip() for part in text.split(const.LIST_SEPARATOR) if part.strip())
-    return text

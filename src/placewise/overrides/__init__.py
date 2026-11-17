@@ -10,6 +10,7 @@ the calling app; LOCAL rules are the user's own file and win over everything. Se
     result.sources["city"]                  # "override:local:overrides.toml#2"
 """
 
-from .engine import REPO_DIR, OverrideEngine, load_overrides
+from .engine import OverrideEngine
+from .loading import REPO_DIR, load_overrides
 
 __all__ = ["REPO_DIR", "OverrideEngine", "load_overrides"]

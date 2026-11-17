@@ -1,4 +1,4 @@
-"""placewise._toml: TOML via tomllib / tomli, JSON with the same structure, and a clear error on 3.10."""
+"""placewise.config._toml: TOML via tomllib / tomli, JSON of the same shape, and a clear error on 3.10."""
 
 import importlib.util
 import json
@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from placewise import _toml
+from placewise.config import _toml
 
 HAS_TOML = any(importlib.util.find_spec(name) for name in ("tomllib", "tomli"))
 needs_toml = pytest.mark.skipif(not HAS_TOML, reason="needs tomllib (3.11+) or tomli")
