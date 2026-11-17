@@ -1,6 +1,7 @@
 """The curated regions as drawn in the real country packs' `regions` layer: public landmarks only.
 
-Run with PLACEWISE_E2E_PACKS=<dir of built packs>; skipped when a pack isn't built.
+Packs come from tests/e2e/e2e_kit.py (E2E_PACKS_DIR or the default build dirs); skipped
+when a pack isn't built.
 """
 
 from functools import cache
