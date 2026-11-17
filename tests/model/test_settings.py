@@ -68,7 +68,7 @@ def test_override_set_parses_a_toml_shaped_document():
                 "fields": {"sublocality": "Uptown Waterloo"},
             }
         ],
-        "alias": [{"text": "UW", "means": "wikidata:Q1067958"}],
+        "alias": [{"text": "UW", "means": "wikidata:Q1049470"}],
         "hide": [{"id": "wikidata:Q00000"}],
         "add": [
             {"kind": "landmark", "name": "Lookout", "point": {"lat": 43.7, "lon": -79.2}, "radius_m": 200}
