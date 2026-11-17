@@ -29,6 +29,11 @@ def signed_area(ring):
     return 0.5 * float(np.dot(x, _shift(y)) - np.dot(_shift(x), y))
 
 
+def _open(ring):
+    """The ring without a closing vertex that repeats its first."""
+    return ring[:-1] if len(ring) > 1 and (ring[0] == ring[-1]).all() else ring
+
+
 def _shift(a):
     """np.roll(a, -1) for a 1-d array, without its overhead."""
     return np.concatenate((a[1:], a[:1]))
@@ -46,9 +51,7 @@ def simplify_rings(rings, tolerance):
     out = [None] * len(rings)
     pts_list = []
     for k, ring in enumerate(rings):
-        pts = np.asarray(ring, dtype=np.float64)
-        if len(pts) > 1 and np.array_equal(pts[0], pts[-1]):
-            pts = pts[:-1]
+        pts = _open(np.asarray(ring, dtype=np.float64))
         if len(pts) >= 3:
             if tolerance <= 0:
                 out[k] = pts
@@ -103,11 +106,11 @@ def _keep_many(line, starts, ends, tolerance):
         dx, dy = x[j] - ax, y[j] - ay
         length = np.hypot(dx, dy)
         px, py = x[idx] - ax[seg], y[idx] - ay[seg]
-        dist = np.empty(len(idx))
-        flat = length[seg] == 0
+        seg_length = length[seg]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            dist = np.abs(dx[seg] * py - dy[seg] * px) / seg_length
+        flat = np.flatnonzero(seg_length == 0)  # a segment whose ends coincide: distance to them
         dist[flat] = np.hypot(px[flat], py[flat])
-        s = ~flat
-        dist[s] = np.abs(dx[seg][s] * py[s] - dy[seg][s] * px[s]) / length[seg][s]
         seg_start = np.cumsum(j - i - 1) - (j - i - 1)
         best = _first_argmax(dist, seg_start)
         split = dist[best] > tolerance
@@ -122,8 +125,8 @@ def _first_argmax(values, starts):
     seg_max = np.maximum.reduceat(values, starts)
     seg = np.repeat(np.arange(len(starts)), np.diff(np.append(starts, len(values))))
     hit = np.flatnonzero(values == seg_max[seg])
-    _, first = np.unique(seg[hit], return_index=True)
-    return hit[first]
+    hit_seg = seg[hit]  # ascending, as hit is
+    return hit[np.concatenate(([True], hit_seg[1:] != hit_seg[:-1]))]
 
 
 def _expand(start, stop):
@@ -156,8 +159,7 @@ def to_features(records, tolerance, projection):
 
 def _plan(rings, fid):
     """(open rings, outer ring indexes, {outer: its holes}, signed areas, fid) for one record."""
-    rings = [np.asarray(r, dtype=np.float64) for r in rings]
-    rings = [r[:-1] if len(r) > 1 and np.array_equal(r[0], r[-1]) else r for r in rings]
+    rings = [_open(np.asarray(r, dtype=np.float64)) for r in rings]
     rings = [r for r in rings if len(r) >= 3]
     if not rings:
         raise ValueError(f"{fid}: no ring with three or more vertices")
@@ -166,6 +168,8 @@ def _plan(rings, fid):
     if not outer:  # some writers ignore winding: every ring is a polygon of its own
         outer = list(range(len(rings)))
     holes = {i: [] for i in outer}
+    if len(outer) == len(rings):
+        return rings, outer, holes, areas, fid
     lo = np.array([rings[o].min(axis=0) for o in outer])
     hi = np.array([rings[o].max(axis=0) for o in outer])
     for i, ring in enumerate(rings):
