@@ -13,9 +13,9 @@ should still read each licence for its own obligations.
 | Source | Licence | Used in |
 |---|---|---|
 | [OurAirports](https://ourairports.com/data/) | LicenseRef-public-domain | world/airports |
-| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/country_facts |
-| [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | usa/states, usa/counties, usa/places, usa/cbsa, usa/csa, usa/zcta, usa/regions |
-| [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/regions |
+| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/country_facts, world/timezones |
+| [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | usa/states, usa/counties, usa/places, usa/cbsa, usa/csa, usa/zcta, usa/regions, usa/timezones |
+| [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/regions, can/timezones |
 | [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated) |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
 | [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts |
@@ -24,6 +24,7 @@ should still read each licence for its own obligations.
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/pincodes, ind/regions |
 | [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/pincodes, ind/post_offices, ind/regions |
 | [placewise curated datasets: regions (datasets/regions)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | usa/regions, can/regions, ind/regions |
+| [placewise curated datasets: time zones (datasets/timezones)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | world/timezones, usa/timezones, can/timezones |
 
 ## Coverage
 
@@ -44,6 +45,9 @@ should still read each licence for its own obligations.
 | regions | can | Statistics Canada, 2021 Census Boundary Files (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts, placewise curated datasets: regions (datasets/regions) |
 | regions | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India), placewise curated datasets: regions (datasets/regions) |
 | regions | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations, placewise curated datasets: regions (datasets/regions) |
+| timezones | world | placewise curated datasets: time zones (datasets/timezones), Natural Earth 1:10m Cultural Vectors |
+| timezones | can | placewise curated datasets: time zones (datasets/timezones), Statistics Canada, 2021 Census Boundary Files (cartographic) |
+| timezones | usa | placewise curated datasets: time zones (datasets/timezones), US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 
 ## OurAirports
 
@@ -70,6 +74,8 @@ country_facts uses each country's label point (LABEL_X, LABEL_Y) where GeoNames 
 - Website: https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html
 
 Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025), which cover incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places) but not other census-designated places. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01). The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files.
+
+The American Indian/Alaska Native/Native Hawaiian Areas cartographic boundary file (2025, 1:500,000) draws the Navajo Nation (which observes daylight saving time inside Arizona) and the Annette Island Reserve (America/Metlakatla).
 
 ## Statistics Canada, 2021 Census Boundary Files (cartographic)
 
@@ -148,3 +154,11 @@ The directory's district column decides which PIN areas make up a district.
 - Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
 
 Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.
+
+## placewise curated datasets: time zones (datasets/timezones)
+
+- Credit: placewise curated datasets, CC BY 4.0
+- Licence: CC-BY-4.0
+- Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
+
+Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): the IANA zone of each country, admin-1 unit, county or census subdivision, with the tz database (public domain), 49 CFR Part 71 (public domain) and the provincial acts cited per entry, and a few hand-drawn areas (Eucla, the western Aleutians, research stations). The outlines in the packs are the units' own boundaries, so they are also credited to the boundary source. Zone names are checked against the tz database at build time.

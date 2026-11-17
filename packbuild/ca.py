@@ -1,6 +1,7 @@
 """The Canada pack: provinces, census divisions, census subdivisions (municipalities), CMAs/CAs and
-forward sortation areas from Statistics Canada's 2021 Census, with 2021 populations, and the
-curated regions (GTA, GTHA ...) as unions of those units.
+forward sortation areas from Statistics Canada's 2021 Census, with 2021 populations, the curated
+regions (GTA, GTHA ...) as unions of those units, and time-zone polygons by province, division and
+subdivision (datasets/timezones/can.json: packbuild.timezones).
 
     uv run python -m packbuild.ca --version 2026.11
     uv run python -m packbuild.ca --version 2026.11 --via service   # StatCan's map service instead
@@ -16,7 +17,7 @@ import urllib.error
 import urllib.parse
 from pathlib import Path
 
-from . import arcgis, regions_layer
+from . import arcgis, regions_layer, timezones
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .projection import STATCAN_LAMBERT
@@ -41,7 +42,7 @@ def build_layers(
     cache_dir, refresh=False, via="files", tolerance_m=statcan.DEFAULT_TOLERANCE_M, regions=None
 ):
     """The Canada layers, fetching (or reusing) the source files in `cache_dir`: the five StatCan
-    layers, then `regions`. via="files" reads the zipped shapefiles; via="service" the same
+    layers, then `regions` and `timezones`. via="files" reads the zipped shapefiles; via="service" the same
     boundaries from StatCan's map service."""
     if via not in VIAS:
         raise ValueError(f"via must be one of {', '.join(VIAS)}, not {via!r}")
@@ -77,7 +78,21 @@ def build_layers(
     population = statcan.read_population(*tables)
     paths = {layer: boundaries(source_id, name) for layer, (source_id, name, _) in LAYERS.items()}
     layers = [loader(paths[layer], population, tolerance_m) for layer, (_, _, loader) in LAYERS.items()]
-    return [*layers, regions_layer_of(layers, paths, regions, tolerance_m)]
+    return [*layers, regions_layer_of(layers, paths, regions, tolerance_m), timezones_layer(layers)]
+
+
+def timezones_layer(layers):
+    """The `timezones` layer: can.json's provinces, census divisions and subdivisions, each drawn
+    with its own (simplified) boundary."""
+    by_name = {layer.name: layer for layer in layers}
+    return timezones.country_layer(
+        timezones.load("can"),
+        by_name["provinces"],
+        [by_name["cd"], by_name["csd"]],
+        lambda pid, row: f"statcan:{pid.removeprefix('statcan:')[:2]}",
+        {},
+        (statcan.BOUNDARIES,),
+    )
 
 
 def regions_layer_of(layers, paths, regions=None, tolerance_m=statcan.DEFAULT_TOLERANCE_M):

@@ -296,6 +296,16 @@ def text_files(folder):
     return {"gazetteer_place": gaz_place, "gazetteer_zcta": gaz_zcta, "population": pop}
 
 
+def aiannh(folder):
+    fields = [("AIANNHCE", *C), ("AIANNHNS", *C), ("GEOIDFQ", *C), ("GEOID", *C), ("NAME", *C), ("NAMELSAD", *C),
+              ("LSAD", *C), ("MTFCC", *C), ("ALAND", *N), ("AWATER", *N)]  # fmt: skip
+    rows = [
+        (box(36.5, -114.8, 36.7, -114.5), ("9001", "00000001", "2500000US9001", "9001", "Test",
+         "Test Reservation", "86", "G2100", 500000000, 0)),
+    ]  # fmt: skip
+    return write_shapefile(Path(folder) / "cb_2025_us_aiannh_500k", fields, rows)
+
+
 def all_inputs(folder):
     """Every input written into `folder`: {registry download name: path}."""
     folder = Path(folder)
@@ -307,6 +317,7 @@ def all_inputs(folder):
         "cbsa": cbsa(folder),
         "csa": csa(folder),
         "zcta": zcta(folder),
+        "aiannh": aiannh(folder),
         "delineation": delineation(folder),
         **text_files(folder),
     }

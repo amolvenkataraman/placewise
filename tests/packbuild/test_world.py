@@ -3,12 +3,13 @@ from pathlib import Path
 
 import pytest
 from facts_kit import fixture_for
+from timezones_kit import use_timezones
 
 from packbuild import world
 from packbuild.sources import SOURCES
 
 DATA = Path(__file__).parent / "data"
-LAYERS = ["countries", "admin1", "cities", "airports", "country_facts"]
+LAYERS = ["countries", "admin1", "cities", "airports", "country_facts", "timezones"]
 
 
 def _zip(path, members):
@@ -44,10 +45,11 @@ def offline(tmp_path, monkeypatch):
         return files[name] if name in files else fixture_for(url)
 
     monkeypatch.setattr(world, "fetch", fake_fetch)
+    use_timezones(monkeypatch)
     return requested
 
 
-def test_build_world_fetches_every_source_and_hands_five_layers_to_the_writer(tmp_path, offline, monkeypatch):
+def test_build_world_fetches_every_source_and_hands_six_layers_to_the_writer(tmp_path, offline, monkeypatch):
     calls = []
 
     def fake_write_pack(out_dir, name, version, layers, created=None):
@@ -64,7 +66,14 @@ def test_build_world_fetches_every_source_and_hands_five_layers_to_the_writer(tm
     assert (out_dir, name, version) == (tmp_path / "out", "world", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
     counts = {layer.name: len(layer.columns["id"]) for layer in layers}
-    assert counts == {"countries": 3, "admin1": 5, "cities": 5, "airports": 5, "country_facts": 1}
+    assert counts == {
+        "countries": 3,
+        "admin1": 5,
+        "cities": 5,
+        "airports": 5,
+        "country_facts": 1,
+        "timezones": 3,
+    }
     for layer in layers:
         assert set(layer.sources) <= set(SOURCES)
         assert all(len(column) == counts[layer.name] for column in layer.columns.values())
@@ -78,11 +87,13 @@ def test_build_world_writes_a_real_pack_that_reopens(tmp_path, offline):
     path = world.build_world(tmp_path / "cache", tmp_path / "out", "2026.11")
     pack = open_pack(path, verify=True)
     assert [layer.name for layer in pack] == LAYERS
-    assert [len(pack[name]) for name in LAYERS] == [3, 5, 5, 5, 1]  # facts: Ottawa is the one capital
+    assert [len(pack[name]) for name in LAYERS] == [3, 5, 5, 5, 1, 3]  # facts: Ottawa is the one capital
     cities = pack["cities"]
     assert cities.row(int(cities.find("id", "geonames:7262586")[0]))["elevation"] is None
     countries = pack["countries"]
     assert countries.value("id", countries.query(43.65, -79.38)) == "iso:CA"
+    zones = pack["timezones"]
+    assert zones.value("zone", zones.query(43.65, -79.38)) == "America/Toronto"
     facts = pack["country_facts"].row(0)
     assert (facts["id"], facts["capital"], facts["currency"], facts["point"]) == (
         "iso:CA",

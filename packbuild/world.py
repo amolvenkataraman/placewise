@@ -1,5 +1,7 @@
 """The world pack: countries and admin-1 polygons (Natural Earth), cities (GeoNames), airports
-(OurAirports) and country facts (GeoNames, Unicode CLDR, Wikidata: packbuild.country_profiles).
+(OurAirports), country facts (GeoNames, Unicode CLDR, Wikidata: packbuild.country_profiles) and
+time-zone polygons (datasets/timezones/world.json drawn with the Natural Earth units:
+packbuild.timezones).
 
     uv run python -m packbuild.world --version 2026.11
 
@@ -12,7 +14,7 @@ import datetime as dt
 import logging
 from pathlib import Path
 
-from . import country_profiles
+from . import country_profiles, timezones
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .sources import geonames, naturalearth, ourairports, url
@@ -21,7 +23,7 @@ log = logging.getLogger(__name__)
 
 
 def build_layers(cache_dir, refresh=False):
-    """The five world layers, fetching (or reusing) the source files in `cache_dir`."""
+    """The six world layers, fetching (or reusing) the source files in `cache_dir`."""
 
     def get(url):
         return fetch(url, cache_dir, refresh=refresh)
@@ -48,7 +50,8 @@ def build_layers(cache_dir, refresh=False):
         refresh=refresh,
         fetcher=lambda u, d, refresh: fetch(u, d, refresh),
     )
-    return [countries, admin1, cities, airports, facts]
+    zones = timezones.world_layer(timezones.load("world"), countries, admin1)
+    return [countries, admin1, cities, airports, facts, zones]
 
 
 def build_world(cache_dir, out_dir, version, refresh=False):

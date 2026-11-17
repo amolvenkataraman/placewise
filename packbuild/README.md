@@ -27,6 +27,7 @@ committed.
 | `admin1` | polygon | Natural Earth 1:10m admin-1 states/provinces | public domain |
 | `cities` | point | GeoNames cities1000 + admin1CodesASCII + countryInfo | CC BY 4.0 |
 | `airports` | point | OurAirports airports.csv (large, medium, scheduled small) | public domain |
+| `timezones` | polygon | `datasets/timezones/world.json` drawn with the Natural Earth units (see [Time zones](#time-zones)) | CC BY 4.0 + public domain |
 | `country_facts` | point | one row per country (`iso:XX`, at its capital, else Natural Earth's label point): GeoNames countryInfo, timeZones and capitals; CLDR currency, conventions and date patterns; Wikidata driving side (`packbuild.country_profiles`) | CC BY 4.0, Unicode-3.0, CC0 |
 
 Attribution records (`placewise.model.Source`) are in `packbuild/sources/__init__.py`; building
@@ -40,20 +41,37 @@ Natural Earth's default files draw borders de facto. Its per-worldview attribute
 
 ## Time zones
 
-The world pack carries no time-zone polygons. The usual source, timezone-boundary-builder, is
-built from OpenStreetMap and is ODbL (share-alike), and share-alike data may only go in the
-separate share-alike packs (`placewise.constants.licences.SHARE_ALIKE`; named `<name>-sa`), never in
-`world`.
+Every pack can carry a `timezones` polygon layer (`packbuild/timezones.py`), drawn from the
+curated tables in placewise-data's `datasets/timezones/` (CC BY 4.0; registry id
+`placewise-timezones`), so `Result.tz` doesn't need the share-alike timezone-boundary-builder data.
+216 of tzdb's 247 countries have one zone: the country polygon is the zone. The rest follow admin
+lines, so `world.json` maps Natural Earth countries and admin-1 units to IANA zones, `usa.json`
+states and Census counties (plus the Navajo Nation and Annette Island from Census AIANNH,
+`uscensus` download `aiannh`), `can.json` provinces, census divisions and subdivisions; each entry
+cites tzdb or the law it follows, and a few hand-drawn boxes cover what no unit fits (Eucla, the
+western Aleutians, research stations, remote islands).
 
-Plan:
+| Column | |
+|---|---|
+| `zone` | the IANA zone; "" where tzdb records none (the nearest-city rule answers) |
+| `zones` | for a unit split along a line no pack draws: all its zones, `|`-separated; the nearest GeoNames city inside the unit whose zone is listed decides |
+| `basis` | `shape`, `part` (county, CD, CSD), `admin1`, `country` |
+| `unit`, `within`, `country` | the unit drawn, the unit a shape applies in, the countries-layer id |
 
-- **Now:** every GeoNames city carries its IANA zone (`cities.timezone`). A point's zone is the
-  zone of the nearest city *in the same country* (country from the `countries` polygon), so a
-  point near a border doesn't borrow the neighbour's zone. Good enough for almost all populated
-  places; wrong in sparse areas cut by a zone line (e.g. parts of the US Midwest, Russia, Brazil).
-- **Later:** zone polygons arrive with the OSM-based share-alike pack, with the ODbL
-  derived-database offer that licence requires. When it is installed, polygons win; the
-  nearest-city rule stays as the fallback.
+Rows are in priority order (shapes, then finer parts, then admin-1, then countries); units keep
+their own outlines (nothing dissolved). The build fails, listing every problem, on a zone missing
+from `zoneinfo.available_timezones()`, a unit of the layer without an entry (full coverage), an
+entry naming a unit the layer lacks or one of another country, an unknown source or a bad shape.
+
+The engine (`placewise.engine._timezones`): the worldview's country's zone where it reports a
+disputed area in a one-zone country; else the finest country pack's polygon (on agreed ground in
+its country); else the world unit the admin answer already found; else the nearest city of the
+same country (as before). At sea beyond the territorial sea: none. India is one zone
+(Asia/Kolkata); with the de facto polygons it covers India-administered ground.
+
+Known gaps (the unit is split, so the nearest city decides): Mexico's US-border municipios and
+Bahía de Banderas, Pará (east/west), Sakha's districts, Broken Hill (Yancowinna). Not drawn:
+Europe/Busingen, Australia/Lindeman.
 
 ## US pack (`usa`)
 
