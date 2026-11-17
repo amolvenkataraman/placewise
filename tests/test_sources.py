@@ -127,17 +127,38 @@ def test_attribution_file_lists_every_source_with_licence_and_credit():
 
 
 def test_committed_attribution_file_is_up_to_date():
-    # regenerate with: uv run placewise attribution > ATTRIBUTION.md
+    # regenerate with: uv run placewise attribution --all > ATTRIBUTION.md
     assert (REPO / "ATTRIBUTION.md").read_text(encoding="utf-8") == attribution.render_markdown()
 
 
-def test_cli_prints_the_attribution(capsys):
-    from placewise.cli import main
+@pytest.mark.parametrize("only", [None, ["naturalearth"]])
+def test_attribution_starts_with_the_disclaimer(only):
+    text = attribution.render_markdown(only=only)
+    title, first, *_ = text.split("\n\n")
+    assert title == "# Data attribution"
+    assert first.startswith("**Disclaimer.**") and '"as is" and "where is"' in first
+    assert "[DISCLAIMER.md](DISCLAIMER.md)" in first and "liability" in first
+    assert (REPO / "DISCLAIMER.md").is_file()
 
-    assert main(["attribution"]) == 0
-    assert capsys.readouterr().out == attribution.render_markdown()
-    assert main(["attribution", "--json"]) == 0
-    assert set(json.loads(capsys.readouterr().out)) == set(attribution.load_sources())
+
+def test_credits_are_one_line_per_source():
+    sources = attribution.load_sources()
+    assert attribution.render_credits().splitlines() == [s.credit for s in sources.values()]
+    assert attribution.render_credits(only=["geonames", "naturalearth"]) == (
+        f"{sources['naturalearth'].credit}\n{sources['geonames'].credit}\n"  # registry order
+    )
+    with pytest.raises(KeyError, match="nope"):
+        attribution.render_credits(only=["nope"])
+
+
+def test_pack_sources_are_the_ids_packs_carry_in_order_without_repeats():
+    class FakePack:
+        def __init__(self, *sources):
+            self.sources = sources
+
+    packs = [FakePack("naturalearth", "geonames"), FakePack("uscensus", "geonames")]
+    assert attribution.pack_sources(packs) == ("naturalearth", "geonames", "uscensus")
+    assert attribution.pack_sources([]) == ()
 
 
 def test_attribution_for_a_subset_lists_only_those_sources_and_their_regions():

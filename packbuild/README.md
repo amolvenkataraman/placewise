@@ -34,7 +34,8 @@ Natural Earth's default files draw borders de facto. Its per-worldview attribute
 
 The world pack carries no time-zone polygons. The usual source, timezone-boundary-builder, is
 built from OpenStreetMap and is ODbL (share-alike), and share-alike data may only go in the
-separate share-alike pack (`placewise.constants.licences.SHARE_ALIKE`), never in `world`.
+separate share-alike packs (`placewise.constants.licences.SHARE_ALIKE`; named `<name>-sa`), never in
+`world`.
 
 Plan:
 
@@ -241,14 +242,18 @@ PLACEWISE_ALLOW_PUBLISH=1 uv run python -m packbuild.release \
 
 `packbuild.release.prepare_release(pack_dirs, out_dir)` re-hashes every pack (`open_pack(verify=True)`)
 and refuses a pack name given twice, a pack schema other than the index's, a directory not named
-`<name>-<version>` and a source id missing from the registry. It writes into `--out`:
+`<name>-<version>`, a source id missing from the registry, and a share-alike source
+(`placewise.constants.licences.SHARE_ALIKE`) in any pack whose name doesn't end in `-sa`
+(`placewise.constants.packs.SHARE_ALIKE_SUFFIX`): share-alike data ships only in its own packs. It
+writes into `--out`:
 
 | File | |
 |---|---|
 | `<name>-<version>.tar.xz` | `placewise.packs.archive`: byte-for-byte reproducible from the pack's contents |
 | `index.json` | `write_index`: relative URLs, so the directory is a complete mirror |
-| `ATTRIBUTION.md` | `attribution.render_markdown(only=...)`: just the sources these packs use |
-| `SHA256SUMS` | for `sha256sum -c` |
+| `ATTRIBUTION.md` | `attribution.render_markdown(only=...)`: the disclaimer, then just the sources these packs use |
+| `DISCLAIMER.md` | a copy of the repository's, which `ATTRIBUTION.md` links to |
+| `SHA256SUMS` | for `sha256sum -c` (every asset above) |
 | `release-notes.md` | the release description (`--notes-file`), not an asset |
 
 `publish(plan, repo=..., tag=None, dry_run=True)` builds `gh release create <tag> --repo <repo>

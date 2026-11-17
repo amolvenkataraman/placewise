@@ -4,10 +4,14 @@
         .cache/packbuild/out/usa-2026.11 --out .cache/packbuild/release/2026.11
 
 writes, into --out, one `<name>-<version>.tar.xz` per pack, `index.json` (relative URLs),
-`ATTRIBUTION.md` (only the sources these packs use), `SHA256SUMS`, and `release-notes.md` (the
-release description, not an asset). The directory is a complete mirror. It then prints the
-`gh release create` command it would run. `--publish` runs it, and is refused unless
-PLACEWISE_ALLOW_PUBLISH=1 is set as well.
+`ATTRIBUTION.md` (only the sources these packs use, after the disclaimer), a copy of the repo's
+`DISCLAIMER.md`, `SHA256SUMS`, and `release-notes.md` (the release description, not an asset). The
+directory is a complete mirror. It then prints the `gh release create` command it would run.
+`--publish` runs it, and is refused unless PLACEWISE_ALLOW_PUBLISH=1 is set as well.
+
+Share-alike sources (placewise.constants.licences.SHARE_ALIKE) may only be in a share-alike pack,
+one whose name ends in `-sa` (placewise.constants.packs.SHARE_ALIKE_SUFFIX); any other pack that
+lists one is refused.
 """
 
 import argparse
@@ -31,6 +35,8 @@ from placewise.packs import archive, open_pack, pack_info, write_index
 DATA_REPO = "amolvenkataraman/placewise-data"  # GitHub owner/name; releases hold the assets
 ALLOW_PUBLISH_ENV = "PLACEWISE_ALLOW_PUBLISH"
 ATTRIBUTION_FILE = "ATTRIBUTION.md"
+DISCLAIMER_FILE = "DISCLAIMER.md"
+DISCLAIMER = Path(__file__).resolve().parents[1] / DISCLAIMER_FILE  # the repo's; every release ships it
 SUMS_FILE = "SHA256SUMS"
 NOTES_FILE = "release-notes.md"
 _REPO_PATTERN = r"[A-Za-z0-9-]+/[A-Za-z0-9._-]+"
@@ -45,6 +51,7 @@ class ReleasePlan:
     archives: tuple[Path, ...]
     index: Path
     attribution: Path
+    disclaimer: Path
     sums: Path
     notes: Path  # the release description, not uploaded
 
@@ -56,7 +63,7 @@ class ReleasePlan:
     @property
     def assets(self) -> tuple[Path, ...]:
         """The files a release uploads, index first."""
-        return (self.index, self.attribution, self.sums, *self.archives)
+        return (self.index, self.attribution, self.disclaimer, self.sums, *self.archives)
 
 
 def prepare_release(pack_dirs, out_dir) -> ReleasePlan:
@@ -82,6 +89,12 @@ def prepare_release(pack_dirs, out_dir) -> ReleasePlan:
             raise ValueError(f"{path}: pack {m['name']} {m['version']} must be in a directory {expected}")
         if unknown := [s for s in m["sources"] if s not in known]:
             raise ValueError(f"{path}: source(s) {', '.join(unknown)} are not in the source registry")
+        share_alike = [s for s in m["sources"] if known[s].share_alike]
+        if share_alike and not m["name"].endswith(consts.SHARE_ALIKE_SUFFIX):
+            raise ValueError(
+                f"{path}: pack {m['name']!r} carries share-alike source(s) {', '.join(share_alike)}; "
+                f"they may only go in a share-alike pack, named <name>{consts.SHARE_ALIKE_SUFFIX}"
+            )
         open_pack(path, verify=True)
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -91,12 +104,14 @@ def prepare_release(pack_dirs, out_dir) -> ReleasePlan:
     attr = out_dir / ATTRIBUTION_FILE
     used = dict.fromkeys(s for info in infos for s in info.sources)
     attr.write_text(attribution.render_markdown(only=used), encoding="utf-8")
+    disclaimer = out_dir / DISCLAIMER_FILE
+    shutil.copyfile(DISCLAIMER, disclaimer)
     sums = out_dir / SUMS_FILE
-    listed = sorted((index, attr, *archives), key=lambda p: p.name)
+    listed = sorted((index, attr, disclaimer, *archives), key=lambda p: p.name)
     sums.write_text("".join(f"{_sha256(p)}  {p.name}\n" for p in listed), encoding="utf-8")
     notes = out_dir / NOTES_FILE
     notes.write_text(_notes(infos), encoding="utf-8")
-    return ReleasePlan(out_dir, infos, archives, index, attr, sums, notes)
+    return ReleasePlan(out_dir, infos, archives, index, attr, disclaimer, sums, notes)
 
 
 def publish(plan, repo=DATA_REPO, tag=None, dry_run=True):
@@ -159,6 +174,8 @@ def _notes(infos):
         "",
         f"Credits and licences: {ATTRIBUTION_FILE}. Checksums: {SUMS_FILE} and index.json. "
         "The data stays under its sources' licences.",
+        "",
+        f'Provided "as is" and "where is", with no warranty and no legal liability: {DISCLAIMER_FILE}.',
     ]
     return "\n".join(lines) + "\n"
 

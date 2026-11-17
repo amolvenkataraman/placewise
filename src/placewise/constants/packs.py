@@ -26,6 +26,8 @@ GEOM_DIR = "geom"
 GRID_DIR = "grid"
 GRID_META = "meta.json"
 ARCHIVE_SUFFIX = ".tar.xz"
+# share-alike data (constants.licences.SHARE_ALIKE) ships only in packs named <name>-sa
+SHARE_ALIKE_SUFFIX = "-sa"
 
 # in-memory point grid for nearest(): cell sizes that divide 180 so columns wrap cleanly at the
 # antimeridian, and the mean number of points per occupied cell to aim for when picking one

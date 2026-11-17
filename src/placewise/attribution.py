@@ -109,38 +109,45 @@ def _merge(known, item, where):
     )
 
 
-_INTRO = """\
-# Data attribution
+_TITLE = "# Data attribution"
 
-Generated from the source registry (`src/placewise/sources/`) by `placewise attribution`; do not
-edit by hand. It lists every dataset placewise data packs are built from, with its licence and
+# the first paragraph of every attribution file; DISCLAIMER.md sits beside each one (the repo root,
+# every data release)
+DISCLAIMER = """\
+**Disclaimer.** placewise and its data packs are provided "as is" and "where is", without warranty
+of any kind and with no legal liability for their use. The data may be wrong, incomplete or out of
+date, and is not an official determination of any place's name, boundaries or status. See
+[DISCLAIMER.md](DISCLAIMER.md).
+"""
+
+_INTRO = """\
+Generated from the source registry (`src/placewise/sources/`) by `placewise attribution --all`; do
+not edit by hand. It lists every dataset placewise data packs are built from, with its licence and
 the credit line to show. An app that ships or displays placewise data can link to this file, and
 should still read each licence for its own obligations.
 """
 
-
 _SUBSET_INTRO = """\
-# Data attribution
-
-The datasets the data packs published with this file are built from, with each one's licence and
-the credit line to show, generated from placewise's source registry. placewise's own
-ATTRIBUTION.md lists every source it uses. An app that ships or displays this data should still
-read each licence for its own obligations.
+The datasets {subject} are built from, with each one's licence and the credit line to show,
+generated from placewise's source registry. placewise's own ATTRIBUTION.md lists every source it
+uses. An app that ships or displays this data should still read each licence for its own
+obligations.
 """
 
 
-def render_markdown(sources=None, registry=None, gaps=None, only=None):
-    """ATTRIBUTION.md: a summary table, coverage by purpose and region, then each source's credit
-    line, licence and notes. `only` (source ids) narrows it to those sources and the regions they
-    serve, for a data release; an unknown id is a KeyError."""
+def render_markdown(sources=None, registry=None, gaps=None, only=None, subject=None):
+    """ATTRIBUTION.md: the disclaimer, a summary table, coverage by purpose and region, then each
+    source's credit line, licence and notes. `only` (source ids) narrows it to those sources and the
+    regions they serve, for a data release or the installed packs, which `subject` names (default
+    "the data packs published with this file"); an unknown id is a KeyError."""
     sources = load_sources() if sources is None else sources
     registry = load_registry() if registry is None else registry
     gaps = load_gaps() if gaps is None else gaps
     intro = _INTRO
     if only is not None:
         sources, registry, gaps = _subset(set(only), sources, registry, gaps)
-        intro = _SUBSET_INTRO
-    lines = [intro, "| Source | Licence | Used in |", "|---|---|---|"]
+        intro = _SUBSET_INTRO.format(subject=subject or "the data packs published with this file")
+    lines = [_TITLE, "", DISCLAIMER, intro, "| Source | Licence | Used in |", "|---|---|---|"]
     for s in sources.values():
         lines.append(f"| [{s.name}]({s.url}) | {s.licence} | {', '.join(s.used_in) or '-'} |")
     lines += ["", "## Coverage", "", "| Purpose | Region | Sources |", "|---|---|---|"]
@@ -160,10 +167,28 @@ def render_markdown(sources=None, registry=None, gaps=None, only=None):
     return "\n".join(lines) + "\n"
 
 
-def _subset(ids, sources, registry, gaps):
+def render_credits(sources=None, only=None):
+    """Each source's credit line, one per line, in registry order; `only` (source ids) narrows it
+    to those sources, and an unknown id is a KeyError."""
+    sources = load_sources() if sources is None else sources
+    if only is not None:
+        sources = _known(set(only), sources)
+    return "".join(f"{s.credit}\n" for s in sources.values())
+
+
+def pack_sources(packs):
+    """The source ids a set of packs (anything with `.sources`) carries, in order, each once."""
+    return tuple(dict.fromkeys(s for pack in packs for s in pack.sources))
+
+
+def _known(ids, sources):
     if unknown := sorted(ids - set(sources)):
         raise KeyError(f"no source(s) {', '.join(unknown)} in the registry")
-    sources = {k: s for k, s in sources.items() if k in ids}
+    return {k: s for k, s in sources.items() if k in ids}
+
+
+def _subset(ids, sources, registry, gaps):
+    sources = _known(ids, sources)
     registry = {
         purpose: {r: kept for r, ss in regions.items() if (kept := tuple(s for s in ss if s.id in ids))}
         for purpose, regions in registry.items()

@@ -141,19 +141,37 @@ class _App:
             "max_batch": self.settings.server.max_batch,
         }
 
-    def attribution(self, fmt):
-        if fmt not in self._attribution:
+    def attribution(self, fmt, everything=False):
+        """(content type, body): the sources of the packs served here, or with `everything` (or a
+        geocoder that doesn't say which packs it reads) the whole source registry."""
+        key = (fmt, everything)
+        if key not in self._attribution:
             from placewise import attribution
 
+            sources = attribution.load_sources()
+            only = None if everything else _served_sources(self.geocoder, attribution)
             if fmt == "json":
-                sources = {i: s.to_dict() for i, s in attribution.load_sources().items()}
-                self._attribution[fmt] = (JSON, json.dumps(sources, ensure_ascii=False).encode())
+                chosen = sources if only is None else {i: s for i, s in sources.items() if i in set(only)}
+                body = json.dumps({i: s.to_dict() for i, s in chosen.items()}, ensure_ascii=False)
+                self._attribution[key] = (JSON, body.encode())
             else:
-                self._attribution[fmt] = (
-                    "text/markdown; charset=utf-8",
-                    attribution.render_markdown().encode(),
-                )
-        return self._attribution[fmt]
+                subject = None if only is None else "the data packs served here"
+                body = attribution.render_markdown(only=only, subject=subject)
+                self._attribution[key] = ("text/markdown; charset=utf-8", body.encode())
+        return self._attribution[key]
+
+
+def _served_sources(geocoder, attribution):
+    """The registry source ids of the packs `geocoder` reads (wrappers such as CachedGeocoder are
+    looked through via `.geocoder`); None if it doesn't expose `packs`. Ids the registry lacks
+    (a pack built elsewhere) are left out."""
+    while geocoder is not None:
+        packs = getattr(geocoder, "packs", None)
+        if packs is not None:
+            known = attribution.load_sources()
+            return [i for i in attribution.pack_sources(packs) if i in known]
+        geocoder = getattr(geocoder, "geocoder", None)
+    return None
 
 
 def _refuse_busy(request):

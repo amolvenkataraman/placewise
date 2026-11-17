@@ -5,7 +5,8 @@ Endpoints (all JSON unless noted):
     GET  /v1/lookup?lat=&lon=&worldview=     one Result
     POST /v1/lookup  {"points": [[lat, lon], ...], "worldview": [...]}   {"results": [Result, ...]}
     GET  /v1/health                          {"status", "data_version", "uptime_s"}
-    GET  /v1/attribution[?format=json]       the attribution markdown, or the source registry
+    GET  /v1/attribution[?format=json][&all=1]  the served packs' sources (all=1: every source),
+                                             as attribution markdown or registry entries
     GET  /v1/version                         {"placewise", "api", "data_version", "max_batch"}
 
 Errors are `{"error": {"code": ..., "message": ...}}` with the matching HTTP status. Coordinates
@@ -146,10 +147,14 @@ class Handler(SecurityChecks, HandlerBase):
         self._write_json(200, self.server.health())
 
     def _attribution(self, query):
-        fmt = query_params(query, ("format",)).get("format", "markdown")
+        params = query_params(query, ("format", "all"))
+        fmt = params.get("format", "markdown")
         if fmt not in ("markdown", "json"):
             raise bad("format must be markdown or json")
-        content_type, body = self.server.attribution(fmt)
+        everything = params.get("all", "0")
+        if everything not in ("0", "1"):
+            raise bad("all must be 0 or 1")
+        content_type, body = self.server.attribution(fmt, everything=everything == "1")
         self._write(200, body, content_type, cache="public, max-age=3600")
 
 

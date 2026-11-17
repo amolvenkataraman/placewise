@@ -84,7 +84,7 @@ tool documents what it does *not* protect against.
 placewise data install world          # download, verify and install a pack
 placewise data list                   # installed and available packs
 placewise data update                 # newer versions (never automatic, never deletes)
-placewise attribution                 # the sources, licences and credit lines to show
+placewise attribution                 # the installed packs' sources, licences and credits (--all, --short)
 ```
 
 Packs are memory-mapped and checksummed (format: `docs/pack-format.md`). Data sources are listed in

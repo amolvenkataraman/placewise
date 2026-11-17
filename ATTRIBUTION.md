@@ -1,7 +1,12 @@
 # Data attribution
 
-Generated from the source registry (`src/placewise/sources/`) by `placewise attribution`; do not
-edit by hand. It lists every dataset placewise data packs are built from, with its licence and
+**Disclaimer.** placewise and its data packs are provided "as is" and "where is", without warranty
+of any kind and with no legal liability for their use. The data may be wrong, incomplete or out of
+date, and is not an official determination of any place's name, boundaries or status. See
+[DISCLAIMER.md](DISCLAIMER.md).
+
+Generated from the source registry (`src/placewise/sources/`) by `placewise attribution --all`; do
+not edit by hand. It lists every dataset placewise data packs are built from, with its licence and
 the credit line to show. An app that ships or displays placewise data can link to this file, and
 should still read each licence for its own obligations.
 
