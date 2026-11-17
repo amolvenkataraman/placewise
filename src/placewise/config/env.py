@@ -13,9 +13,10 @@ from .schema import FIELDS, SECTIONS
 def from_env(env):
     """[((section, key), value, origin)] for every PLACEWISE_ variable in `env`."""
     found = {}
+    ours = [name for name in env if name.startswith(const.ENV_PREFIX)]  # the rest are never read
     # aliases first, so the full PLACEWISE_<SECTION>_<KEY> spelling wins when both are set
-    for name in sorted(env, key=lambda n: n not in const.ENV_ALIASES):
-        if not name.startswith(const.ENV_PREFIX) or name in const.ENV_RESERVED:
+    for name in sorted(ours, key=lambda n: n not in const.ENV_ALIASES):
+        if name in const.ENV_RESERVED:
             continue
         if name in const.ENV_ALIASES:
             section, key = const.ENV_ALIASES[name]

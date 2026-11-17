@@ -1,7 +1,7 @@
 """The world pack: countries and admin-1 polygons (Natural Earth), cities (GeoNames), airports
 (OurAirports), country facts (GeoNames, Unicode CLDR, Wikidata: packbuild.country_profiles) and
 time-zone polygons (datasets/timezones/world.json drawn with the Natural Earth units:
-packbuild.timezones).
+packbuild.timezones). Natural Earth's disputed areas are the `worldviews` layer.
 
     uv run python -m packbuild.world --version 2026.11
 
@@ -35,6 +35,7 @@ def build_layers(cache_dir, refresh=False):
     countries_shp = shapefile(url("naturalearth", "countries"))
     countries = naturalearth.countries(countries_shp)
     admin1 = naturalearth.admin1(shapefile(url("naturalearth", "admin1")))
+    worldviews = naturalearth.disputed_areas(shapefile(url("naturalearth", "disputed_areas")))
     cities_zip = get(url("geonames", "cities"))
     cities_txt = unzip(cities_zip) / f"{cities_zip.stem}.txt"
     cities = geonames.cities(
@@ -51,7 +52,7 @@ def build_layers(cache_dir, refresh=False):
         fetcher=lambda u, d, refresh: fetch(u, d, refresh),
     )
     zones = timezones.world_layer(timezones.load("world"), countries, admin1)
-    return [countries, admin1, cities, airports, facts, zones]
+    return [countries, admin1, worldviews, cities, airports, facts, zones]
 
 
 def build_world(cache_dir, out_dir, version, refresh=False):

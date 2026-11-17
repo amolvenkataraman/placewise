@@ -53,6 +53,48 @@ def test_area_selector_geojson_resolves_relative_to_base_dir(tmp_path):
     assert area.matches(*SAN_FRANCISCO, base_dir=tmp_path) is False
 
 
+def test_one_point_answers_as_an_array_of_one_does(tmp_path):
+    """One point takes a path without numpy; it must agree with the array path everywhere,
+    including right at a circle's edge, a box's edges and across the antimeridian."""
+    (tmp_path / "box.geojson").write_text(
+        '{"type": "Polygon", "coordinates": [[[-80, 43.4], [-79, 43.4], [-79.5, 44], [-80, 43.4]]]}'
+    )
+    rng = np.random.default_rng(0)
+    areas = [
+        AreaSelector(point=Point(*TORONTO), km=5),
+        AreaSelector(point=Point(89.9, 10.0), km=50),
+        AreaSelector(point=Point(0.0, 179.99), km=10),
+        AreaSelector(bbox=BBox(43.4, -80.0, 44.0, -79.0)),
+        AreaSelector(bbox=BBox(-10.0, 170.0, 10.0, -170.0)),
+        AreaSelector(geojson="box.geojson"),
+        AreaSelector(country="CA"),
+        AreaSelector(place="wikidata:Q172"),
+    ]
+    lats = np.concatenate([rng.uniform(43, 44.5, 300), rng.uniform(-90, 90, 300), [43.4, 44.0, 89.95, 0.0]])
+    lons = np.concatenate(
+        [rng.uniform(-80.5, -78.5, 300), rng.uniform(-180, 180, 300), [-80.0, -79.0, 10, 180]]
+    )
+    # points on the first circle's edge, a hair inside and outside
+    for bearing in rng.uniform(0, 360, 50):
+        for km in (5 - 1e-12, 5.0, 5 + 1e-12):
+            b = np.radians(bearing)
+            d = km / 6371.0088
+            la1, lo1 = np.radians(TORONTO)
+            la2 = np.arcsin(np.sin(la1) * np.cos(d) + np.cos(la1) * np.sin(d) * np.cos(b))
+            lo2 = lo1 + np.arctan2(np.sin(b) * np.sin(d) * np.cos(la1), np.cos(d) - np.sin(la1) * np.sin(la2))
+            lats, lons = np.append(lats, np.degrees(la2)), np.append(lons, np.degrees(lo2))
+    for area in areas:
+        for cc, ids in (("CA", {"wikidata:Q172"}), (None, None), ("us", set())):
+            codes, per_point = np.full(len(lats), cc, dtype=object), [ids] * len(lats)
+            many = area.matches(lats, lons, cc=codes, place_ids=per_point, base_dir=tmp_path)
+            one = [
+                area.matches(float(a), float(o), cc=cc, place_ids=ids, base_dir=tmp_path)
+                for a, o in zip(lats, lons, strict=True)
+            ]
+            assert one == many.tolist(), area
+            assert all(type(x) is bool for x in one)
+
+
 def test_city_rule_by_locality_or_area():
     CityRule("wikidata:Q17042", "Bay Area")  # positional order unchanged: locality, city
     CityRule(within=AreaSelector(bbox=BBox(37.2, -122.6, 38.3, -121.6)), city="Bay Area")

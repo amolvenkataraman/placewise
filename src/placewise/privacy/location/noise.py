@@ -24,7 +24,7 @@ from placewise.constants.privacy import NOISE_CELL_SCALES
 from placewise.geo import destination
 from placewise.geo._arrays import as_floats, out
 
-from .._common import check_key, keyed_uniforms
+from .._common import check_key, keyed_uniforms_each
 from .snap import cells
 
 _NEWTON_STEPS = 60
@@ -61,12 +61,27 @@ def geo_indistinguishable(lat, lon, epsilon_per_m, key):
     epsilon_per_m = float(epsilon_per_m)
     lat, lon = np.broadcast_arrays(*as_floats(lat, lon))
     row, col, *_ = cells(lat, lon, NOISE_CELL_SCALES / epsilon_per_m, key, purpose="noise-cell")
-    pairs, inverse = np.unique(np.stack([row.ravel(), col.ravel()], axis=1), axis=0, return_inverse=True)
+    pairs, inverse = _distinct_cells(row.ravel(), col.ravel())
     # ε is in the message: releases at different ε must draw independently, or two outputs on one
     # ray at a known distance ratio would pin the true point
-    draws = np.array([keyed_uniforms(key, "noise", epsilon_per_m, int(r), int(c), n=2) for r, c in pairs])
-    draws = draws[inverse.ravel()].reshape((*lat.shape, 2))
-    bearing = draws[..., 0] * 360.0
-    radius_m = np.asarray(radius_quantile(draws[..., 1], epsilon_per_m))
+    draws = keyed_uniforms_each(key, "noise", epsilon_per_m, rows=pairs.tolist(), n=2)
+    draws = np.array(draws).reshape(-1, 2)
+    # one bearing and radius per cell, then per point: the same numbers, computed once
+    bearing = (draws[:, 0] * 360.0)[inverse].reshape(lat.shape)
+    radius_m = np.asarray(radius_quantile(draws[:, 1], epsilon_per_m))[inverse].reshape(lat.shape)
     new_lat, new_lon = destination(lat, lon, bearing, radius_m / 1000.0)
     return out(new_lat), out(new_lon)
+
+
+def _distinct_cells(row, col):
+    """(distinct (row, col) pairs in lexicographic order, index of each point's pair), as
+    np.unique(axis=0) gives them, through one int64 key per point when the grid span allows."""
+    if len(row) == 0:
+        return np.zeros((0, 2), dtype=np.int64), np.zeros(0, dtype=np.intp)
+    r0, c0 = int(row.min()), int(col.min())
+    span = int(col.max()) - c0 + 1
+    if (int(row.max()) - r0 + 1) * span >= 2**62:
+        pairs, inverse = np.unique(np.stack([row, col], axis=1), axis=0, return_inverse=True)
+        return pairs, inverse.ravel()
+    packed, inverse = np.unique((row - r0) * span + (col - c0), return_inverse=True)
+    return np.stack([packed // span + r0, packed % span + c0], axis=1), inverse.ravel()

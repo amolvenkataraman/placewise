@@ -13,6 +13,8 @@ from .model import LocationPart
 from .readings import _admin1_name, _ambiguous_city, _name_clash, _Reading
 from .tokenize import _display
 
+_WORD_BREAKS = re.compile(r"[\s\-/]+")
+
 
 @dataclass
 class _Candidate:
@@ -45,8 +47,59 @@ def _promote(cands, wanted, strength=0.9):
     return hits + rest
 
 
+# without a gazetteer a group's answer depends only on what `_group_key` holds (and its span), so
+# each distinct group is resolved once; the cache is emptied when it fills
+_RESOLVED = {}
+_RESOLVED_SIZE = 1 << 14
+
+
+def _group_key(group, context):
+    """Everything `_resolve` reads from a group except its span."""
+    city, metro = group.city, group.metro
+    return (
+        context,
+        group.remote,
+        None if metro is None else metro.metro,
+        None if city is None else (city.kind, city.text, city.alias, city.readings),
+        tuple((t.text, t.readings) for t in group.regions),
+    )
+
+
+def _moved(part, span, alternatives=()):
+    """`part` at another span (dataclasses.replace, without its overhead)."""
+    return LocationPart(
+        city=part.city,
+        admin1_code=part.admin1_code,
+        admin1_name=part.admin1_name,
+        country_iso2=part.country_iso2,
+        region=part.region,
+        confidence=part.confidence,
+        span=span,
+        city_verified=part.city_verified,
+        remote=part.remote,
+        place=part.place,
+        alternatives=alternatives,
+    )
+
+
 def _resolve(group, context, gazetteer):
     """The place a group names: its likeliest candidate, the others as alternatives."""
+    if gazetteer is not None:  # the gazetteer's answers can't be assumed to stay the same
+        return _resolve_group(group, context, gazetteer)
+    k = _group_key(group, context)
+    if k in _RESOLVED:
+        part = _RESOLVED[k]
+    else:
+        part = _resolve_group(group, context, None)
+        if len(_RESOLVED) >= _RESOLVED_SIZE:
+            _RESOLVED.clear()
+        _RESOLVED[k] = part
+    if part is None or part.span == (span := group.span):
+        return part
+    return _moved(part, span, tuple(_moved(a, span) for a in part.alternatives))
+
+
+def _resolve_group(group, context, gazetteer):
     allow_india = "IN" in context
     if group.metro is not None:
         metro = group.metro.metro
@@ -182,7 +235,7 @@ def _finish(group, cands, city, metro, gazetteer, context):
                 cands, verified = [_Candidate(country, codes.get("admin1"), place=place)], True
     if not cands:
         cands = [_Candidate(None, weight=0.5)]
-    parts = []
+    parts, span = [], group.span
     for c in cands:
         name = None if c.no_city else (c.place.name if c.place is not None else city)
         if metro is not None and c.country == metro.country and not c.no_city:
@@ -191,25 +244,21 @@ def _finish(group, cands, city, metro, gazetteer, context):
             found = _metros.metro_of(name, c.country, c.admin1) or _metros.metro_of(city, c.country, c.admin1)
             region = found.key if found and name else None
         parts.append(
-            LocationPart(
-                city=name,
-                admin1_code=c.admin1,
-                admin1_name=c.admin1_name or _admin1_name(c.country, c.admin1),
-                country_iso2=c.country,
-                region=region,
-                confidence=round(min(max(c.weight, 0.0), 1.0), 6),
-                span=group.span,
-                city_verified=verified and c.place is not None,
-                remote=group.remote,
-                place=c.place,
-            )
+            {
+                "city": name,
+                "admin1_code": c.admin1,
+                "admin1_name": c.admin1_name or _admin1_name(c.country, c.admin1),
+                "country_iso2": c.country,
+                "region": region,
+                "confidence": round(min(max(c.weight, 0.0), 1.0), 6),
+                "span": span,
+                "city_verified": verified and c.place is not None,
+                "remote": group.remote,
+                "place": c.place,
+            }
         )
     first, *rest = parts
-    return LocationPart(**{**_fields(first), "alternatives": tuple(rest)})
-
-
-def _fields(part):
-    return {f: getattr(part, f) for f in part.__dataclass_fields__}
+    return LocationPart(**first, alternatives=tuple(LocationPart(**fields) for fields in rest))
 
 
 def _embedded(group, gazetteer):
@@ -221,7 +270,7 @@ def _embedded(group, gazetteer):
         (c[0].country, next((r.admin1 for r in c if r.admin1), None)) if c else (None, None) for c in combos
     ]
     for tok in group.junk:
-        words = [w for w in re.split(r"[\s\-/]+", tok.text) if w and not any(ch.isdigit() for ch in w)]
+        words = [w for w in _WORD_BREAKS.split(tok.text) if w and not any(ch.isdigit() for ch in w)]
         for size in range(min(4, len(words)), 0, -1):
             for begin in range(len(words) - size, -1, -1):
                 name = " ".join(words[begin : begin + size])

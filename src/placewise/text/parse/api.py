@@ -1,5 +1,7 @@
 """parse_location and parse_address: the entry points."""
 
+import functools
+
 from placewise.constants import countries
 from placewise.constants.location_text import ADDRESS_KEYS
 from placewise.constants.work_modes import MODES
@@ -8,7 +10,7 @@ from .. import metros as _metros
 from .group import _group
 from .model import ParsedLocation
 from .modes import _work_modes
-from .patterns import DASHES, LEVEL1, LEVEL2, MORE, POSTAL_CODES, SPACES
+from .patterns import ANY_POSTAL_CODE, DASHES, LEVEL1, LEVEL2, MORE, POSTAL_CODES, SPACES
 from .resolve import _embedded, _resolve
 from .spans import _protected_and, _split, _Text
 from .tokenize import _Token, _tokens
@@ -38,14 +40,30 @@ def parse_location(text, gazetteer=None, *, context=None):
     """
     raw = text or ""
     ctx = _contexts(context)
-    work = _Text(list(raw.translate(DASHES).translate(SPACES)))
+    if gazetteer is None and type(raw) is str:  # the answer is immutable, so repeats share it
+        return _parse_cached(raw, ctx)
+    return _parse(raw, gazetteer, ctx)
+
+
+# listings repeat the same few location strings; answers without a gazetteer are kept for them
+_RESULT_CACHE = 1 << 14
+
+
+@functools.lru_cache(maxsize=_RESULT_CACHE)
+def _parse_cached(raw, ctx):
+    return _parse(raw, None, ctx)
+
+
+def _parse(raw, gazetteer, ctx):
+    work = _Text(raw.translate(DASHES).translate(SPACES))
     multiple = False
     for m in MORE.finditer(work.get(0, len(raw))):
         multiple = True
         work.blank(m.start(), m.end())
-    for pattern in POSTAL_CODES:
-        for m in pattern.finditer(work.get(0, len(raw))):
-            work.blank(m.start(), m.end())
+    if not ANY_POSTAL_CODE.hopeless(work.text):
+        for pattern in POSTAL_CODES:
+            for m in pattern.finditer(work.get(0, len(raw))):
+                work.blank(m.start(), m.end())
 
     modes, unparsed = set(), []
     segments = _split(work, 0, len(raw), LEVEL1)

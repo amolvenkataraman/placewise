@@ -15,10 +15,10 @@ from placewise.tracks import TrackMeta
 
 from ._track_common import (
     build_track,
+    iter_xml,
     local_name,
     new_points,
     parse_iso_time,
-    parse_xml,
     read_source,
     source_name,
     to_float,
@@ -33,32 +33,61 @@ _COMMA_SPACING = re.compile(r"\s*,\s*")
 
 
 def read_kml(source):
-    """Tracks from a .kml or .kmz path, bytes or file object, one per track-bearing Placemark."""
+    """Tracks from a .kml or .kmz path, bytes or file object, one per track-bearing Placemark.
+    The document is streamed: each Placemark is read when it ends and then dropped."""
     data = read_source(source)
     if data.startswith(ZIP_MAGIC):
         data = _kmz_document(data)
-    root = parse_xml(data)
-    if local_name(root.tag) != kml.ROOT_ELEMENT:
-        raise ValueError(f"not KML: root element is <{local_name(root.tag)}>")
     origin = source_name(source, "kml")
-    tracks, mismatched = [], 0
-    for placemark in (e for e in root.iter() if local_name(e.tag) == "Placemark"):
-        points = new_points(_COLUMNS)
-        segments = []
-        for part in placemark.iter():
-            start = len(points["time"])
-            kind = local_name(part.tag)
-            if kind == "Track":
-                mismatched += not _read_gx_track(part, points)
-            elif kind == "LineString":
-                _read_line_string(part, points)
-            if len(points["time"]) > start:
-                segments.append(start)
-        if points["time"]:
-            meta = TrackMeta(name=xml_text(xml_child(placemark, "name")), source=origin)
-            tracks.append(build_track(points, segments, meta))
+    found, mismatched = [], 0
+    stack, placemarks, root, count = [], [], None, 0
+    for event, element in iter_xml(data):
+        if root is None:
+            root = local_name(element.tag)
+        if root != kml.ROOT_ELEMENT:  # read on: malformed XML is reported before a wrong root
+            element.clear()
+            continue
+        if event == "start":
+            stack.append(element)
+            if local_name(element.tag) == "Placemark":
+                placemarks.append((count, element))  # numbered in document order
+                count += 1
+            continue
+        stack.pop()
+        if placemarks and placemarks[-1][1] is element:
+            order, _ = placemarks.pop()
+            track, bad = _read_placemark(element, origin)
+            mismatched += bad
+            if track is not None:
+                found.append((order, track))
+            if not placemarks and stack:  # an outer Placemark would still read this one's parts
+                stack[-1].remove(element)
+    if root != kml.ROOT_ELEMENT:
+        raise ValueError(f"not KML: root element is <{root}>")
     warn_skipped(mismatched, "gx:Track(s)", "<when> and <gx:coord> counts differ", "KML")
-    return tracks
+    return [track for _, track in sorted(found, key=lambda pair: pair[0])]
+
+
+def _read_placemark(placemark, origin):
+    """(Track or None, number of gx:Tracks whose <when> and <gx:coord> counts differ)."""
+    points = new_points(("ele",))  # the SimpleArray columns join when a gx:Track has one
+    segments, mismatched = [], 0
+    for part in placemark.iter():
+        start = len(points["time"])
+        kind = local_name(part.tag)
+        if kind == "Track":
+            mismatched += not _read_gx_track(part, points)
+        elif kind == "LineString":
+            _read_line_string(part, points)
+        if len(points["time"]) > start:
+            segments.append(start)
+    if not points["time"]:
+        return None, mismatched
+    for column in _COLUMNS[1:]:  # NaN for the points of parts without the column
+        if column in points:
+            points[column].extend([math.nan] * (len(points["time"]) - len(points[column])))
+    meta = TrackMeta(name=xml_text(xml_child(placemark, "name")), source=origin)
+    return build_track(points, segments, meta), mismatched
 
 
 def _kmz_document(data):
@@ -81,13 +110,16 @@ def _read_gx_track(track, points):
     if len(whens) != len(coords):
         return False
     arrays = _simple_arrays(track, len(coords))
-    for i, (when, coord) in enumerate(zip(whens, coords, strict=True)):
+    start = len(points["time"])
+    for when, coord in zip(whens, coords, strict=True):
         points["time"].append(parse_iso_time(when) if when else math.nan)
         points["lon"].append(float(coord[0]))
         points["lat"].append(float(coord[1]))
         points["ele"].append(float(coord[2]) if len(coord) > 2 else math.nan)
-        for column in _COLUMNS[1:]:
-            points[column].append(arrays[column][i] if column in arrays else math.nan)
+    for column, values in arrays.items():
+        column_values = points.setdefault(column, [])
+        column_values.extend([math.nan] * (start - len(column_values)))  # earlier parts lacked it
+        column_values.extend(values)
     return True
 
 
@@ -111,5 +143,3 @@ def _read_line_string(line, points):
         points["lon"].append(float(values[0]))
         points["lat"].append(float(values[1]))
         points["ele"].append(float(values[2]) if len(values) > 2 else math.nan)
-        for column in _COLUMNS[1:]:
-            points[column].append(math.nan)

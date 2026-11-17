@@ -6,6 +6,7 @@ import urllib.parse
 import zipfile
 from pathlib import Path
 
+import cgndb_fixtures
 import pytest
 import statcan_fixtures as fx
 from regions_kit import CA_REGIONS, use_regions
@@ -13,11 +14,21 @@ from timezones_kit import use_timezones
 
 from packbuild import arcgis, ca
 from packbuild.sources import SOURCES, statcan, url
+from packbuild.sources.can import cgndb
 from placewise.packs import open_pack
 
 BASE = ["provinces", "cd", "csd", "cma", "fsa"]
-LAYERS = [*BASE, "regions", "timezones"]
-COUNTS = {"provinces": 3, "cd": 6, "csd": 8, "cma": 4, "fsa": 6, "regions": 3, "timezones": 5}
+LAYERS = [*BASE, "populated_places", "regions", "timezones"]
+COUNTS = {
+    "provinces": 3,
+    "cd": 6,
+    "csd": 8,
+    "cma": 4,
+    "fsa": 6,
+    "populated_places": 5,
+    "regions": 3,
+    "timezones": 5,
+}
 BOUNDARY_DOWNLOADS = [
     (statcan.BOUNDARIES, "provinces"),
     (statcan.BOUNDARIES, "cd"),
@@ -26,6 +37,7 @@ BOUNDARY_DOWNLOADS = [
     (statcan.FSA, "fsa"),
 ]
 POPULATION_DOWNLOADS = [(statcan.POPULATION, k) for k in ("csd", "cma", "fsa")]
+NAME_DOWNLOADS = [(cgndb.SOURCE, "populated_places")]
 
 
 def _zip(path, members):
@@ -48,6 +60,7 @@ def downloads(tmp_path):
         files[f"{stem}.zip"] = _zip(store / f"{stem}.zip", members)
     for table, csv_path in fx.POPULATION.items():
         files[f"{table}-eng.zip"] = _zip(store / f"{table}-eng.zip", {f"{table}.csv": csv_path})
+    files["cgn_canada_csv_eng.zip"] = cgndb_fixtures.write_archive(store)
     return files
 
 
@@ -66,7 +79,7 @@ def offline(downloads, monkeypatch):
 
 
 def test_the_registry_has_every_download_the_build_needs():
-    for source_id, name in [*BOUNDARY_DOWNLOADS, *POPULATION_DOWNLOADS]:
+    for source_id, name in [*BOUNDARY_DOWNLOADS, *POPULATION_DOWNLOADS, *NAME_DOWNLOADS]:
         assert url(source_id, name).startswith("https://"), (source_id, name)
     for source_id in (statcan.BOUNDARIES, statcan.FSA, statcan.POPULATION):
         source = SOURCES[source_id]
@@ -88,7 +101,8 @@ def test_build_ca_fetches_from_the_registry_and_hands_six_layers_to_the_writer(
     monkeypatch.setattr(ca, "write_pack", fake_write_pack)
     out = ca.build_ca(tmp_path / "cache", tmp_path / "out", "2026.11")
     assert out == tmp_path / "out" / "can-2026.11"
-    assert sorted(offline) == sorted(url(s, n) for s, n in [*BOUNDARY_DOWNLOADS, *POPULATION_DOWNLOADS])
+    expected = [*BOUNDARY_DOWNLOADS, *POPULATION_DOWNLOADS, *NAME_DOWNLOADS]
+    assert sorted(offline) == sorted(url(s, n) for s, n in expected)
     [(out_dir, name, version, layers)] = calls
     assert (out_dir, name, version) == (tmp_path / "out", "can", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
@@ -104,12 +118,11 @@ def test_build_ca_writes_a_pack_that_answers_for_public_places(tmp_path, offline
     assert [layer.name for layer in pack] == LAYERS
     assert {name: len(pack[name]) for name in LAYERS} == COUNTS
     assert set(pack.sources) == {
-        statcan.BOUNDARIES,
-        statcan.FSA,
-        statcan.POPULATION,
-        "placewise-regions",
+        statcan.BOUNDARIES, statcan.FSA, statcan.POPULATION, cgndb.SOURCE, "placewise-regions",
         "placewise-timezones",
-    }
+    }  # fmt: skip
+    i, km = pack["populated_places"].nearest(*fx.LAKE_LOUISE)
+    assert pack["populated_places"].row(int(i))["name"] == "Lake Louise" and float(km) < 1
 
     def names(lat, lon):
         out = {}
@@ -204,7 +217,7 @@ def fake_service(downloads, monkeypatch):
     monkeypatch.setattr(arcgis, "FULL_KM", 550)
 
     def fake_fetch(u, cache_dir, refresh=False):
-        assert "/n1/tbl/csv/98100" in u  # only the population tables
+        assert "/n1/tbl/csv/98100" in u or "cgn_canada" in u  # only the tables and CGNDB
         return downloads[u.rsplit("/", 1)[1]]
 
     monkeypatch.setattr(ca, "fetch", fake_fetch)

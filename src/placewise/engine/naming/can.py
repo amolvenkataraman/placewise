@@ -3,12 +3,15 @@
 - admin1: the subdivision's province ("can/csd:state").
 - locality: the census subdivision (CSD), so amalgamated cities come out whole (Scarborough is in
   Toronto). Rural CSDs (townships, rural municipalities) and unorganised ones (improvement
-  districts, unorganised territory) are named by the nearest GeoNames place inside them within
-  RURAL_PLACE_KM; failing that a rural CSD is named itself and an unorganised one not at all.
+  districts, unorganised territory) are named by the nearest CGNDB settlement inside them within
+  CGNDB_LOCALITY_KM (Lake Louise, Field), else the nearest GeoNames place inside within
+  RURAL_PLACE_KM; failing both a rural CSD is named itself and an unorganised one not at all.
 - city: the locality if it has CITY_KEEP_POPULATION people or is named in its CMA's name;
   otherwise the CMA's first city (in the same province) when that city is CITY_ROLL_UP_RATIO
   times bigger (Pickering -> Toronto; Fort Erie stays). No locality: the GeoNames score.
-- sublocality: the nearest GeoNames place within SUBLOCALITY_KM inside the same CSD.
+- sublocality: a CGNDB neighbourhood or community inside the same CSD, the one whose reach (by
+  its map scale) the point is deepest inside (Scarborough, Kanata, Malton, Port Credit); else the
+  nearest GeoNames place within SUBLOCALITY_KM inside the same CSD.
 - admin2 (census division), postal (forward sortation area), regions (the pack's curated
   `regions` and the CMA or CA, smallest first).
 """
@@ -23,6 +26,7 @@ from placewise.model import PlaceKind
 
 from . import _common as common
 from . import rules
+from ._points import NamedPoints, point_maker
 
 
 class Can:
@@ -51,6 +55,10 @@ class Can:
             self.cma = layers.add(pack, names["metro"], common.region_place)
         if const.REGIONS in pack:
             self.regions = layers.add(pack, const.REGIONS, common.region_place)
+        self.named = None
+        if names["named"] in pack:
+            key = layers.add(pack, names["named"], point_maker(PlaceKind.LOCALITY))
+            self.named = NamedPoints(layers, key, self.csd)
 
     def _col(self, key, field):
         values = self.layers.column(key, field)
@@ -110,29 +118,54 @@ class Can:
         local, local_km = a["local"][pts], a["local_km"][pts]
         kind = np.where(csd >= 0, self._csd["kind"][np.maximum(csd, 0)], "")
         # rural and unorganised subdivisions: the GeoNames place inside them, if one is near
-        place = np.full(len(pts), -1, dtype=np.int64)
+        place, named = np.full(len(pts), -1, dtype=np.int64), np.full(len(pts), -1, dtype=np.int64)
         rural = np.flatnonzero((kind == rules.RURAL) | (kind == rules.UNORGANIZED))
+        if self.named is not None:
+            named[rural] = self.named.locality(lat[rural], lon[rural], csd[rural])
+        rural = rural[named[rural] < 0]
         place[rural] = common.geonames_inside(
             self.cities, self.csd, csd[rural], local[rural], local_km[rural], const.RURAL_PLACE_KM,
             lookup_const.CITY_EXCLUDED_FEATURE_CODES,
         )  # fmt: skip
-        by_csd = ((kind == rules.MUNICIPAL) | (kind == rules.RURAL)) & (place < 0)
+        by_csd = ((kind == rules.MUNICIPAL) | (kind == rules.RURAL)) & (place < 0) & (named < 0)
         locality = np.where(by_csd, csd, -1)
         out.put("locality", every, self.csd, locality, st["rule"])
         has = np.flatnonzero(place >= 0)
         out.put("locality", has, lookup_const.CITIES, place[has], const.INSIDE)
+        hamlet = np.flatnonzero(named >= 0)
+        if len(hamlet):
+            out.put("locality", hamlet, self.named.key, named[hamlet], const.INSIDE)
         pop = np.where(by_csd, self._csd["population"][np.maximum(csd, 0)], np.nan)
         pop[has] = self.cities.table["population"][place[has]]
         city, cma = self._city(out, lat, lon, locality, pop, st["rule"])
         none = np.flatnonzero(out.locality == None)  # noqa: E711 - element-wise
         out.put("city", none, lookup_const.CITIES, a["city"][pts[none]], lookup_const.SCORE)
-        out.sublocality_inside(self.cities, self.csd, locality, local, local_km)
+        self._sublocality(out, lat, lon, locality, local, local_km)
         if self.postal is not None:
             fsa = np.atleast_1d(self.layers.layer(self.postal).query(lat, lon)).astype(np.int64)
             out.put("postal", every, self.postal, fsa, lookup_const.POLYGON)
         common.set_regions(out, self.layers, lat, lon, self.regions, [(self.cma, cma)] if self.cma else ())
         common.skip_near(self.cities, self.csd, a, pts, locality, city)
         return out
+
+    def _sublocality(self, out, lat, lon, locality, local, local_km):
+        """CGNDB's neighbourhood inside the locality's CSD, else GeoNames' (Named.sublocality_inside)."""
+        todo = np.flatnonzero(locality >= 0)
+        if self.named is not None and len(todo):
+
+            def skip(j, name):
+                i = todo[j]
+                return any(
+                    rules.same_name(name, p.name) for p in (out.locality[i], out.city[i]) if p is not None
+                )
+
+            found = self.named.sublocality(lat[todo], lon[todo], locality[todo], skip)
+            got = found >= 0
+            out.put("sublocality", todo[got], self.named.key, found[got], const.INSIDE, PlaceKind.SUBLOCALITY)
+            todo = todo[~got]
+        rest = np.full(len(locality), -1, dtype=np.int64)
+        rest[todo] = locality[todo]
+        out.sublocality_inside(self.cities, self.csd, rest, local, local_km)
 
     def _city(self, out, lat, lon, locality, pop, st_rule):
         """Fill out.city by the roll-up rule; returns (the city's CSD row per point, -1 for none or

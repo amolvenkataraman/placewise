@@ -11,13 +11,15 @@ files are cited by file name only, so answers never carry the user's directory l
 """
 
 import dataclasses
+import heapq
 
 from placewise.model import Add, CityRule, Hide, Label, OverrideSet, RegionRule, Rename
 from placewise.model.overrides import RULE_TYPES
 
 from . import labels, names, places, regions
+from ._index import RuleIndex
 from .state import LIST_FIELDS, Entry, State, tag
-from .tuning import apply_tuning, knobs
+from .tuning import Tunes, knobs
 
 _TYPE_NAMES = {rule_type: name for name, rule_type in RULE_TYPES.items()}
 
@@ -36,7 +38,7 @@ _HANDLERS = {
 class OverrideEngine:
     """Rules from every layer, in the order they apply. Build one with `load_overrides`."""
 
-    __slots__ = ("_entries",)
+    __slots__ = ("_entries", "_index", "_tunes")
 
     def __init__(self, sets=()):
         """`sets`: OverrideSets, or (OverrideSet, base_dir) pairs for rules read from a file."""
@@ -46,6 +48,8 @@ class OverrideEngine:
             entries.extend(Entry(rule, override_set.layer, base_dir) for rule in override_set.rules)
         entries.sort(key=lambda e: e.layer.precedence)  # stable: file and rule order survive
         self._entries = tuple(entries)
+        self._index = None  # built on the first apply (it reads GeoJSON areas)
+        self._tunes = Tunes(self._entries)
 
     @classmethod
     def from_documents(cls, documents):
@@ -73,12 +77,21 @@ class OverrideEngine:
     def apply(self, result, lat, lon, relabel=None):
         """A new Result with every rule applied. `relabel(result) -> str`, if given, recomposes the
         label after a rule renamed something it shows (unless a label rule set the label text)."""
+        if self._index is None:
+            self._index = RuleIndex(self._entries, _HANDLERS)
         state = State(result)
-        for entry in self._entries:
-            handler = _HANDLERS.get(type(entry.rule))
-            if handler is not None:
-                handler(state, entry, lat, lon)
-        apply_tuning(self._entries, state)
+        entries, followers = self._entries, self._index.followers
+        queue = self._index.candidates(result, lat, lon)  # sorted, so a heap: rule order
+        queued = set(queue)
+        while queue:  # the rules left out would change nothing
+            i = heapq.heappop(queue)
+            entry = entries[i]
+            _HANDLERS[type(entry.rule)](state, entry, lat, lon)
+            for k in followers[i]:  # later rules waiting on an id this one may have added
+                if k not in queued:
+                    queued.add(k)
+                    heapq.heappush(queue, k)
+        self._tunes.apply(state)
 
         fields = dict(state.fields)
         for name in (*LIST_FIELDS, "near"):

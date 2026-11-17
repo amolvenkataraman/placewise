@@ -85,11 +85,36 @@ def _extract_members(tar, dest, top, max_bytes):
 
 
 def sha256_file(path):
-    digest = hashlib.sha256()
     with open(path, "rb") as f:
-        while chunk := f.read(const.CHUNK_BYTES):
-            digest.update(chunk)
-    return digest.hexdigest()
+        if hasattr(hashlib, "file_digest"):  # 3.11+: reads into one reused buffer
+            return hashlib.file_digest(f, "sha256").hexdigest()
+        digest = hashlib.sha256()
+        buffer = bytearray(const.CHUNK_BYTES)
+        view = memoryview(buffer)
+        while size := f.readinto(buffer):
+            digest.update(view[:size])
+        return digest.hexdigest()
+
+
+def _file_problem(path, size, sha):
+    """A problem with one listed file that is present, or None: the size first, then the hash."""
+    if (actual := path.stat().st_size) != size:
+        return f"{actual} bytes, {const.PACK_MANIFEST} says {size}"
+    if sha256_file(path) != sha:
+        return f"sha256 doesn't match {const.PACK_MANIFEST}"
+    return None
+
+
+def _file_problems(jobs):
+    """_file_problem for each (path, size, sha), in order; several files are hashed at once. An
+    error reading one is raised once the files before it are checked, as a plain loop would."""
+    workers = min(const.HASH_THREADS, os.cpu_count() or 1, len(jobs))
+    if workers <= 1:
+        return [_file_problem(*job) for job in jobs]
+    from concurrent.futures import ThreadPoolExecutor  # imports logging: only when it's needed
+
+    with ThreadPoolExecutor(workers) as pool:
+        return list(pool.map(lambda job: _file_problem(*job), jobs))
 
 
 def check_pack_dir(root, name, version, expected_from):
@@ -120,15 +145,12 @@ def check_pack_dir(root, name, version, expected_from):
     problems += bad
     present, odd = _files_on_disk(root)
     problems += odd
-    for rel in sorted(listed):
-        sha, size = listed[rel]
-        path = present.get(rel)
-        if path is None:
-            problems.append(f"{rel}: listed in {const.PACK_MANIFEST} but missing")
-        elif (actual := path.stat().st_size) != size:
-            problems.append(f"{rel}: {actual} bytes, {const.PACK_MANIFEST} says {size}")
-        elif sha256_file(path) != sha:
-            problems.append(f"{rel}: sha256 doesn't match {const.PACK_MANIFEST}")
+    order = sorted(listed)
+    found = iter(_file_problems([(present[r], listed[r][1], listed[r][0]) for r in order if r in present]))
+    for rel in order:
+        problem = next(found) if rel in present else f"listed in {const.PACK_MANIFEST} but missing"
+        if problem is not None:
+            problems.append(f"{rel}: {problem}")
     for rel in sorted(set(present) - set(listed) - {const.PACK_MANIFEST}):
         problems.append(f"{rel}: not listed in {const.PACK_MANIFEST}")
     return problems

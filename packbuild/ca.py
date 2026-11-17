@@ -1,7 +1,8 @@
 """The Canada pack: provinces, census divisions, census subdivisions (municipalities), CMAs/CAs and
-forward sortation areas from Statistics Canada's 2021 Census, with 2021 populations, the curated
-regions (GTA, GTHA ...) as unions of those units, and time-zone polygons by province, division and
-subdivision (datasets/timezones/can.json: packbuild.timezones).
+forward sortation areas from Statistics Canada's 2021 Census, with 2021 populations, the populated
+places of the Canadian Geographical Names Database (hamlets, communities, neighbourhoods), the
+curated regions (GTA, GTHA ...) as unions of those units, and time-zone polygons by province,
+division and subdivision (datasets/timezones/can.json: packbuild.timezones).
 
     uv run python -m packbuild.ca --version 2026.11
     uv run python -m packbuild.ca --version 2026.11 --via service   # StatCan's map service instead
@@ -22,6 +23,7 @@ from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .projection import STATCAN_LAMBERT
 from .sources import statcan, url
+from .sources.can import cgndb
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +44,8 @@ def build_layers(
     cache_dir, refresh=False, via="files", tolerance_m=statcan.DEFAULT_TOLERANCE_M, regions=None
 ):
     """The Canada layers, fetching (or reusing) the source files in `cache_dir`: the five StatCan
-    layers, then `regions` and `timezones`. via="files" reads the zipped shapefiles; via="service" the same
+    layers, CGNDB's `populated_places`, then `regions` and `timezones`. via="files" reads the zipped
+    shapefiles; via="service" the same
     boundaries from StatCan's map service."""
     if via not in VIAS:
         raise ValueError(f"via must be one of {', '.join(VIAS)}, not {via!r}")
@@ -78,7 +81,8 @@ def build_layers(
     population = statcan.read_population(*tables)
     paths = {layer: boundaries(source_id, name) for layer, (source_id, name, _) in LAYERS.items()}
     layers = [loader(paths[layer], population, tolerance_m) for layer, (_, _, loader) in LAYERS.items()]
-    return [*layers, regions_layer_of(layers, paths, regions, tolerance_m), timezones_layer(layers)]
+    named = cgndb.populated_places(get(url(cgndb.SOURCE, "populated_places")))
+    return [*layers, named, regions_layer_of(layers, paths, regions, tolerance_m), timezones_layer(layers)]
 
 
 def timezones_layer(layers):
@@ -136,7 +140,7 @@ def build_ca(
     """Fetch the sources, build the layers and write `<out_dir>/can-<version>/`."""
     layers = build_layers(cache_dir, refresh=refresh, via=via, tolerance_m=tolerance_m, regions=regions)
     for layer in layers:
-        vertices = sum(len(r) for f in layer.features for o in f.outlines for r in o.rings)
+        vertices = sum(len(r) for f in layer.features or () for o in f.outlines for r in o.rings)
         log.info("%s: %d features, %d vertices", layer.name, len(layer.columns["id"]), vertices)
     return write_pack(Path(out_dir), "can", version, layers)
 

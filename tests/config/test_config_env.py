@@ -3,6 +3,7 @@
 import pytest
 
 from placewise.config import ConfigError, load_settings
+from placewise.constants import config as const
 from placewise.model import Settings
 
 
@@ -56,3 +57,7 @@ def test_unknown_env_and_kwargs_are_errors():
         load_settings(path=False, env={}, near_airprot=5)
     with pytest.raises(ConfigError, match="airprot"):
         load_settings(path=False, env={}, near={"airprot": 5})
+
+
+def test_aliases_carry_the_prefix_from_env_filters_on():
+    assert all(name.startswith(const.ENV_PREFIX) for name in const.ENV_ALIASES)
