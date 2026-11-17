@@ -41,6 +41,26 @@
         },
         "notes": "Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025), which cover incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places) but not other census-designated places. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01). The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files."
       }
+    ],
+    "ca": [
+      {
+        "id": "statcan-population-2021",
+        "name": "Statistics Canada, 2021 Census of Population, population and dwelling counts",
+        "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201",
+        "licence": "LicenseRef-StatCan-Open-Licence",
+        "credit": "Adapted from Statistics Canada, Census of Population 2021, Population and dwelling counts (tables 98-10-0002-01, 98-10-0005-01 and 98-10-0019-01), reference date May 11, 2021. This does not constitute an endorsement by Statistics Canada of this product.",
+        "used_in": [
+          "ca/provinces",
+          "ca/cd",
+          "ca/csd",
+          "ca/cma",
+          "ca/fsa"
+        ],
+        "downloads": {
+          "csd": "https://www150.statcan.gc.ca/n1/tbl/csv/98100002-eng.zip"
+        },
+        "notes": "Full-table CSV downloads. 98-10-0002-01 covers Canada, provinces and territories, census divisions and census subdivisions; 98-10-0005-01 CMAs and CAs (whole and by provincial part); 98-10-0019-01 forward sortation areas. Joined to the boundaries on DGUID. 63 CSDs (incompletely enumerated Indian reserves and settlements) have no count (symbol '..'); they are stored as null, not zero."
+      }
     ]
   }
 }

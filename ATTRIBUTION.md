@@ -10,7 +10,10 @@ should still read each licence for its own obligations.
 | [OurAirports](https://ourairports.com/data/) | LicenseRef-public-domain | world/airports |
 | [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1 |
 | [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | us/states, us/counties, us/places, us/cbsa, us/csa, us/zcta |
+| [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | ca/provinces, ca/cd, ca/csd, ca/cma |
 | [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/cities |
+| [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | ca/provinces, ca/cd, ca/csd, ca/cma, ca/fsa |
+| [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | ca/fsa |
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | in/pincodes |
 | [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | in/pincodes, in/post_offices |
 
@@ -20,12 +23,16 @@ should still read each licence for its own obligations.
 |---|---|---|
 | airports | world | OurAirports |
 | boundaries | world | Natural Earth 1:10m Cultural Vectors |
+| boundaries | ca | Statistics Canada, 2021 Census Boundary Files (cartographic) |
 | boundaries | in | none: No openly licensed, redistributable state or district boundaries found yet (Survey of India data is not under an open licence; NWDP's terms are unclear; geoBoundaries is CC BY 2.5 IN or ODbL). Natural Earth admin1 covers states in the world pack. See packbuild/README.md, India pack. |
 | boundaries | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 | places | world | GeoNames |
+| places | ca | Statistics Canada, 2021 Census of Population, population and dwelling counts |
 | places | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| postal | ca | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
 | postal | in | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India) |
 | postal | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| regions | ca | Statistics Canada, 2021 Census Boundary Files (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
 | regions | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 
 ## OurAirports
@@ -52,6 +59,14 @@ Public domain (naturalearthdata.com/about/terms-of-use). Borders are de facto; p
 
 Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025), which cover incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places) but not other census-designated places. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01). The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files.
 
+## Statistics Canada, 2021 Census Boundary Files (cartographic)
+
+- Credit: Adapted from Statistics Canada, 2021 Census Boundary Files (cartographic), reference date January 1, 2021. This does not constitute an endorsement by Statistics Canada of this product.
+- Licence: LicenseRef-StatCan-Open-Licence
+- Website: https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21
+
+Statistics Canada Open Licence (statcan.gc.ca/en/terms-conditions/open-licence); the credit is the licence's required notice for value-added products (the pack reprojects and simplifies the boundaries). Catalogue 92-160-X, reference guide 92-160-G. Cartographic files: clipped to the shoreline (coastal water belongs to no area) but not generalised, with a vertex every few metres; the build simplifies them (Douglas-Peucker, 10 m, per feature). Published only in Statistics Canada Lambert (EPSG:3347, NAD83); the build unprojects to longitude/latitude and uses NAD83 as WGS84 (1-2 m apart in Canada). The zips (Shapefile) sit on www12.statcan.gc.ca, which answers scripted downloads with a browser check (HTTP 403); 'service' is StatCan's own ArcGIS REST service of the same 2021 cartographic files (layers lpr_000b21s_e etc.), which the build can read instead (--via service). Names are StatCan's official forms, some bilingual ('Greater Sudbury / Grand Sudbury'). The Open Government Portal lists the same files under the Open Government Licence - Canada.
+
 ## GeoNames
 
 - Credit: GeoNames (geonames.org), CC BY 4.0
@@ -59,6 +74,22 @@ Works of the US federal government are not subject to copyright (17 U.S.C. 105).
 - Website: https://www.geonames.org
 
 Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists.
+
+## Statistics Canada, 2021 Census of Population, population and dwelling counts
+
+- Credit: Adapted from Statistics Canada, Census of Population 2021, Population and dwelling counts (tables 98-10-0002-01, 98-10-0005-01 and 98-10-0019-01), reference date May 11, 2021. This does not constitute an endorsement by Statistics Canada of this product.
+- Licence: LicenseRef-StatCan-Open-Licence
+- Website: https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201
+
+Full-table CSV downloads. 98-10-0002-01 covers Canada, provinces and territories, census divisions and census subdivisions; 98-10-0005-01 CMAs and CAs (whole and by provincial part); 98-10-0019-01 forward sortation areas. Joined to the boundaries on DGUID. 63 CSDs (incompletely enumerated Indian reserves and settlements) have no count (symbol '..'); they are stored as null, not zero.
+
+## Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)
+
+- Credit: Adapted from Statistics Canada, 2021 Census Forward Sortation Area Boundary File, reference date January 1, 2021. This does not constitute an endorsement by Statistics Canada of this product. This data includes information copied with permission from Canada Post Corporation. Postal code is an official mark of Canada Post.
+- Licence: LicenseRef-StatCan-Open-Licence
+- Website: https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X
+
+Catalogue 92-179-X, reference guide 92-179-G, whose use is governed by the Statistics Canada Open Licence; the guide carries the Canada Post notice repeated in the credit. 1,643 census FSAs (first three characters of the postal code) built from the postal codes census respondents reported: each dissemination area is assigned one FSA, so boundaries follow dissemination areas and can differ from Canada Post's delivery FSAs. Full six-character postal codes and their locations are Canada Post data, not open data, and are not used anywhere in placewise. Same projection, download and browser-check notes as statcan-boundaries-2021; the service is layer lfsa000b21s_e of the same map service.
 
 ## All India Pincode Boundary (Department of Posts, Open Government Data Platform India)
 
