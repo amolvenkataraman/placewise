@@ -62,6 +62,7 @@ Everything comes from the US Census Bureau (registry id `uscensus`, public domai
 | `cbsa` | polygon | CB 2025 CBSA 1:500k + delineation list 1 | `type` (metro / micro), `csa`, `counties` |
 | `csa` | polygon | CB 2025 CSA 1:500k + delineation list 1 | `cbsas`, `counties` |
 | `zcta` | polygon | CB 2020 ZCTA5 1:500k + 2025 gazetteer | `aland`, `intpt_lat/lon` |
+| `regions` | polygon | curated regions as unions of counties (see [Regions layer](#regions-layer-us-canada-and-india-packs)) | `kind`, `members`, `aliases`, `area_km2` |
 
 Ids: `census:<GEOID>` for places and counties; `census:cbsa:<code>`, `census:csa:<code>` and
 `census:zcta:<zcta>` for the rest, because those GEOIDs collide with each other and with county
@@ -102,6 +103,7 @@ uv run python -m packbuild.ca --version 2026.11 --via service   # writes .cache/
 | `csd` | polygon | ... census subdivisions (`lcsd000b21a_e`): municipalities (Milton, Toronto), reserves, unorganised areas | StatCan Open Licence |
 | `cma` | polygon | ... census metropolitan areas and agglomerations (`lcma000b21a_e`) | StatCan Open Licence |
 | `fsa` | polygon | 2021 Census forward sortation area boundary file (`lfsa000b21a_e`) | StatCan Open Licence, with Canada Post's notice |
+| `regions` | polygon | curated regions as unions of CDs, CSDs or CMAs (see [Regions layer](#regions-layer-us-canada-and-india-packs)) | CC BY 4.0 + StatCan Open Licence |
 
 Populations (`population`, null when StatCan suppresses the count) come from the census population
 and dwelling count tables 98-10-0002-01 (provinces, CDs, CSDs), 98-10-0005-01 (CMAs/CAs) and
@@ -144,13 +146,13 @@ before unprojecting (`--tolerance-m`, 0 to keep everything). Each feature is sim
 so neighbours' shared borders can differ by up to the tolerance; rings smaller than it (rocks,
 islets) are dropped, but a feature never loses its last ring.
 
+**Metro regions.** CMAs are StatCan's commuting-based units, but the GTHA (Greater Toronto and
+Hamilton Area) is not a CMA: Toronto, Hamilton and Oshawa are separate CMAs, Burlington (Halton) is
+in the Hamilton CMA and the Toronto CMA takes in part of Simcoe County. So the GTA, GTHA and Golden
+Horseshoe are curated as unions of census divisions (and one CSD) in the `regions` layer below.
+
 **Not here:**
 
-- *Metro regions.* CMAs are StatCan's commuting-based units and a basis for metro regions, but the
-  GTHA (Greater Toronto and Hamilton Area) is not a CMA: Toronto, Hamilton and Oshawa are separate
-  CMAs, Burlington (Halton) is in the Hamilton CMA and the Toronto CMA takes in part of Simcoe
-  County. A GTHA region needs to be curated later, e.g. as the CDs Toronto, Durham, York, Peel,
-  Halton and Hamilton.
 - *Postal codes.* FSAs are the first three characters of the postal code; these are StatCan's
   census FSAs (one per dissemination area, from the postal codes respondents reported), which can
   differ from Canada Post's delivery areas (the CN Tower is in census FSA M5J although its postal
@@ -169,6 +171,7 @@ uv run python -m packbuild.india --version 2026.11 \
 |---|---|---|---|
 | `pincodes` | polygon | All India Pincode Boundary (Department of Posts, 2025), district and state joined from the directory | GODL-India |
 | `post_offices` | point | All India Pincode Directory (Department of Posts): offices with usable coordinates | GODL-India |
+| `regions` | polygon | curated regions as unions of PIN areas grouped by district (see [Regions layer](#regions-layer-us-canada-and-india-packs)) | CC BY 4.0 + GODL-India |
 
 Registry: `indiapost-pincode-boundary`, `indiapost-pincode-directory`. Ids: `pin:560001`;
 `indiapost:<pincode>:<office name>` (`#2`, `#3`, ... when a name repeats under one PIN code).
@@ -209,6 +212,47 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
   countries administer; Natural Earth's world admin1 is de facto.
 - *Census 2011 towns.* The Town Directory has no coordinates; GeoNames in the world pack covers
   towns.
+
+## Regions layer (US, Canada and India packs)
+
+Each country pack ends with a `regions` polygon layer: the curated regions of
+`datasets/regions/{usa,can,ind}.json` (CC BY 4.0, `datasets/LICENSE.md`; registry id
+`placewise-regions`), each drawn as the union of its `members`, which are features of the same
+pack. `packbuild/regions_layer.py` builds it; every country builder calls it last.
+
+| Column | |
+|---|---|
+| `id` | `region:gta`, `region:sf-bay-area`, `region:delhi-ncr` ... (the dataset id) |
+| `name`, `short_name` | "Greater Toronto Area", "GTA" |
+| `kind` | `metro` (OMB MSA/CSA, StatCan CMA), `official-planning` (an area a public body plans or governs as one: ABAG, Metrolinx, the NCR Planning Board), `vernacular` (a name in common use, drawn with official units) |
+| `country` | ISO 3166-1 alpha-2 |
+| `members` | comma-separated member ids: `census:06075`, `statcan:3520`, `pin:110001` |
+| `aliases` | pipe-separated |
+| `area_km2` | the union's area on the sphere |
+
+Rows are smallest first, so `query` returns the most specific region and `query_all` every region
+of a point (CN Tower: GTA, GTHA, Golden Horseshoe). Regions overlap freely.
+
+- **Members.** US regions are counties (`census:<GEOID>`: the July 2023 OMB delineation for
+  metros, ABAG's nine counties for the Bay Area); Canada regions are census divisions, subdivisions
+  or CMAs (`statcan:<UID>`). India has no openly licensed district polygons (see the India pack),
+  so an India region lists the districts its definition names (`districts`, spelled as the India
+  Post directory spells them) and its members are the PIN areas filed under them. A PIN area can
+  cross a district line, so those outlines are the postal approximation of the districts.
+- **Build-time checks.** A member missing from the pack's layers, a region with no members, or
+  (India) members that are not exactly the PIN areas of the listed districts fail the build with
+  every problem listed: fix the dataset, never the build.
+- **Union.** No geometry library: member rings are cut into directed edges, edges two members
+  share (once each way) are dropped and the rest stitched into simple rings. Removing a pair of
+  coincident edges changes no point's even-odd count, so the union answers exactly as its members'
+  rings would, without the internal borders. Census and India Post boundaries share their borders'
+  vertices, so their unions come out clean (the NCR's 520 PIN areas make 11 rings). StatCan layers
+  are simplified per feature, so simplified neighbours overlap or gap by up to 10 m, and under
+  even-odd an overlap would fall outside the region; the Canada build therefore reads the members'
+  rings again unsimplified (`statcan.raw_rings`), dissolves them and simplifies the union once.
+- **Location search.** `packbuild.regions` also generates `constants/countries/regions.py` from the
+  same files. A region with `search_as` (the GTHA, the Delhi NCR core, the Bengaluru Metropolitan
+  Region) has no entry there: location search reads its names as the region it names.
 
 ## Releasing data
 
