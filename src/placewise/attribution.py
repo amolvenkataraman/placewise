@@ -113,13 +113,28 @@ should still read each licence for its own obligations.
 """
 
 
-def render_markdown(sources=None, registry=None, gaps=None):
+_SUBSET_INTRO = """\
+# Data attribution
+
+The datasets the data packs published with this file are built from, with each one's licence and
+the credit line to show, generated from placewise's source registry. placewise's own
+ATTRIBUTION.md lists every source it uses. An app that ships or displays this data should still
+read each licence for its own obligations.
+"""
+
+
+def render_markdown(sources=None, registry=None, gaps=None, only=None):
     """ATTRIBUTION.md: a summary table, coverage by purpose and region, then each source's credit
-    line, licence and notes."""
+    line, licence and notes. `only` (source ids) narrows it to those sources and the regions they
+    serve, for a data release; an unknown id is a KeyError."""
     sources = load_sources() if sources is None else sources
     registry = load_registry() if registry is None else registry
     gaps = load_gaps() if gaps is None else gaps
-    lines = [_INTRO, "| Source | Licence | Used in |", "|---|---|---|"]
+    intro = _INTRO
+    if only is not None:
+        sources, registry, gaps = _subset(set(only), sources, registry, gaps)
+        intro = _SUBSET_INTRO
+    lines = [intro, "| Source | Licence | Used in |", "|---|---|---|"]
     for s in sources.values():
         lines.append(f"| [{s.name}]({s.url}) | {s.licence} | {', '.join(s.used_in) or '-'} |")
     lines += ["", "## Coverage", "", "| Purpose | Region | Sources |", "|---|---|---|"]
@@ -137,3 +152,16 @@ def render_markdown(sources=None, registry=None, gaps=None):
         if s.notes:
             lines += ["", s.notes]
     return "\n".join(lines) + "\n"
+
+
+def _subset(ids, sources, registry, gaps):
+    if unknown := sorted(ids - set(sources)):
+        raise KeyError(f"no source(s) {', '.join(unknown)} in the registry")
+    sources = {k: s for k, s in sources.items() if k in ids}
+    registry = {
+        purpose: {r: kept for r, ss in regions.items() if (kept := tuple(s for s in ss if s.id in ids))}
+        for purpose, regions in registry.items()
+    }
+    served = {r for regions in registry.values() for r in regions}
+    gaps = {purpose: {r: why for r, why in g.items() if r in served} for purpose, g in gaps.items()}
+    return sources, registry, gaps

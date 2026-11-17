@@ -92,6 +92,9 @@ Packs are memory-mapped and checksummed (format: `docs/pack-format.md`). Data so
 airports ...) giving the sources used in each region, and `ATTRIBUTION.md` is generated from them,
 so an app that ships placewise data can link to that one file.
 
+Packs are published as release assets of `amolvenkataraman/placewise-data` (`index.json` plus one
+`.tar.xz` per pack); any copy of a release's files works as a mirror (`--index-url`, `data.mirrors`).
+
 ## Conventions
 
 - Coordinates are WGS84 degrees, always in `(lat, lon)` order (GeoJSON uses `(lon, lat)`).

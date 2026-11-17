@@ -119,7 +119,15 @@ Cloudflare browser check (HTTP 403, seen November 2026), so `--via files` (the d
 where that check lets you through. `--via service` reads the same 2021 cartographic files from
 Statistics Canada's own ArcGIS REST service (geo.statcan.gc.ca, layers `lcsd000b21s_e` etc.: the
 `s` is StatCan's file-name code for "services"), in pages of Esri JSON in the native projection,
-cached under `.cache/packbuild/<layer>/` with a `<layer>.json` sidecar.
+cached under `.cache/packbuild/<layer>/` with a `<layer>.json` sidecar. The service's gateway gives
+up after 60 s, which the largest boundaries don't fit in at full resolution (Ontario alone times
+out; Nunavut has 190,000 km of coastline), so requests are planned by perimeter (`SHAPE_Length`):
+OBJECTID ranges of at most 8,000 km, features over 10,000 km alone, and features over 15,000 km
+generalised by the service itself (`maxAllowableOffset`, about 1 m per 600 km of perimeter, 25 to
+400 m in practice). The sidecar's `generalised_m` lists them; they are the big northern and coastal
+units (Nunavut, NWT, Labrador, Nord-du-Québec, the BC coast, Ontario's Hudson Bay shore), whose
+length is mostly coastline; their borders, too, can move by up to the offset. `--via files` reads
+every feature at full resolution.
 
 **Projection.** StatCan publishes the boundary files only in Statistics Canada Lambert (EPSG:3347,
 NAD83), never in longitude/latitude, and `placewise.io.read_shapefile` refuses projected files.
@@ -200,3 +208,53 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
   countries administer; Natural Earth's world admin1 is de facto.
 - *Census 2011 towns.* The Town Directory has no coordinates; GeoNames in the world pack covers
   towns.
+
+## Releasing data
+
+Packs are published as GitHub release assets of `amolvenkataraman/placewise-data` (no data in its
+git history; see its README). placewise's default index URL is that repository's
+`releases/latest/download/index.json`, so **every release must list every pack**: an unchanged
+pack is released again under the new tag.
+
+```
+# 1. build the packs (each writes .cache/packbuild/out/<name>-<version>/)
+uv run python -m packbuild.world --version 2026.11
+uv run python -m packbuild.us --version 2026.11
+
+# 2. prepare: verify, archive, index (nothing is uploaded; prints the gh command it would run)
+uv run python -m packbuild.release \
+    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/us-2026.11 \
+    --out .cache/packbuild/release/2026.11
+
+# 3. test the release directory as placewise would use it
+uv run placewise --data-dir /tmp/pw-test \
+    --index-url file://$PWD/.cache/packbuild/release/2026.11/index.json data install world
+uv run placewise --data-dir /tmp/pw-test \
+    --index-url file://$PWD/.cache/packbuild/release/2026.11/index.json data verify
+
+# 4. publish (needs both the flag and the environment switch; uses gh's login)
+PLACEWISE_ALLOW_PUBLISH=1 uv run python -m packbuild.release \
+    --packs .cache/packbuild/out/world-2026.11 .cache/packbuild/out/us-2026.11 \
+    --out .cache/packbuild/release/2026.11 --publish [--tag 2026.11]
+```
+
+`packbuild.release.prepare_release(pack_dirs, out_dir)` re-hashes every pack (`open_pack(verify=True)`)
+and refuses a pack name given twice, a pack schema other than the index's, a directory not named
+`<name>-<version>` and a source id missing from the registry. It writes into `--out`:
+
+| File | |
+|---|---|
+| `<name>-<version>.tar.xz` | `placewise.packs.archive`: byte-for-byte reproducible from the pack's contents |
+| `index.json` | `write_index`: relative URLs, so the directory is a complete mirror |
+| `ATTRIBUTION.md` | `attribution.render_markdown(only=...)`: just the sources these packs use |
+| `SHA256SUMS` | for `sha256sum -c` |
+| `release-notes.md` | the release description (`--notes-file`), not an asset |
+
+`publish(plan, repo=..., tag=None, dry_run=True)` builds `gh release create <tag> --repo <repo>
+--title "placewise data <tag>" --notes-file release-notes.md --latest <assets>`; the tag defaults to
+the newest pack version. It only prints the command unless `dry_run=False` and
+`PLACEWISE_ALLOW_PUBLISH=1`.
+
+Before the first real release: placewise downloads anonymously, so the data repository must be
+public (assets of a private repository's releases need a token). GitHub caps each release asset
+at 2 GiB.

@@ -118,3 +118,15 @@ def test_cli_prints_the_attribution(capsys):
     assert capsys.readouterr().out == attribution.render_markdown()
     assert main(["attribution", "--json"]) == 0
     assert set(json.loads(capsys.readouterr().out)) == set(attribution.load_sources())
+
+
+def test_attribution_for_a_subset_lists_only_those_sources_and_their_regions():
+    # a release's ATTRIBUTION.md: only the sources its packs use
+    text = attribution.render_markdown(only=["naturalearth", "geonames"])
+    assert "## Natural Earth" in text and "## GeoNames" in text
+    assert "OurAirports" not in text and "Census" not in text
+    assert "| boundaries | world | Natural Earth" in text and "| boundaries | us |" not in text
+    assert "placewise attribution" not in text  # not the generated whole-registry file
+    assert attribution.render_markdown(only=["uscensus", "uscensus"]).count("## US Census") == 1
+    with pytest.raises(KeyError, match="nope"):
+        attribution.render_markdown(only=["naturalearth", "nope"])
