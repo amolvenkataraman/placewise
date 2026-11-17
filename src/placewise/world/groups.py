@@ -54,8 +54,15 @@ def _by_name():
     return {key(n): g.id for g in _all().values() for n in (g.name, *g.aliases)}
 
 
+@functools.cache
 def _kinds():
-    return sorted({g.kind for g in _all().values()})
+    return tuple(sorted({g.kind for g in _all().values()}))
+
+
+@functools.cache
+def _sorted():
+    """Every group, sorted by name."""
+    return tuple(sorted(_all().values(), key=lambda g: g.name))
 
 
 def group(x):
@@ -73,7 +80,19 @@ def group(x):
 
 def codes(g, on):
     """The alpha-2 codes of a group's members on `on` (YYYY-MM-DD); geographic groups are undated."""
-    return {m.country for m in g.members if _resolve.active(m, on)}
+    return set(_codes(g, on))
+
+
+def _codes(g, on):
+    """`codes` as a frozenset, worked out once per group and day for the groups in the tables."""
+    if _all().get(g.id) is g:
+        return _table_codes(g.id, on)
+    return frozenset(m.country for m in g.members if _resolve.active(m, on))
+
+
+@functools.lru_cache(maxsize=1 << 14)
+def _table_codes(gid, on):
+    return frozenset(m.country for m in _all()[gid].members if _resolve.active(m, on))
 
 
 def groups(of=None, kind=None, category=None, as_of=None):
@@ -85,14 +104,13 @@ def groups(of=None, kind=None, category=None, as_of=None):
         raise ValueError(f"kind {kind!r} is not one of {', '.join(_kinds())}")
     on = _resolve.day(as_of)
     alpha2 = _country(of).alpha2 if of is not None else None
-    found = [
+    return [
         g
-        for g in _all().values()
+        for g in _sorted()
         if (kind is None or g.kind == kind)
         and (category is None or g.category == category)
-        and (alpha2 is None or alpha2 in codes(g, on))
+        and (alpha2 is None or alpha2 in _codes(g, on))
     ]
-    return sorted(found, key=lambda g: g.name)
 
 
 def members(g, as_of=None):
@@ -104,4 +122,4 @@ def members(g, as_of=None):
 
 def is_member(country, g, on=None):
     """Was `country` in group `g` on `on` (default today)?"""
-    return _country(country).alpha2 in codes(group(g), _resolve.day(on))
+    return _country(country).alpha2 in _codes(group(g), _resolve.day(on))

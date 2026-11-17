@@ -36,6 +36,8 @@ INDEX_MAX_BYTES = 4 * 1024 * 1024  # an index is a few hundred bytes per pack
 # disk before the hash check gets to fail; the hash is the real check, so a little leeway is free.
 DOWNLOAD_SLACK_BYTES = 64 * 1024
 CHUNK_BYTES = 1024 * 1024
+# files hashed at once when checking a pack (hashlib releases the GIL, so threads use more cores)
+HASH_THREADS = 8
 
 # Decompression-bomb guards: the archive's hash is trusted only as far as the index is, so the
 # unpacked size is capped too. Packs are numeric arrays that xz shrinks a few times at most.

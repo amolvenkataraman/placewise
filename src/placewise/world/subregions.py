@@ -48,9 +48,23 @@ def subregions(country, kind=None):
     return list(found)
 
 
+@functools.cache
+def _by_short_code(alpha2):
+    out = {}
+    for s in _all(alpha2):
+        out.setdefault(s.short_code, s)
+    return out
+
+
+@functools.cache
+def _name_keys():
+    """Normalised names and aliases of every subdivision in every table."""
+    return frozenset(key(n) for a in TABLES for s in _all(a) for n in (s.name, *s.aliases))
+
+
 def _in(alpha2, text):
     short = TABLES[alpha2].lookup(text)
-    return next((s for s in _all(alpha2) if s.short_code == short), None) if short else None
+    return _by_short_code(alpha2).get(short) if short else None
 
 
 def subregion(x, country=None):
@@ -69,7 +83,7 @@ def subregion(x, country=None):
             )
         return found
     prefixed = _ISO_3166_2.fullmatch(text)
-    if prefixed and key(text) not in {key(n) for a in TABLES for s in _all(a) for n in (s.name, *s.aliases)}:
+    if prefixed and key(text) not in _name_keys():
         return subregion(prefixed.group(2), country=prefixed.group(1).upper())
     matches = [s for alpha2 in TABLES if (s := _in(alpha2, text)) is not None]
     if len(matches) > 1:
