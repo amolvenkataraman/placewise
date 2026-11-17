@@ -41,7 +41,13 @@ class IndexMixin:
             self._write_cache(index)
             self._index = index
             return dict(index.packs)
-        raise DownloadError("couldn't fetch the pack index: " + "; ".join(failures))
+        message = "couldn't fetch the pack index: " + "; ".join(failures)
+        if self.index_url == const.DEFAULT_INDEX_URL:
+            message += (
+                ". To use another release (a mirror or a local build), set data.index_url in"
+                " placewise.toml, PLACEWISE_INDEX_URL, or --index-url"
+            )
+        raise DownloadError(message)
 
     def available(self) -> dict[str, PackInfo]:
         """The packs the index offers, by name."""

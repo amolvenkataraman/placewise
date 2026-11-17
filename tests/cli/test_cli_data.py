@@ -149,3 +149,25 @@ def test_usage_errors_exit_2(capsys, argv):
 def test_help_exits_0(capsys):
     assert main(["--help"]) == 0
     assert "data" in capsys.readouterr().out
+
+
+def test_data_commands_read_placewise_toml(capsys, tmp_path, monkeypatch, release):
+    # with no options or env, the config file decides where packs come from and go
+    release.add("world", "2026.11")
+    monkeypatch.delenv("PLACEWISE_INDEX_URL")
+    monkeypatch.delenv("PLACEWISE_DATA_DIR")
+    config = tmp_path / "placewise.toml"
+    config.write_text(f'[data]\nindex_url = "{release.index_url}"\ndata_dir = "{tmp_path / "toml-data"}"\n')
+    monkeypatch.setenv("PLACEWISE_CONFIG", str(config))
+    assert main(["data", "install", "world"]) == 0
+    assert (tmp_path / "toml-data" / "packs" / "world-2026.11").is_dir()
+    assert main(["data", "where"]) == 0
+    assert capsys.readouterr().out.strip().endswith(str(tmp_path / "toml-data"))
+
+
+def test_options_beat_placewise_toml(capsys, tmp_path, monkeypatch, data_dir):
+    config = tmp_path / "placewise.toml"
+    config.write_text(f'[data]\ndata_dir = "{tmp_path / "toml-data"}"\n')
+    monkeypatch.setenv("PLACEWISE_CONFIG", str(config))
+    assert main(["--data-dir", str(data_dir), "data", "where"]) == 0
+    assert capsys.readouterr().out.strip() == str(data_dir)

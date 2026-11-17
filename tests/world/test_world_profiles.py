@@ -93,3 +93,26 @@ def test_lazy_top_level_profile():
     import placewise
 
     assert placewise.profile is world.profile
+
+
+def test_profile_uses_the_configured_store(monkeypatch, tmp_path):
+    # placewise.toml / env decide where the world pack comes from, as they do for lookup
+    import placewise.config
+    import placewise.store
+    from placewise.model import DataSettings, Settings
+
+    seen = {}
+
+    class FakeStore:
+        def __init__(self, data_dir=None, settings=None, index_url=None):
+            seen["settings"] = settings
+
+        def ensure(self, name):
+            raise placewise.store.StoreError("no pack in this test")
+
+    settings = Settings(data=DataSettings(data_dir=str(tmp_path / "configured")))
+    monkeypatch.setattr(placewise.config, "load_settings", lambda *a, **k: settings)
+    monkeypatch.setattr(placewise.store, "Store", FakeStore)
+    with pytest.raises(LookupError):
+        world.profile("CA")
+    assert seen["settings"] == settings.data

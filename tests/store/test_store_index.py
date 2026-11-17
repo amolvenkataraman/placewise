@@ -142,3 +142,17 @@ def test_offline_ensure_returns_an_installed_pack(data_dir, release):
     path = make_store(data_dir, release).install("world")
     (release.root / "index.json").unlink()
     assert make_store(data_dir, release, offline=True).ensure("world") == path
+
+
+def test_unreachable_default_index_explains_how_to_point_elsewhere(tmp_path, monkeypatch):
+    from placewise.constants import store as store_const
+    from placewise.store import DownloadError, Store, net
+
+    def not_found(url, limit):
+        raise DownloadError("HTTP 404 Not Found")
+
+    monkeypatch.setattr(net, "fetch_bytes", not_found)
+    store = Store(tmp_path, index_url=store_const.DEFAULT_INDEX_URL)
+    with pytest.raises(DownloadError, match="index_url") as caught:
+        store.fetch_index()
+    assert "PLACEWISE_INDEX_URL" in str(caught.value) and "--index-url" in str(caught.value)

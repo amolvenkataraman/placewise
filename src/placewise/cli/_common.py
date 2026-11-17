@@ -2,8 +2,9 @@
 options describe, one-line error text and argparse value types."""
 
 import argparse
+import dataclasses
 
-from placewise.model import DataSettings
+from placewise.config import load_settings
 from placewise.store import Store
 
 
@@ -32,7 +33,10 @@ def subparser(commands, name, help_text):
 
 
 def open_store(args):
-    settings = DataSettings(offline=args.offline)
+    """The Store placewise.toml and the environment describe, with command-line options on top."""
+    settings = load_settings().data
+    if args.offline:
+        settings = dataclasses.replace(settings, offline=True)
     return Store(args.data_dir, settings, index_url=args.index_url)
 
 

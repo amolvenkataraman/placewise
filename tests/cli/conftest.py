@@ -10,6 +10,10 @@ def _no_real_network_home_or_keys(tmp_path, monkeypatch):
     monkeypatch.setenv("PLACEWISE_INDEX_URL", (tmp_path / "no-index-here" / "index.json").as_uri())
     monkeypatch.setenv("PLACEWISE_DATA_DIR", str(tmp_path / "env-data"))
     monkeypatch.setenv("PLACEWISE_KEYS_FILE", str(tmp_path / "env-keys" / "keys.json"))
+    # and never the developer's own placewise.toml (cwd or ~/.config)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "env-config"))
+    monkeypatch.delenv("PLACEWISE_CONFIG", raising=False)
+    monkeypatch.chdir(tmp_path)
 
 
 @pytest.fixture

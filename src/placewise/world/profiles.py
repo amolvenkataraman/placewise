@@ -37,11 +37,14 @@ def _from_path(path):
 
 
 def _installed(store):
-    from placewise.store import Store, StoreError
+    import placewise.config
+    import placewise.store
 
     try:
-        return (store or Store()).ensure(PACK)
-    except (StoreError, OSError) as e:
+        if store is None:  # placewise.toml and env decide where packs come from, as for lookup
+            store = placewise.store.Store(settings=placewise.config.load_settings().data)
+        return store.ensure(PACK)
+    except (placewise.store.StoreError, OSError) as e:
         raise LookupError(
             f"country profiles read the {PACK} pack's {FACTS_LAYER} layer, and no {PACK} pack is "
             f"available ({e}); install it with: {INSTALL_HINT}"
