@@ -1,0 +1,28 @@
+# Repo overrides: shipped with placewise, inherited by every install, beaten by app and local rules.
+# Format: docs/overrides.md. Keep rules public and uncontroversial; cite a reason in a comment.
+#
+# aliases.json is this file's JSON twin for Python 3.10 without tomli. Edit this file, then
+# regenerate the twin (docs/overrides.md has the one-liner); a test checks they agree.
+
+# Common short names for metro regions. The ids are placeholders until region entities exist in
+# the packs; forward search maps the short name to whichever entity holds the id.
+
+[[alias]]
+text = "GTA"
+means = "placewise:region/gta"  # Greater Toronto Area
+country = "CA"
+
+[[alias]]
+text = "Greater Toronto Area"
+means = "placewise:region/gta"
+country = "CA"
+
+[[alias]]
+text = "Bay Area"
+means = "placewise:region/sf-bay-area"  # San Francisco Bay Area
+country = "US"
+
+[[alias]]
+text = "SF Bay Area"
+means = "placewise:region/sf-bay-area"
+country = "US"

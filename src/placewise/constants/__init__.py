@@ -1,6 +1,7 @@
 """Every constant placewise uses, one module per subject, so each value has exactly one home."""
 
 from . import (
+    config,
     crs,
     defaults,
     distance,
@@ -11,6 +12,7 @@ from . import (
     kml,
     licences,
     nmea,
+    overrides,
     packs,
     plus_codes,
     polylines,
@@ -27,6 +29,7 @@ from . import (
 )
 
 __all__ = [
+    "config",
     "crs",
     "defaults",
     "distance",
@@ -37,6 +40,7 @@ __all__ = [
     "kml",
     "licences",
     "nmea",
+    "overrides",
     "packs",
     "plus_codes",
     "polylines",

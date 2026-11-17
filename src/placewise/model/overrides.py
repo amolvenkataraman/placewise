@@ -1,7 +1,13 @@
 """Manual overrides: rules that beat the data. Layers stack data < repo < app < local."""
 
+import functools
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
+
+import numpy as np
+
+from placewise.geo.distances import haversine
 
 from ._base import Model, set_field
 from .geometry import BBox, Point
@@ -21,18 +27,81 @@ class Layer(Enum):
 
 @dataclass(frozen=True, slots=True)
 class AreaSelector(Model):
-    """Exactly one of: point + km radius, a bbox, or a GeoJSON file path."""
+    """Exactly one of: point + km radius, a bbox, a GeoJSON file path, a place id (the answer
+    mentions that place: its admin chain, regions or within) or an ISO 3166-1 alpha-2 country."""
 
     point: Point | None = None
     km: float | None = None
     bbox: BBox | None = None
-    geojson: str | None = None
+    geojson: str | None = None  # relative paths resolve against the overrides file's directory
+    place: str | None = None
+    country: str | None = None
 
     def __post_init__(self):
-        if sum(x is not None for x in (self.point, self.bbox, self.geojson)) != 1:
-            raise ValueError("an area is exactly one of: point + km, bbox, geojson")
+        shapes = (self.point, self.bbox, self.geojson, self.place, self.country)
+        if sum(x is not None for x in shapes) != 1:
+            raise ValueError("an area is exactly one of: point + km, bbox, geojson, place, country")
         if (self.point is None) != (self.km is None) or (self.km is not None and self.km <= 0):
             raise ValueError("a point area needs a positive km radius (and km needs a point)")
+        if self.country is not None:
+            code = str(self.country).upper()
+            if len(code) != 2 or not code.isalpha():
+                raise ValueError(f"area country must be an ISO 3166-1 alpha-2 code, not {self.country!r}")
+            set_field(self, "country", code)
+
+    def matches(self, lat, lon, *, cc=None, place_ids=None, base_dir=None):
+        """Which points lie in the area. Scalars give a bool; arrays give a bool array.
+
+        Point, bbox and GeoJSON areas need only coordinates. A country area compares `cc` (a code,
+        or an array of codes, one per point); a place area looks its id up in `place_ids` (a set
+        of ids for one point, or a sequence of sets, one per point)."""
+        lat, lon = np.broadcast_arrays(np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64))
+        if self.point is not None:
+            inside = np.asarray(haversine(self.point.lat, self.point.lon, lat, lon)) <= self.km
+        elif self.bbox is not None:
+            inside = np.asarray(self.bbox.contains(lat, lon))
+        elif self.geojson is not None:
+            features = _geojson_features(_resolve(self.geojson, base_dir))
+            inside = np.zeros(lat.shape, dtype=bool)
+            for feature in features:
+                inside |= np.asarray(feature.contains(lat, lon))
+        elif self.country is not None:
+            codes = np.asarray(cc if cc is not None else "", dtype=object)
+            inside = np.broadcast_to(
+                np.vectorize(_same_country, otypes=[bool])(codes, self.country), lat.shape
+            )
+        else:
+            inside = np.broadcast_to(_has_place(place_ids, self.place, lat.ndim), lat.shape)
+        return bool(inside) if inside.ndim == 0 else np.array(inside, dtype=bool)
+
+
+def _same_country(code, wanted):
+    return isinstance(code, str) and code.upper() == wanted
+
+
+def _has_place(place_ids, wanted, ndim):
+    if place_ids is None:
+        return np.asarray(False)
+    if ndim == 0:
+        return np.asarray(wanted in place_ids)
+    return np.array([wanted in (ids or ()) for ids in place_ids], dtype=bool)
+
+
+def _resolve(path, base_dir):
+    path = Path(path).expanduser()
+    if not path.is_absolute() and base_dir is not None:
+        path = Path(base_dir) / path
+    return str(path.resolve())
+
+
+@functools.lru_cache(maxsize=64)
+def _geojson_features(path):
+    from placewise.io.geojson import read_geojson  # io builds on the model, so import late
+
+    features = read_geojson(path)
+    if not features:
+        raise ValueError(f"{path}: no polygons in this GeoJSON")
+    return tuple(features)
 
 
 # answer fields a `label` rule may set
@@ -64,9 +133,18 @@ class Label(Model):
 
 @dataclass(frozen=True, slots=True)
 class CityRule(Model):
-    locality: str  # locality id
-    city: str
+    """Show `city` as the display city for one locality id, or for every point in an area."""
+
+    locality: str | None = None  # locality id
+    city: str = ""
     origin: str | None = None
+    within: AreaSelector | None = None
+
+    def __post_init__(self):
+        if not self.city:
+            raise ValueError("a city rule needs a city")
+        if (self.locality is None) == (self.within is None):
+            raise ValueError("a city rule targets exactly one of: locality, within")
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +186,7 @@ class Add(Model):
     radius_m: float = 100.0
     id: str | None = None
     origin: str | None = None
+    within: AreaSelector | None = None  # match this area instead of point + radius_m
 
     def __post_init__(self):
         set_field(self, "kind", PlaceKind(self.kind))
@@ -152,13 +231,30 @@ class OverrideSet:
 
     @classmethod
     def from_dict(cls, layer, document, origin=None):
-        """Rules from a parsed overrides file; each rule remembers "file#n" so answers can cite it."""
+        """Rules from a parsed overrides file; each rule remembers "file#n" so answers can cite it.
+        Errors name the file and the rule number, counted through the file across all tables."""
+        where = f"{origin}: " if origin else ""
+        if not isinstance(document, dict):
+            raise ValueError(f"{where}an overrides document is a mapping of [[type]] tables")
         rules = []
         for table, entries in document.items():
+            n = len(rules) + 1
             rule_type = RULE_TYPES.get(table)
             if rule_type is None:
-                raise ValueError(f"unknown override type [[{table}]]; known: {', '.join(RULE_TYPES)}")
+                raise ValueError(
+                    f"{where}rule #{n}: unknown override type [[{table}]]; known: {', '.join(RULE_TYPES)}"
+                )
+            if not isinstance(entries, list | tuple):
+                raise ValueError(f"{where}rule #{n}: write [[{table}]] (an array of tables), not [{table}]")
             for entry in entries:
-                tag = f"{origin}#{len(rules) + 1}" if origin else None
-                rules.append(rule_type.from_dict({**entry, "origin": tag}))
+                n = len(rules) + 1
+                tag = f"{origin}#{n}" if origin else None
+                try:
+                    if not isinstance(entry, dict):
+                        raise ValueError(f"expected a table, got {type(entry).__name__}")
+                    if "origin" in entry:
+                        raise ValueError("'origin' is set by the loader, not in the file")
+                    rules.append(rule_type.from_dict({**entry, "origin": tag}))
+                except (TypeError, ValueError) as e:
+                    raise ValueError(f"{where}rule #{n} [[{table}]]: {e}") from e
         return cls(Layer(layer), tuple(rules))
