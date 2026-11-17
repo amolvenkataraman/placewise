@@ -129,7 +129,8 @@ def archive(pack_dir):
                 with path.open("rb") as fh:
                     tar.addfile(info, fh)
     # xz itself stores no timestamps, so the same tar gives the same archive
-    _atomic_write_bytes(target, lzma.compress(buffer.getvalue(), format=lzma.FORMAT_XZ, preset=9))
+    filters = [{"id": lzma.FILTER_LZMA2, **consts.ARCHIVE_LZMA2}]
+    _atomic_write_bytes(target, lzma.compress(buffer.getvalue(), format=lzma.FORMAT_XZ, filters=filters))
     return target
 
 
