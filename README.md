@@ -15,7 +15,8 @@ Canada and India packs, with the first naming rules (`docs/naming.md`): three na
 (sublocality, locality, city), county or census division, NYC borough, ZIP Code area / FSA / PIN
 code and metro areas. With the optional `world-water` pack, points on water name it ("Over Lake
 Ontario", "On Lake Tahoe", "Over the North Atlantic Ocean") and points beside a sea, lake or river
-list it in `near` (`docs/water.md`). Parks and curated regions are next. The toolkit, tracks, privacy
+list it in `near` (`docs/water.md`). Parks (`docs/parks.md`: `within` and nearby parks from the usa-parks, can-parks and world-parks
+packs) too. Curated regions are next. The toolkit, tracks, privacy
 tools, data store, overrides, config and the server are done.
 
 ```python

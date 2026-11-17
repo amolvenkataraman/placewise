@@ -425,6 +425,15 @@ Sources live in `packbuild/sources/water/` (registry `sources/water.json`).
 - **Rejected:** Marine Regions IHO Sea Areas (CC BY-NC-SA 4.0) and HydroRIVERS (HydroSHEDS v1
   licence); both ids are in `constants.licences.DENIED_SOURCES`. See `docs/water.md`.
 
+## Park packs (`usa-parks`, `can-parks`, `world-parks`)
+
+```
+uv run python -m packbuild.parks usa can world --version 2026.11
+```
+
+NPS, USFS and PAD-US 4.1 (US), CPCAD (Canada) as one polygon layer per tier, Wikidata points
+elsewhere; tiers, ids, sources and gaps in `docs/parks.md`.
+
 ## Releasing data
 
 Packs are published as GitHub release assets of `amolvenkataraman/placewise-data` (no data in its

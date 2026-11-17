@@ -8,8 +8,9 @@ The rules, in the order they run (constants in placewise.constants.lookup):
    city score, the nearest-city time zone where no polygon answered, notable cities (_cities);
 4. country packs' names: sublocality, locality, city, borough, admin2, postal, regions (naming);
 5. airport, and the nearest country far offshore (_nearby);
-6. the sea or lake a point is on, and the water beside it, when a water pack is open (_water);
-7. the Results and their labels (_results).
+6. parks the point is within or near, from the park packs (_within);
+7. the sea or lake a point is on, and the water beside it, when a water pack is open (_water);
+8. the Results and their labels (_results).
 
 `lookup_many` runs every spatial query for all points at once and then builds the Results;
 `lookup` is `lookup_many` with one point, so the two always agree.
@@ -23,6 +24,7 @@ import numpy as np
 from placewise.config import effective_worldview
 from placewise.constants import lookup as const
 from placewise.constants import naming as naming_const
+from placewise.constants import parks as parks_const
 from placewise.constants import water as water_const
 from placewise.model import PlaceKind, Settings
 from placewise.packs import Pack, open_pack
@@ -33,6 +35,7 @@ from ._cities import Cities
 from ._layers import Layers
 from ._timezones import Timezones
 from ._water import Water
+from ._within import Parks
 from .naming import Naming
 
 
@@ -76,6 +79,11 @@ class Geocoder:
         """The packs' timezones layers, or None when no pack has one."""
         found = Timezones(self.layers, self.admin)
         return found if found else None
+
+    @cached_property
+    def parks(self):
+        """The park packs' layers (placewise.engine._within), or None when no pack has any."""
+        return Parks(self.packs, self.layers, self.settings.near) or None
 
     @cached_property
     def water(self):
@@ -134,6 +142,8 @@ class Geocoder:
         if self.layers.has(const.AIRPORTS):
             _nearby.airports(a, self.layers.layer(const.AIRPORTS), lat, lon, self._near_km(PlaceKind.AIRPORT))
         _nearby.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
+        if self.parks is not None:
+            a["parks"] = self.parks.answer(lat, lon, near)
         if self.water:
             self.water.answer(a, lat, lon, self.layers.layer(const.COUNTRIES))
         return a, named
@@ -168,13 +178,13 @@ class Geocoder:
 
 
 def _installed_country_packs(store):
-    """The country packs (and the world-water pack) installed in the store that it can open
-    (stores without `installed()` have none)."""
+    """The country packs, the world-water pack and the park packs installed in the store that it
+    can open (stores without `installed()` have none)."""
     installed = getattr(store, "installed", None)
     if installed is None:
         return []
     names, found = installed(), []
-    for name in (*naming_const.COUNTRY_PACKS, water_const.PACK):
+    for name in (*naming_const.COUNTRY_PACKS, water_const.PACK, *parks_const.PACKS):
         if name in names:
             try:
                 found.append(store.current(name))
