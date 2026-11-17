@@ -26,6 +26,10 @@ GEOM_DIR = "geom"
 GRID_DIR = "grid"
 GRID_META = "meta.json"
 ARCHIVE_SUFFIX = ".tar.xz"
+# xz compression of release archives: preset 9 (64 MiB dictionary) with LZMA's literal coding
+# set for 4-byte values (lc=0, lp=2, pb=2), since packs are mostly int32 coordinate arrays: about
+# 2% smaller than plain preset 9 on the 2026.11 packs, and read by any xz decoder
+ARCHIVE_LZMA2 = {"preset": 9, "lc": 0, "lp": 2, "pb": 2}
 # share-alike data (constants.licences.SHARE_ALIKE) ships only in packs named <name>-sa
 SHARE_ALIKE_SUFFIX = "-sa"
 

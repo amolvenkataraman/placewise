@@ -17,7 +17,7 @@ import tempfile
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from numbers import Integral, Real
+from numbers import Real
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +26,7 @@ from placewise.constants import licences
 from placewise.constants import packs as consts
 from placewise.model import Feature, PackInfo
 
+from . import _arrays, _grid_index
 from . import _geometry as gm
 
 
@@ -127,7 +128,8 @@ def archive(pack_dir):
                 with path.open("rb") as fh:
                     tar.addfile(info, fh)
     # xz itself stores no timestamps, so the same tar gives the same archive
-    _atomic_write_bytes(target, lzma.compress(buffer.getvalue(), format=lzma.FORMAT_XZ, preset=9))
+    filters = [{"id": lzma.FILTER_LZMA2, **consts.ARCHIVE_LZMA2}]
+    _atomic_write_bytes(target, lzma.compress(buffer.getvalue(), format=lzma.FORMAT_XZ, filters=filters))
     return target
 
 
@@ -209,7 +211,7 @@ def _prepare(layer):
 
     fields, arrays, table = {}, {}, {"": 0}
     for f, values in columns.items():
-        kind, array = _column(where, f, values, layer.types.get(f), layer.nulls.get(f))
+        kind, array = _arrays.column(where, f, values, layer.types.get(f), layer.nulls.get(f))
         if f in consts.REQUIRED_FIELDS and kind != "str":
             raise ValueError(f"{where}: {f!r} must be a string column")
         if f == "id":
@@ -221,15 +223,17 @@ def _prepare(layer):
         if f in layer.nulls:
             fields[f]["null"] = int(layer.nulls[f])
         if kind == "str":
-            array = np.fromiter((table.setdefault(s, len(table)) for s in array), dtype=np.int32, count=count)
+            for s in dict.fromkeys(array):  # new strings in order of first use, as setdefault would
+                table.setdefault(s, len(table))
+            array = np.fromiter(map(table.__getitem__, array), dtype=np.int32, count=count)
         arrays[f] = array
 
     if layer.kind == "point":
-        geom = _point_geometry(where, layer, count)
+        geom = _arrays.point_geometry(where, layer, count)
     else:
         if not (isinstance(layer.cell_deg, Real) and 0 < layer.cell_deg <= 90):
             raise ValueError(f"{where}: cell_deg must be in (0, 90], not {layer.cell_deg!r}")
-        geom = _polygon_geometry(where, layer, count)
+        geom = _arrays.polygon_geometry(where, layer, count)
     return _Prepared(
         name=layer.name,
         kind=layer.kind,
@@ -243,154 +247,10 @@ def _prepare(layer):
     )
 
 
-def _column(where, name, values, kind, null):
-    """(type, values): a list of str for str fields, else an ndarray of the field's dtype."""
-    label = f"{where}: column {name!r}"
-    if kind is None:
-        kind = _infer_type(label, values)
-    if kind not in consts.FIELD_TYPES:
-        raise ValueError(f"{label}: type {kind!r} is not one of {', '.join(consts.FIELD_TYPES)}")
-    if null is not None and kind not in consts.INT_TYPES:
-        raise ValueError(f"{label}: only integer fields take a null sentinel (str nulls are '', floats NaN)")
-    items = values.tolist() if isinstance(values, np.ndarray) else list(values)
-    if kind == "str":
-        if not all(v is None or isinstance(v, str) for v in items):
-            raise ValueError(f"{label}: a str field holds only strings (or None)")
-        return kind, ["" if v is None else v for v in items]
-    dtype = _dtype(kind)
-    if kind == "bool":
-        if not all(isinstance(v, bool | np.bool_) for v in items):
-            raise ValueError(f"{label}: a bool field holds only True / False")
-        return kind, np.asarray(items, dtype=dtype)
-    if kind in consts.INT_TYPES:
-        info = np.iinfo(dtype)
-        if null is not None and not (isinstance(null, Integral) and info.min <= null <= info.max):
-            raise ValueError(f"{label}: null sentinel {null!r} doesn't fit {kind}")
-        if null is None and any(v is None for v in items):
-            raise ValueError(f"{label}: has None but no null sentinel in `nulls`")
-        items = [null if v is None else v for v in items]
-        if not all(isinstance(v, Integral) and not isinstance(v, bool | np.bool_) for v in items):
-            raise ValueError(f"{label}: an integer field holds only integers")
-        if items and not (info.min <= min(items) and max(items) <= info.max):
-            raise ValueError(f"{label}: values outside the {kind} range {info.min}..{info.max}")
-        return kind, np.asarray(items, dtype=dtype)
-    items = [np.nan if v is None else v for v in items]
-    if not all(isinstance(v, Real) and not isinstance(v, bool | np.bool_) for v in items):
-        raise ValueError(f"{label}: a float field holds only numbers (or None / NaN)")
-    return kind, np.asarray(items, dtype=dtype)
-
-
-def _infer_type(label, values):
-    if isinstance(values, np.ndarray):
-        if values.dtype.kind == "b":
-            return "bool"
-        if values.dtype.kind in "iuf":
-            kind = f"{values.dtype.kind}{values.dtype.itemsize}"
-            if kind not in consts.FIELD_TYPES:
-                raise ValueError(
-                    f"{label}: dtype {values.dtype} has no pack type ({', '.join(consts.FIELD_TYPES)})"
-                )
-            return kind
-        if values.dtype.kind not in "UO":
-            raise ValueError(f"{label}: can't store dtype {values.dtype}")
-        values = values.tolist()
-    present = [v for v in values if v is not None]
-    if all(isinstance(v, str) for v in present):
-        return "str"  # including an empty or all-None column
-    if all(isinstance(v, bool | np.bool_) for v in present):
-        return "bool"
-    if all(isinstance(v, Integral) and not isinstance(v, bool | np.bool_) for v in present):
-        return "i8"
-    if all(isinstance(v, Real) and not isinstance(v, bool | np.bool_) for v in present):
-        return "f8"
-    raise ValueError(f"{label}: mixed or unsupported values; give its type in `types`")
-
-
-def _dtype(kind):
-    return np.dtype(bool) if kind == "bool" else np.dtype(kind).newbyteorder("<")
-
-
 def _check_name(name, what):
     if not isinstance(name, str) or not re.fullmatch(consts.NAME_PATTERN, name):
         raise ValueError(
             f"{what} name {name!r} must match {consts.NAME_PATTERN} (it becomes a directory name)"
-        )
-
-
-def _point_geometry(where, layer, count):
-    if layer.lat is None or layer.lon is None:
-        raise ValueError(f"{where}: a point layer needs lat and lon arrays")
-    lat, lon = np.asarray(layer.lat, dtype=np.float64), np.asarray(layer.lon, dtype=np.float64)
-    if lat.shape != (count,) or lon.shape != (count,):
-        raise ValueError(f"{where}: lat and lon need shape ({count},), got {lat.shape} and {lon.shape}")
-    if not (np.all(np.isfinite(lat)) and np.all(np.abs(lat) <= 90)):
-        raise ValueError(f"{where}: every lat must be finite and within ±90")
-    if not (np.all(np.isfinite(lon)) and np.all(np.abs(lon) <= 180)):
-        raise ValueError(f"{where}: every lon must be finite and within ±180")
-    return {"lat.npy": gm.to_e7(lat), "lon.npy": gm.to_e7(lon)}
-
-
-def _polygon_geometry(where, layer, count):
-    features = list(layer.features) if layer.features is not None else None
-    if features is None or len(features) != count:
-        got = "none" if features is None else len(features)
-        raise ValueError(f"{where}: a polygon layer needs one entry in features per row ({count}), got {got}")
-    lats, lons, ring_off, part_off, feat_off, bbox = [], [], [0], [0], [0], []
-    vertices = 0
-    for i, feature in enumerate(features):
-        if not isinstance(feature, Feature):
-            raise ValueError(f"{where}: features[{i}] is a {type(feature).__name__}, not a Feature")
-        spans, south, north = [], [], []
-        for outline in feature.outlines:
-            for ring in outline.rings:
-                pts = np.asarray(ring, dtype=np.float64)
-                if len(pts) > 1 and np.array_equal(pts[0], pts[-1]):
-                    pts = pts[:-1]  # rings are stored open; the closing edge is implicit
-                lat, lon = gm.to_e7(pts[:, 0]), gm.to_e7(pts[:, 1])
-                lats.append(lat)
-                lons.append(lon)
-                vertices += len(pts)
-                ring_off.append(vertices)
-                spans.append((lon.min(), lon.max()))
-                south.append(lat.min())
-                north.append(lat.max())
-            part_off.append(len(ring_off) - 1)
-        feat_off.append(len(part_off) - 1)
-        west, east = gm.circular_lon_range(spans)
-        bbox.append((min(south), west, max(north), east))
-    ring_off = np.asarray(ring_off, dtype=np.int64)
-    part_off = np.asarray(part_off, dtype=np.int64)
-    feat_off = np.asarray(feat_off, dtype=np.int64)
-    lat = np.concatenate(lats) if lats else np.zeros(0, dtype=np.int32)
-    lon = np.concatenate(lons) if lons else np.zeros(0, dtype=np.int32)
-    _check_antimeridian(where, lat, lon, ring_off, part_off, feat_off)
-    return {
-        "lat.npy": lat,
-        "lon.npy": lon,
-        "ring.npy": ring_off,
-        "part.npy": part_off,
-        "feature.npy": feat_off,
-        "bbox.npy": np.asarray(bbox, dtype=np.int32).reshape(-1, 4),
-    }
-
-
-def _check_antimeridian(where, lat, lon, ring_off, part_off, feat_off):
-    """Refuse edges that jump more than 180° of longitude: in planar geometry they would sweep
-    round the world the wrong way. An edge from +180 to -180 along a parallel is fine: it is how
-    a ring spanning every longitude (Antarctica) closes."""
-    if not len(lon):
-        return
-    nxt = gm.ring_next(ring_off, len(lon))
-    a, b = lon.astype(np.int64), lon[nxt].astype(np.int64)
-    limit = 180 * consts.E7
-    along_parallel = (np.abs(a) == limit) & (np.abs(b) == limit) & (lat == lat[nxt])
-    bad = (np.abs(b - a) > limit) & ~along_parallel
-    if bad.any():
-        ring = np.searchsorted(ring_off, np.flatnonzero(bad)[0], "right") - 1
-        feature = np.searchsorted(feat_off, np.searchsorted(part_off, ring, "right") - 1, "right") - 1
-        raise ValueError(
-            f"{where}: feature {feature} has an edge crossing the antimeridian; "
-            "split it at ±180 into separate polygons (RFC 7946 §3.1.9)"
         )
 
 
@@ -425,47 +285,13 @@ def _write_layer(layer_dir, p):
 
 
 def _write_grid(grid_dir, geom, cell_deg):
-    """Candidates per cell and the cells one feature answers outright.
-
-    A feature is a candidate in a cell when it may contain some point of it: an edge touches the
-    cell, or it covers the cell wholly (a feature whose bbox touches a cell but whose shape misses
-    it is left out). A cell is marked `inside` f when f covers it wholly (corners inside and no edge
-    touching it, so a cell in a hole is not) and every earlier candidate misses it entirely, so f is
-    the first-match answer for every point in it."""
+    """Candidates per cell and the cells one feature answers outright (see _grid_index)."""
     rows, cols = gm.grid_shape(cell_deg)
-    lat, lon = gm.from_e7(geom["lat.npy"]), gm.from_e7(geom["lon.npy"])
-    ring_off, part_off, feat_off = geom["ring.npy"], geom["part.npy"], geom["feature.npy"]
-    nxt = gm.ring_next(ring_off, len(lat))
-    bbox = gm.from_e7(geom["bbox.npy"])
-    cells, feats, status = [], [], []  # status 1: wholly inside, 2: an edge touches the cell
-    for f in range(len(feat_off) - 1):
-        vs, ve = ring_off[part_off[feat_off[f]]], ring_off[part_off[feat_off[f + 1]]]
-        ya, xa, yb, xb = lat[vs:ve], lon[vs:ve], lat[nxt[vs:ve]], lon[nxt[vs:ve]]
-        candidates = gm.bbox_cells(*bbox[f], cell_deg, rows, cols)
-        on_edge = np.isin(candidates, gm.edge_cells(ya, xa, yb, xb, cell_deg, rows, cols))
-        free = candidates[~on_edge]
-        # no edge touches a free cell, so its centre speaks for all of it
-        centre_lat = -90.0 + (free // cols + 0.5) * cell_deg
-        centre_lon = -180.0 + (free % cols + 0.5) * cell_deg
-        covered = free[gm.even_odd_rows(centre_lat, centre_lon, ya, xa, yb, xb)]
-        cells += [candidates[on_edge], covered]
-        feats.append(np.full(on_edge.sum() + len(covered), f, dtype=np.int64))
-        status += [np.full(on_edge.sum(), 2, dtype=np.int8), np.ones(len(covered), dtype=np.int8)]
-    cell = np.concatenate([np.zeros(0, dtype=np.int64), *cells])
-    feat = np.concatenate([np.zeros(0, dtype=np.int64), *feats])
-    stat = np.concatenate([np.zeros(0, dtype=np.int8), *status])
-    order = np.lexsort((feat, cell))
-    cell, feat, stat = cell[order], feat[order], stat[order]
-    offsets = np.zeros(rows * cols + 1, dtype=np.int64)
-    np.cumsum(np.bincount(cell, minlength=rows * cols), out=offsets[1:])
-    inside = np.full(rows * cols, -1, dtype=np.int32)
-    first_cells, first = np.unique(cell, return_index=True)
-    inside[first_cells] = np.where(stat[first] == 1, feat[first], -1)
-
+    offsets, items, inside = _grid_index.build(geom, cell_deg)
     grid_dir.mkdir()
     _write_json(grid_dir / consts.GRID_META, {"cell_deg": cell_deg, "rows": rows, "cols": cols})
     _save(grid_dir / "cell.npy", offsets)
-    _save(grid_dir / "items.npy", feat.astype(np.int32))
+    _save(grid_dir / "items.npy", items)
     _save(grid_dir / "inside.npy", inside)
 
 

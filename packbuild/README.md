@@ -257,8 +257,9 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
   1 km); past a couple of km the point is inside a neighbouring area, and the count keeps rising
   with no clear break (13,961 within 5 km, 19,218 within 10 km), which is the signature of points
   misplaced by whole areas rather than metres. The test runs on placewise's own pack geometry
-  (`PolygonLayer.contains`, `near_boundary`; distances exact on the sphere): the PIN areas are
-  written to a temporary pack first; the check takes about 35 s of the build's ~50 s. Ids keep
+  (`PolygonLayer.contains`, and `nearest_edge_km` to the office's own area for offices near
+  its bbox; distances exact on the sphere): the PIN areas are written to a temporary pack first;
+  the check takes about 7 s of the build's ~16 s. Ids keep
   the directory's numbering, so a left-out office leaves a gap rather than renumbering the rest.
 - **Disputed areas.** PIN areas are delivery zones as published by the Department of Posts (a
   Government of India body), not administrative boundaries; the pack carries them unchanged.
@@ -317,8 +318,8 @@ of a point (CN Tower: GTA, GTHA, Golden Horseshoe). Regions overlap freely.
   rings would, without the internal borders. Census and India Post boundaries share their borders'
   vertices, so their unions come out clean (the NCR's 520 PIN areas make 11 rings). StatCan layers
   are simplified per feature, so simplified neighbours overlap or gap by up to 10 m, and under
-  even-odd an overlap would fall outside the region; the Canada build therefore reads the members'
-  rings again unsimplified (`statcan.raw_rings`), dissolves them and simplifies the union once.
+  even-odd an overlap would fall outside the region; the Canada build therefore keeps the members'
+  rings unsimplified as it reads them (statcan's `raw`), dissolves them and simplifies the union once.
 - **Location search.** `packbuild.regions` also generates `constants/countries/regions.py` from the
   same files. A region with `search_as` (the GTHA, the Delhi NCR core, the Bengaluru Metropolitan
   Region) has no entry there: location search reads its names as the region it names.

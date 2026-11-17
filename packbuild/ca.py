@@ -79,23 +79,25 @@ def build_layers(
         tables.append(unzip(archive) / f"{table}.csv")
     population = statcan.read_population(*tables)
     paths = {layer: boundaries(source_id, name) for layer, (source_id, name, _) in LAYERS.items()}
-    layers = [loader(paths[layer], population, tolerance_m) for layer, (_, _, loader) in LAYERS.items()]
+    curated = regions_layer.for_country(regions, "CA")
+    # the members' rings, unsimplified, collected while their layers are read
+    raw = {m: [] for r in curated for m in r["members"]}
+    layers = [
+        loader(paths[layer], population, tolerance_m, raw if layer in REGION_MEMBER_LAYERS else None)
+        for layer, (_, _, loader) in LAYERS.items()
+    ]
     named = cgndb.populated_places(get(url(cgndb.SOURCE, "populated_places")))
-    return [*layers, named, regions_layer_of(layers, paths, regions, tolerance_m)]
+    return [*layers, named, regions_layer_of(layers, curated, raw, tolerance_m)]
 
 
-def regions_layer_of(layers, paths, regions=None, tolerance_m=statcan.DEFAULT_TOLERANCE_M):
-    """The curated regions (`regions` None reads datasets/regions) as unions of census divisions,
-    subdivisions or CMAs. Members are checked against the built layers, then their rings read again
-    unsimplified (statcan.raw_rings): each feature is simplified on its own, so simplified
+def regions_layer_of(layers, curated, rings, tolerance_m=statcan.DEFAULT_TOLERANCE_M):
+    """The curated regions of Canada as unions of census divisions, subdivisions or CMAs. Members
+    are checked against the built layers; `rings` holds each member's projected rings as read,
+    unsimplified (see statcan's `raw`): each feature is simplified on its own, so simplified
     neighbours overlap or gap by up to the tolerance, while the raw files share their borders'
     vertices exactly. The union is simplified once, like every other boundary."""
-    curated = regions_layer.for_country(regions, "CA")
     built = {layer.name: set(layer.columns["id"]) for layer in layers if layer.name in REGION_MEMBER_LAYERS}
     regions_layer.check_members(curated, set().union(*built.values()))
-    members = {m for r in curated for m in r["members"]}
-    needed = {name: paths[name] for name, ids in built.items() if ids & members}
-    rings = statcan.raw_rings(needed, members)
     shapes = {
         r["id"]: regions_layer.union(
             r["id"], [ring for m in r["members"] for ring in rings[m]], tolerance_m, STATCAN_LAMBERT

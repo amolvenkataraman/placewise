@@ -64,3 +64,15 @@ def test_write_index(tmp_path):
     }
     with pytest.raises(ValueError, match="world"):
         write_index(tmp_path, [infos[0], infos[0]])
+
+
+def test_archive_is_xz_with_literal_coding_for_four_byte_values(tmp_path):
+    import lzma
+
+    from placewise.constants import packs as consts
+
+    tar_path = archive(_build(tmp_path))
+    data = tar_path.read_bytes()
+    filters = [{"id": lzma.FILTER_LZMA2, "preset": 9, "lc": 0, "lp": 2, "pb": 2}]
+    assert consts.ARCHIVE_LZMA2 == {"preset": 9, "lc": 0, "lp": 2, "pb": 2}
+    assert lzma.compress(lzma.decompress(data), format=lzma.FORMAT_XZ, filters=filters) == data
