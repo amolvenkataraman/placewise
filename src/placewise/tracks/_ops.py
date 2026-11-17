@@ -9,8 +9,6 @@ from placewise.constants.tracks import BOUNDARY_BISECTIONS
 from placewise.geo.bearing import along
 from placewise.geo.distances import haversine
 
-from .track import Track
-
 M_PER_KM = METRES_PER["km"]
 
 
@@ -19,8 +17,8 @@ def columns(track):
 
 
 def replace(track, **changed):
-    """A new Track with some columns swapped, same segments and meta."""
-    return Track.from_columns({**columns(track), **changed}, track.segments or None, track.meta)
+    """A new Track with some columns swapped, same segments and meta (see Track.replace)."""
+    return track.replace(**changed)
 
 
 def bounds(track):

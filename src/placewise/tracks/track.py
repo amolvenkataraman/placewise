@@ -100,6 +100,129 @@ class Track:
         for start, end in pairwise(bounds):
             yield self[start:end]
 
+    def replace(self, **columns):
+        """A new Track with some columns swapped (None drops an optional column), same segments
+        and meta."""
+        return Track.from_columns({**self._columns, **columns}, self.segments or None, self.meta)
+
+    def segment_bounds(self):
+        """(start, end) index pairs of each segment, end exclusive."""
+        from ._ops import bounds
+
+        return bounds(self)
+
+    # Thin methods over the operation modules, each documented there. Imports are local because
+    # those modules import Track, and placewise.io imports this package.
+
+    @classmethod
+    def read(cls, path_or_bytes):
+        """The first track of a file in any supported format (a path, bytes or a binary file
+        object; the format is detected from the content). Files can hold several tracks, and GPX
+        routes too: `placewise.io.read_track` returns them all."""
+        from placewise.io import read_track
+
+        tracks, fmt = read_track(path_or_bytes)
+        if not tracks:
+            raise ValueError(f"the {fmt} file has no track")
+        return tracks[0]
+
+    def to_gpx(self, path=None):
+        """GPX 1.1 text (see `placewise.io.write_gpx`), also written to `path` when given."""
+        from placewise.io import write_gpx
+
+        return write_gpx(self, path)
+
+    def to_geojson(self):
+        """A GeoJSON Feature dict (see `placewise.io.write_geojson_track`)."""
+        from placewise.io import write_geojson_track
+
+        return write_geojson_track(self)
+
+    def clean(self):
+        """The usual cleaning pipeline with default settings: sort_and_dedupe -> drop_invalid ->
+        remove_spikes -> split_gaps. Call the functions in `placewise.tracks.clean` to tune them or
+        add filter_accuracy, smooth or thin."""
+        from .clean import drop_invalid, remove_spikes, sort_and_dedupe, split_gaps
+
+        return split_gaps(remove_spikes(drop_invalid(sort_and_dedupe(self))))
+
+    def smooth(self, **options):
+        from .clean import smooth
+
+        return smooth(self, **options)
+
+    def thin(self, **options):
+        from .clean import thin
+
+        return thin(self, **options)
+
+    def stats(self, **options):
+        from .measure import stats
+
+        return stats(self, **options)
+
+    def splits(self, **options):
+        from .measure import splits
+
+        return splits(self, **options)
+
+    def position_at(self, times, **options):
+        from .interpolate import position_at
+
+        return position_at(self, times, **options)
+
+    def resample(self, **options):
+        from .interpolate import resample
+
+        return resample(self, **options)
+
+    def stays(self, **options):
+        from .segment import stays
+
+        return stays(self, **options)
+
+    def trips(self, stays=None, **stay_options):
+        """Trips between `stays`, found with `stay_options` when not given."""
+        from .segment import trips
+
+        return trips(self, self.stays(**stay_options) if stays is None else stays)
+
+    def time_inside(self, shape):
+        from .spatial import time_inside
+
+        return time_inside(self, shape)
+
+    def crossings(self, features):
+        from .spatial import crossings
+
+        return crossings(self, features)
+
+    def closest_pass(self, lat, lon):
+        from .spatial import closest_pass
+
+        return closest_pass(self, lat, lon)
+
+    @property
+    def bbox(self):
+        from .spatial import bbox
+
+        return bbox(self)
+
+    def crop(self, start=None, end=None):
+        from .combine import crop
+
+        return crop(self, start, end)
+
+    def split(self, by="segment", **options):
+        from .combine import split
+
+        return split(self, by, **options)
+
+    def reverse(self):
+        from .combine import reverse
+
+        return reverse(self)
+
 
 def _check_segments(segments, n):
     if n == 0:

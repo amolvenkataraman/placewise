@@ -118,3 +118,25 @@ JUMP_ANY_KM = 3000.0  # this far is a flight however long the silence (or an oce
 # --- presence days ----------------------------------------------------------------------------
 
 SLEPT_HOUR = 3  # local hour by which most people are where they sleep; the night belongs to the day before
+
+# --- combining tracks -------------------------------------------------------------------------
+
+# merge() picks one source per window of this many seconds where recordings overlap: long enough
+# to judge a device's accuracy or sampling rate, short enough to switch when one loses signal.
+MERGE_WINDOW_S = 60.0
+# Fixes from different devices in the same whole second and closer than this are one position
+# reported twice; 5 m is within the error of a good phone or watch fix.
+MERGE_DUPLICATE_M = 5.0
+
+# --- comparing tracks -------------------------------------------------------------------------
+
+# A corridor this wide either side of a route takes in GPS error and lane or pavement changes, but
+# not a parallel street (city blocks are ~80-200 m apart).
+CORRIDOR_M = 30.0
+SAME_ROUTE_MIN_OVERLAP = 0.9  # of each track's length inside the other's corridor
+# Off route once beyond this: wider than the same-route corridor, so jitter along a route that
+# drifts a little doesn't report a stream of tiny detours.
+DEVIATION_CORRIDOR_M = 50.0
+# Discrete Fréchet couples vertices, so simplifying turns straight stretches into far-apart
+# vertices and inflates the result by up to half their spacing; off unless asked for speed.
+FRECHET_SIMPLIFY_M = None
