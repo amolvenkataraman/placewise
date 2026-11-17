@@ -3,7 +3,7 @@
 India has no open municipal or state polygons yet (packbuild/README.md), so:
 
 - admin1: the PIN area's state (`state_code`, ISO 3166-2:IN after 2023, mapped to the world pack's
-  older codes through constants.countries.ind), "in/pincodes:state". Gurugram is in Haryana even
+  older codes through constants.countries.ind), "ind/pincodes:state". Gurugram is in Haryana even
   where Natural Earth's coarse line says Delhi; the city score then prefers Haryana's cities.
 - locality and city: the GeoNames score, as for the rest of the world.
 - sublocality: the PIN area's post office without its type suffix ("Whitefield S.O" ->
@@ -84,7 +84,7 @@ class Ind:
                 out.sublocality[i] = area
                 out.sources[i]["sublocality"] = f"{self.pin}:{const.NAME}"
         if self.regions is not None:
-            common.set_regions(out, layers, self.regions, lat, lon)
+            common.set_regions(out, layers, lat, lon, self.regions)
         return out
 
     def _area(self, row):

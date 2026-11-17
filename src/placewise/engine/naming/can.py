@@ -1,6 +1,6 @@
 """Canada naming over the StatCan pack (census divisions and subdivisions, CMAs, FSAs).
 
-- admin1: the subdivision's province ("ca/csd:state").
+- admin1: the subdivision's province ("can/csd:state").
 - locality: the census subdivision (CSD), so amalgamated cities come out whole (Scarborough is in
   Toronto). Rural CSDs (townships, rural municipalities) and unorganised ones (improvement
   districts, unorganised territory) are named by the nearest GeoNames place inside them within
@@ -9,8 +9,8 @@
   otherwise the CMA's first city (in the same province) when that city is CITY_ROLL_UP_RATIO
   times bigger (Pickering -> Toronto; Fort Erie stays). No locality: the GeoNames score.
 - sublocality: the nearest GeoNames place within SUBLOCALITY_KM inside the same CSD.
-- admin2 (census division), postal (forward sortation area), regions (the CMA or CA; or the
-  pack's curated `regions` layer when it has one).
+- admin2 (census division), postal (forward sortation area), regions (the pack's curated
+  `regions` and the CMA or CA, smallest first).
 """
 
 from functools import cached_property
@@ -123,33 +123,30 @@ class Can:
         out.put("locality", has, lookup_const.CITIES, place[has], const.INSIDE)
         pop = np.where(by_csd, self._csd["population"][np.maximum(csd, 0)], np.nan)
         pop[has] = self.cities.table["population"][place[has]]
-        city = self._city(out, lat, lon, locality, pop)
+        city, cma = self._city(out, lat, lon, locality, pop, st["rule"])
         none = np.flatnonzero(out.locality == None)  # noqa: E711 - element-wise
         out.put("city", none, lookup_const.CITIES, a["city"][pts[none]], lookup_const.SCORE)
         out.sublocality_inside(self.cities, self.csd, locality, local, local_km)
         if self.postal is not None:
             fsa = np.atleast_1d(self.layers.layer(self.postal).query(lat, lon)).astype(np.int64)
             out.put("postal", every, self.postal, fsa, lookup_const.POLYGON)
-        if self.regions is not None:
-            common.set_regions(out, self.layers, self.regions, lat, lon)
+        common.set_regions(out, self.layers, lat, lon, self.regions, [(self.cma, cma)] if self.cma else ())
         common.skip_near(self.cities, self.csd, a, pts, locality, city)
         return out
 
-    def _city(self, out, lat, lon, locality, pop):
-        """Fill out.city by the roll-up rule (and regions from the CMA when the pack has no curated
-        ones); returns the city's CSD row per point (-1: none, or not a CSD)."""
+    def _city(self, out, lat, lon, locality, pop, st_rule):
+        """Fill out.city by the roll-up rule; returns (the city's CSD row per point, -1 for none or
+        not a CSD; the CMA row per point)."""
         city = locality.copy()
         out.city[:] = out.locality
         for i in np.flatnonzero(out.locality != None).tolist():  # noqa: E711 - element-wise
             out.sources[i]["city"] = out.sources[i]["locality"]
         if self.cma is None:
-            return city
+            return city, np.full(len(lat), -1, dtype=np.int64)
         cma, _ = common.polygon(self.layers.layer(self.cma), lat, lon, snap_km=0)
-        if self.regions is None:  # the CMA stands in for curated regions
-            found = common.places_for(self.layers, self.cma, cma)
-            for i in np.flatnonzero(cma >= 0).tolist():
-                out.regions[i] = (found[i],)
-                out.sources[i]["regions"] = f"{self.cma}:{lookup_const.POLYGON}"
+        shore = np.flatnonzero((cma < 0) & (st_rule == lookup_const.NEAREST))  # off a clipped shore
+        if len(shore):
+            cma[shore] = common.polygon(self.layers.layer(self.cma), lat[shore], lon[shore])[0]
         population = self._csd["population"]
         for i in np.flatnonzero((cma >= 0) & (out.locality != None)).tolist():  # noqa: E711 - element-wise
             head, title = self._cma[cma[i]]
@@ -160,4 +157,4 @@ class Can:
                 out.city[i] = self.layers.place(self.csd, int(head))
                 out.sources[i]["city"] = f"{self.csd}:{const.METRO}"
                 city[i] = head
-        return city
+        return city, cma

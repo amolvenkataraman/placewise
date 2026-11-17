@@ -11,7 +11,16 @@ One "city" field can't serve both "where in town" and "where in the world", so a
 
 Beside them: `admin2` (county, census division), `borough` (New York City), `postal` (ZIP Code
 area, forward sortation area, PIN code area) and `regions` (smallest first). `Result.sources` names
-the layer and rule behind every field (`"us/places:metro"`, `"ca/csd:nearest"`).
+the layer and rule behind every field (`"usa/places:metro"`, `"can/csd:nearest"`).
+
+## Regions
+
+`regions` lists every region containing the point, smallest first by area: the pack's curated
+`regions` layer (Greater Toronto Area, San Francisco Bay Area, Delhi NCR; they may overlap) and
+the statistical metro areas beside them (US CBSA and CSA, Canada's CMA or CA), which name every
+metro, curated or not. Fort Erie: St. Catharines - Niagara (CMA), Greater Golden Horseshoe.
+Pearson: Toronto (CMA), Greater Toronto Area, GTHA, Greater Golden Horseshoe. The roll-up rules
+below always read the CBSA and CMA, whichever region comes first.
 
 The rules live in `placewise.engine.naming` (one module per country, pure rules in `rules.py`) and
 their thresholds in `placewise.constants.naming`. They are starting points, tuned against the
@@ -30,7 +39,7 @@ shape but in none (a pier, Horseshoe Falls) takes the nearest one, with rule `ne
 
 ## United States (Census Bureau pack)
 
-- **admin1**: the county's state (`us/counties:state`), finer than Natural Earth's line.
+- **admin1**: the county's state (`usa/counties:state`), finer than Natural Earth's line.
 - **locality**: the census place (incorporated place or CDP) containing the point.
   - A CDP within `METRO_CDP_KM` (5 km) of its metro's principal city, the CBSA title's first city
     in the same state, takes that city, unless the CDP is itself named in the title: the Strip
@@ -46,12 +55,11 @@ shape but in none (a pier, Horseshoe Falls) takes the nearest one, with rule `ne
 - **sublocality**: the nearest GeoNames place within `SUBLOCALITY_KM` (2 km) whose point lies in
   the same census place and isn't named like the locality, city or borough.
 - **borough**: New York City's five counties (Kings -> Brooklyn). **admin2**: the county.
-  **postal**: the ZCTA. **regions**: CBSA then CSA (a stopgap; a curated `regions` layer in the
-  pack replaces them).
+  **postal**: the ZCTA. **regions**: curated, CBSA and CSA (see Regions).
 
 ## Canada (StatCan pack)
 
-- **admin1**: the census subdivision's province (`ca/csd:state`).
+- **admin1**: the census subdivision's province (`can/csd:state`).
 - **locality**: the census subdivision (CSD), so amalgamated cities come out whole (Rouge Park
   and Scarborough are in Toronto; Pearson is in Mississauga). Rural CSDs (townships, rural
   municipalities, parishes: `CSD_RURAL`) and unorganised ones (improvement districts, unorganised
@@ -64,13 +72,13 @@ shape but in none (a pier, Horseshoe Falls) takes the nearest one, with rule `ne
   Catharines is only 4x bigger). A CMA split by a provincial border (Ottawa - Gatineau) has one
   feature per province, and each part's first city is the first one named in that province.
 - **sublocality**: as in the US, inside the same CSD. **admin2**: the census division (from the
-  CSDUID). **postal**: the FSA. **regions**: the CMA or CA (stopgap, as above).
+  CSDUID). **postal**: the FSA. **regions**: curated, and the CMA or CA.
 
 ## India (India Post pack)
 
 There are no open municipal or state polygons for India yet, so:
 
-- **admin1**: the PIN area's state (`in/pincodes:state`; ISO 3166-2:IN after 2023, mapped to the
+- **admin1**: the PIN area's state (`ind/pincodes:state`; ISO 3166-2:IN after 2023, mapped to the
   world pack's older codes such as IN-OR for Odisha). Gurugram is in Haryana even where Natural
   Earth's coarse line says Delhi, and the city score, which halves cities of another admin1, then
   picks Gurugram.
@@ -98,5 +106,5 @@ Earth's longer form stays in `country.aliases`.
 - No urban-area test for roll-ups: a whole CMA counts, so a rural CSD at a CMA's edge can roll up.
 - India's localities are GeoNames places, which sometimes prefer a taluk or village over the city
   (Fort Kochi answers Kanayannur).
-- Parks, water and notable places are not named yet; regions are metro areas until the curated
-  region polygons are in the packs.
+- Parks, water and notable places are not named yet. India has curated regions only (no
+  statistical metro areas).

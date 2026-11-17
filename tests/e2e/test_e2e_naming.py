@@ -27,16 +27,18 @@ def test_fort_erie_is_in_canada_not_buffalo(geo):
         "admin1": "Ontario", "country": "Canada", "tz": "America/Toronto",
     }  # fmt: skip
     assert r.label == "Fort Erie, Ontario, Canada"
-    assert [p.name for p in r.regions] == ["St. Catharines - Niagara"]  # the CMA, until Niagara Region
+    # smallest first: the CMA, then the curated region (no Niagara Region polygon yet)
+    assert [p.name for p in r.regions] == ["St. Catharines - Niagara", "Greater Golden Horseshoe"]
+    assert r.sources["regions"] == "can/cma:polygon"
 
 
 def test_las_vegas_strip_is_las_vegas(geo):
     r = geo.lookup(36.1147, -115.1728)
     assert r.label == "Las Vegas, Nevada, United States"
     assert (r.locality.name, r.city.name, r.sublocality.name) == ("Las Vegas", "Las Vegas", "Paradise")
-    assert r.sources["locality"] == "us/places:metro"  # Paradise CDP next to the principal city
+    assert r.sources["locality"] == "usa/places:metro"  # Paradise CDP next to the principal city
     assert r.postal.name == "89109" and r.admin2.name == "Clark County"
-    assert r.regions[0].id == "census:cbsa:29820"
+    assert [p.id for p in r.regions] == ["region:las-vegas", "census:cbsa:29820", "census:csa:332"]
 
 
 def test_emeryville_is_its_own_city(geo):
@@ -45,7 +47,10 @@ def test_emeryville_is_its_own_city(geo):
     r = geo.lookup(37.8313, -122.2852)
     assert (r.locality.name, r.city.name) == ("Emeryville", "Emeryville")
     assert r.label == "Emeryville, California, United States"
-    assert r.regions[0].name == "San Francisco-Oakland-Fremont, CA Metro Area"
+    assert [p.name for p in r.regions] == [
+        "San Francisco-Oakland-Fremont, CA Metro Area", "San Francisco Bay Area",
+        "San Jose-San Francisco-Oakland, CA CSA",
+    ]  # fmt: skip
 
 
 def test_mission_district(geo):
@@ -56,6 +61,9 @@ def test_mission_district(geo):
 
 def test_toronto_pearson_is_in_mississauga(geo):
     r = geo.lookup(43.6777, -79.6248)
+    assert [p.name for p in r.regions] == [
+        "Toronto", "Greater Toronto Area", "Greater Toronto and Hamilton Area", "Greater Golden Horseshoe",
+    ]  # fmt: skip
     assert (r.locality.name, r.city.name) == ("Mississauga", "Mississauga")
     assert r.airport.place.codes["iata"] == "YYZ" and r.airport.relation.value == "at"
     assert r.label == "Mississauga, Ontario, Canada"
@@ -86,7 +94,8 @@ def test_rouge_park_is_in_toronto(geo):
 def test_gurugram_is_in_haryana(geo):
     r = geo.lookup(28.495, 77.089)
     assert (r.admin1.id, r.city.name, r.locality.name) == ("iso:IN-HR", "Gurugram", "Gurugram")
-    assert r.sources["admin1"] == "in/pincodes:state"
+    assert r.sources["admin1"] == "ind/pincodes:state"
+    assert [p.name for p in r.regions] == ["Delhi NCR (core)", "National Capital Region (India)"]
     assert r.label == "Gurugram, Haryana, India"
 
 
@@ -94,6 +103,7 @@ def test_whitefield_bengaluru(geo):
     r = geo.lookup(12.9958, 77.7608)
     assert (r.sublocality.name, r.city.name, r.admin1.name) == ("Whitefield", "Bengaluru", "Karnataka")
     assert r.postal.name == "560066"
+    assert [p.name for p in r.regions] == ["Bengaluru", "Bengaluru Metropolitan Region"]
 
 
 def test_horseshoe_falls_canadian_side(geo):
@@ -101,7 +111,8 @@ def test_horseshoe_falls_canadian_side(geo):
     assert (r.locality.name, r.admin1.name, r.country.name, r.tz) == (
         "Niagara Falls", "Ontario", "Canada", "America/Toronto",
     )  # fmt: skip
-    assert r.sources["locality"] == "ca/csd:nearest"  # the falls are off the clipped shore
+    assert r.sources["locality"] == "can/csd:nearest"  # the falls are off the clipped shore
+    assert [p.name for p in r.regions] == ["St. Catharines - Niagara"]  # the CMA, reached from the shore
 
 
 def test_williamsburg_brooklyn(geo):

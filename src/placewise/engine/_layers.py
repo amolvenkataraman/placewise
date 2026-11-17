@@ -1,7 +1,7 @@
 """The layers a Geocoder reads and the Places made from their rows.
 
-A layer is known by its key, "<pack>/<layer>" ("world/cities", "us/places"), which is also how
-Result.sources names it ("us/places:polygon"). The world layers have fixed roles (countries,
+A layer is known by its key, "<pack>/<layer>" ("world/cities", "usa/places"), which is also how
+Result.sources names it ("usa/places:polygon"). The world layers have fixed roles (countries,
 admin1, cities, airports: the first pack that has each); country packs register their own layers
 with the naming rules that read them (placewise.engine.naming).
 """

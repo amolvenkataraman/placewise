@@ -3,7 +3,7 @@ curated regions preferred, packs from the store, batch == single."""
 
 import numpy as np
 import pytest
-from naming_kit import regions_layer, write_ca
+from naming_kit import regions_layer, write_ca, write_us
 
 from placewise.engine import Geocoder
 from placewise.model import PlaceKind
@@ -42,16 +42,28 @@ def test_data_version_lists_every_pack(geo):
     assert geo.data_version == "world-2026.11+us-2026.11+ca-2026.11+in-2026.11"
 
 
-def test_curated_regions_replace_metro_areas(tmp_path, packs):
-    gta = ((10, -149, 11, -148.5), "region:gta", "GTA", "vernacular", "CA")
+def test_curated_regions_join_metro_areas_smallest_first(tmp_path, packs):
+    gta = ((10, -149, 10.9, -148.5), "region:gta", "GTA", "vernacular", "CA")
     golden = ((10, -149, 11, -148), "region:golden-horseshoe", "Golden Horseshoe", "vernacular", "CA")
     ca = write_ca(tmp_path, regions=regions_layer([golden, gta]))
     geo = Geocoder(packs=[packs[0], ca])
     r = geo.lookup(10.25, -148.6)
-    assert [p.id for p in r.regions] == ["region:gta", "region:golden-horseshoe"]  # smallest first
+    assert [p.id for p in r.regions] == ["region:gta", "statcan:35535", "region:golden-horseshoe"]
     assert r.regions[0].kind == PlaceKind.REGION and r.regions[0].codes["kind"] == "vernacular"
-    assert r.sources["regions"] == "ca/regions:polygon"
-    assert [p.id for p in geo.lookup(10.1, -148.2).regions] == ["region:golden-horseshoe"]
+    assert r.sources["regions"] == "ca/regions:polygon"  # the smallest one's layer
+    fort_erie = geo.lookup(10.1, -148.2)
+    assert [p.id for p in fort_erie.regions] == ["statcan:35539", "region:golden-horseshoe"]
+    assert fort_erie.sources["regions"] == "ca/cma:polygon"
+    # the CMA still names the city it rolls up to, whatever regions the Result lists
+    assert r.city.name == "Toronto"
+
+
+def test_curated_regions_leave_the_metro_city_rule_alone(tmp_path, packs):
+    vegas = ((10, -150, 10.5, -149.4), "region:las-vegas", "Las Vegas Valley", "metro", "US")
+    us = write_us(tmp_path, regions=regions_layer([vegas]))
+    r = Geocoder(packs=[packs[0], us]).lookup(10.27, -149.85)
+    assert r.locality.name == "Las Vegas" and r.sources["locality"] == "us/places:metro"
+    assert {p.id for p in r.regions} == {"region:las-vegas", "census:cbsa:29820", "census:csa:332"}
 
 
 def test_label_template_reaches_the_new_fields(packs):

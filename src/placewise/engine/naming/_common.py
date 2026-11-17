@@ -181,31 +181,34 @@ def geonames_inside(cities, key, feature, local, local_km, max_km, excluded_code
     return out
 
 
-def regions(layers, key, lat, lon):
-    """Per point, a tuple of the curated regions containing it, smallest (by bounding box) first."""
-    layer = layers.layer(key)
-    point, feature = layer.query_every(lat, lon)
-    out = np.full(len(lat), None, dtype=object)
-    if not len(point):
-        return out
-    bbox = layer.bboxes()
-    width = np.where(bbox[:, 3] >= bbox[:, 1], bbox[:, 3] - bbox[:, 1], bbox[:, 3] - bbox[:, 1] + 360)
-    area = (bbox[:, 2] - bbox[:, 0]) * width * np.cos(np.radians((bbox[:, 0] + bbox[:, 2]) / 2))
-    order = np.lexsort((area[feature], point))
-    groups = {}
-    for p, f in zip(point[order].tolist(), feature[order].tolist(), strict=True):
-        groups.setdefault(p, []).append(layers.place(key, f))
-    for p, found in groups.items():
-        out[p] = tuple(found)
-    return out
+def set_regions(out, layers, lat, lon, curated=None, statistical=()):
+    """Fill out.regions with every region containing each point, smallest first: the curated
+    `regions` layer's (key or None, which may overlap) and the statistical areas, given as
+    (key, feature row per point) pairs (CBSA, CSA, CMA). The smallest one's layer is the source."""
+    found = [[] for _ in range(out.m)]
+    if curated is not None:
+        point, feature = layers.layer(curated).query_every(lat, lon)
+        for p, f in zip(point.tolist(), feature.tolist(), strict=True):
+            found[p].append((curated, f))
+    for key, rows in statistical:
+        for i in np.flatnonzero(rows >= 0).tolist():
+            found[i].append((key, int(rows[i])))
+    for i, items in enumerate(found):
+        if items:
+            items.sort(key=lambda kr: region_area(layers, *kr))
+            out.regions[i] = tuple(layers.place(k, r) for k, r in items)
+            out.sources[i]["regions"] = layers.source(items[0][0], lookup_const.POLYGON)
 
 
-def set_regions(out, layers, key, lat, lon):
-    """Fill out.regions from a curated regions layer."""
-    found = regions(layers, key, lat, lon)
-    for i in np.flatnonzero(found != None).tolist():  # noqa: E711 - element-wise
-        out.regions[i] = found[i]
-        out.sources[i]["regions"] = f"{key}:{lookup_const.POLYGON}"
+def region_area(layers, key, row):
+    """A region's area (km2): the layer's area_km2 column if it has one, else its outlines',
+    computed once."""
+    cache = layers.cache(f"{key}#area")
+    if row not in cache:
+        layer = layers.layer(key)
+        value = layer.value("area_km2", row) if "area_km2" in layer.fields else None
+        cache[row] = value if value is not None else sum(o.area_km2 for o in layer.feature(row).outlines)
+    return cache[row]
 
 
 def region_place(get, layer, i):

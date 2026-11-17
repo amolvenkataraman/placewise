@@ -1,6 +1,6 @@
 """United States naming over the Census Bureau pack (counties, places, ZCTAs, CBSAs, CSAs).
 
-- admin1: the county's state ("us/counties:state").
+- admin1: the county's state ("usa/counties:state").
 - locality: the census place containing the point. A census-designated place (CDP) inside a metro
   area takes the CBSA title's first city in its state, when the point is within METRO_CDP_KM of
   that city and the CDP isn't named in the title itself (Paradise -> Las Vegas; Arlington VA and
@@ -9,8 +9,8 @@
 - city: the locality; on unincorporated land the metro's city within METRO_CITY_KM (SFO -> San
   Francisco), else the GeoNames score. Incorporated places are always their own city (Emeryville).
 - sublocality: the nearest GeoNames place within SUBLOCALITY_KM inside the same census place.
-- borough (New York City's five counties), admin2 (county), postal (ZCTA), regions (CBSA, CSA;
-  or the pack's curated `regions` layer when it has one).
+- borough (New York City's five counties), admin2 (county), postal (ZCTA), regions (the pack's
+  curated `regions` and the CBSA and CSA, smallest first).
 """
 
 from functools import cached_property
@@ -42,11 +42,11 @@ class Usa:
             self.postal = layers.add(pack, names["postal"], common.area_maker(PlaceKind.POSTAL_CODE))
         if const.REGIONS in pack:
             self.regions = layers.add(pack, const.REGIONS, common.region_place)
-        else:
-            if names["cbsa"] in pack:
-                self.cbsa = layers.add(pack, names["cbsa"], common.region_place)
-            if names["csa"] in pack:
-                self.csa = layers.add(pack, names["csa"], common.region_place)
+        # the CBSA names the principal cities, whichever regions the Result lists
+        if names["cbsa"] in pack:
+            self.cbsa = layers.add(pack, names["cbsa"], common.region_place)
+        if names["csa"] in pack:
+            self.csa = layers.add(pack, names["csa"], common.region_place)
         self._heads = {}
 
     # -- per-row tables -----------------------------------------------------------------------------
@@ -190,20 +190,8 @@ class Usa:
                 out.sources[i]["borough"] = f"{self.county}:{const.NAME}"
 
     def _regions(self, out, lat, lon, county):
-        if self.regions is not None:
-            common.set_regions(out, self.layers, self.regions, lat, lon)
-        else:
-            safe = np.maximum(county, 0)
-            parts = []
-            for key, column in ((self.cbsa, "cbsa"), (self.csa, "csa")):
-                if key is not None:
-                    rows = np.where(county >= 0, self._county[column][safe], -1)
-                    parts.append(common.places_for(self.layers, key, rows))
-            found = np.full(len(county), None, dtype=object)
-            for i in range(len(county)):
-                regions = tuple(p[i] for p in parts if p[i] is not None)
-                found[i] = regions or None
-            source = f"{self.cbsa or self.csa}:{lookup_const.POLYGON}"
-            for i in np.flatnonzero(found != None).tolist():  # noqa: E711 - element-wise
-                out.regions[i] = found[i]
-                out.sources[i]["regions"] = source
+        safe, statistical = np.maximum(county, 0), []
+        for key, column in ((self.cbsa, "cbsa"), (self.csa, "csa")):
+            if key is not None:
+                statistical.append((key, np.where(county >= 0, self._county[column][safe], -1)))
+        common.set_regions(out, self.layers, lat, lon, self.regions, statistical)
