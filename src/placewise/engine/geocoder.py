@@ -148,12 +148,19 @@ class Geocoder:
 
 
 def _installed_country_packs(store):
-    """The country packs installed in the store (stores without `installed()` have none)."""
+    """The country packs installed in the store that it can open (stores without `installed()`
+    have none)."""
     installed = getattr(store, "installed", None)
     if installed is None:
         return []
-    names = installed()
-    return [store.current(name) for name in naming_const.COUNTRY_PACKS if name in names]
+    names, found = installed(), []
+    for name in naming_const.COUNTRY_PACKS:
+        if name in names:
+            try:
+                found.append(store.current(name))
+            except LookupError:  # not at the pinned version: the lookup goes on without it
+                continue
+    return found
 
 
 def _accepts(func, name):

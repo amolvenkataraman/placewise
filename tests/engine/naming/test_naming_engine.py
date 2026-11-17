@@ -88,6 +88,20 @@ def test_default_geocoder_opens_installed_country_packs(packs):
     assert geo.lookup(10.48, -148.8).locality.name == "Mississauga"
 
 
+def test_default_geocoder_skips_country_packs_it_cannot_open(packs):
+    class PinnedStore:
+        def ensure(self, name):
+            return packs[0]
+
+        def installed(self):
+            return {"world": ["2026.11"], "ca": ["2025.01"]}
+
+        def current(self, name):
+            raise LookupError(f"{name} is not installed at the pinned version")
+
+    assert Geocoder(store=PinnedStore()).data_version == "world-2026.11"
+
+
 @pytest.mark.parametrize("subset", ["all", "us"])
 def test_lookup_many_equals_lookup(packs, subset):
     geo = Geocoder(packs=list(packs) if subset == "all" else [packs[0], packs[1]])
