@@ -1,6 +1,6 @@
 """The US pack: states, counties, places (incorporated places and CDPs), metro/micro areas (cbsa),
 combined statistical areas (csa) and ZIP Code Tabulation Areas (zcta), all from the US Census
-Bureau (public domain).
+Bureau (public domain), and the curated regions (Bay Area ...) as unions of counties.
 
     uv run python -m packbuild.us --version 2026.11
 
@@ -12,6 +12,7 @@ import datetime as dt
 import logging
 from pathlib import Path
 
+from . import regions_layer
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .sources import url, uscensus
@@ -22,8 +23,9 @@ SHAPEFILES = ("state", "county", "place", "cbsa", "csa", "zcta")
 DOWNLOADS = (*SHAPEFILES, "gazetteer_place", "gazetteer_zcta", "population", "delineation")
 
 
-def build_layers(cache_dir, refresh=False):
-    """The six US layers, fetching (or reusing) the source files in `cache_dir`."""
+def build_layers(cache_dir, refresh=False, regions=None):
+    """The US layers, fetching (or reusing) the source files in `cache_dir`: the six Census layers,
+    then `regions` (curated regions as unions of counties; `regions` None reads datasets/regions)."""
 
     def get(name):
         return fetch(url(uscensus.SOURCE, name), cache_dir, refresh=refresh)
@@ -50,15 +52,18 @@ def build_layers(cache_dir, refresh=False):
     ]
     # polygons: ZIP lookups are point-in-area questions, which internal points can't answer
     layers.append(uscensus.zcta(shapefile("zcta"), gazetteer("gazetteer_zcta")))
+    counties = next(layer for layer in layers if layer.name == "counties")
+    curated = regions_layer.for_country(regions, "US")
+    layers.append(regions_layer.from_features(curated, regions_layer.by_id(counties), counties.sources))
     return layers
 
 
-def build_us(cache_dir, out_dir, version, refresh=False):
-    """Fetch the sources, build the layers and write `<out_dir>/us-<version>/`."""
-    layers = build_layers(cache_dir, refresh=refresh)
+def build_us(cache_dir, out_dir, version, refresh=False, regions=None):
+    """Fetch the sources, build the layers and write `<out_dir>/usa-<version>/`."""
+    layers = build_layers(cache_dir, refresh=refresh, regions=regions)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "us", version, layers)
+    return write_pack(Path(out_dir), "usa", version, layers)
 
 
 def main(argv=None):

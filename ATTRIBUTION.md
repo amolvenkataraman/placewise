@@ -1,7 +1,12 @@
 # Data attribution
 
-Generated from the source registry (`src/placewise/sources/`) by `placewise attribution`; do not
-edit by hand. It lists every dataset placewise data packs are built from, with its licence and
+**Disclaimer.** placewise and its data packs are provided "as is" and "where is", without warranty
+of any kind and with no legal liability for their use. The data may be wrong, incomplete or out of
+date, and is not an official determination of any place's name, boundaries or status. See
+[DISCLAIMER.md](DISCLAIMER.md).
+
+Generated from the source registry (`src/placewise/sources/`) by `placewise attribution --all`; do
+not edit by hand. It lists every dataset placewise data packs are built from, with its licence and
 the credit line to show. An app that ships or displays placewise data can link to this file, and
 should still read each licence for its own obligations.
 
@@ -9,15 +14,16 @@ should still read each licence for its own obligations.
 |---|---|---|
 | [OurAirports](https://ourairports.com/data/) | LicenseRef-public-domain | world/airports |
 | [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/country_facts |
-| [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | us/states, us/counties, us/places, us/cbsa, us/csa, us/zcta |
-| [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | ca/provinces, ca/cd, ca/csd, ca/cma |
+| [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | usa/states, usa/counties, usa/places, usa/cbsa, usa/csa, usa/zcta, usa/regions |
+| [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/regions |
 | [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated) |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
 | [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts |
-| [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | ca/provinces, ca/cd, ca/csd, ca/cma, ca/fsa |
-| [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | ca/fsa |
-| [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | in/pincodes |
-| [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | in/pincodes, in/post_offices |
+| [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
+| [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
+| [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/pincodes, ind/regions |
+| [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/pincodes, ind/post_offices, ind/regions |
+| [placewise curated datasets: regions (datasets/regions)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | usa/regions, can/regions, ind/regions |
 
 ## Coverage
 
@@ -25,18 +31,19 @@ should still read each licence for its own obligations.
 |---|---|---|
 | airports | world | OurAirports |
 | boundaries | world | Natural Earth 1:10m Cultural Vectors |
-| boundaries | ca | Statistics Canada, 2021 Census Boundary Files (cartographic) |
-| boundaries | in | none: No openly licensed, redistributable state or district boundaries found yet (Survey of India data is not under an open licence; NWDP's terms are unclear; geoBoundaries is CC BY 2.5 IN or ODbL). Natural Earth admin1 covers states in the world pack. See packbuild/README.md, India pack. |
-| boundaries | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| boundaries | can | Statistics Canada, 2021 Census Boundary Files (cartographic) |
+| boundaries | ind | none: No openly licensed, redistributable state or district boundaries found yet (Survey of India data is not under an open licence; NWDP's terms are unclear; geoBoundaries is CC BY 2.5 IN or ODbL). Natural Earth admin1 covers states in the world pack. See packbuild/README.md, India pack. |
+| boundaries | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 | countries | world | GeoNames, Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0, Wikidata, Natural Earth 1:10m Cultural Vectors |
 | places | world | GeoNames |
-| places | ca | Statistics Canada, 2021 Census of Population, population and dwelling counts |
-| places | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
-| postal | ca | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
-| postal | in | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India) |
-| postal | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
-| regions | ca | Statistics Canada, 2021 Census Boundary Files (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
-| regions | us | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts |
+| places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| postal | can | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
+| postal | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India) |
+| postal | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| regions | can | Statistics Canada, 2021 Census Boundary Files (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts, placewise curated datasets: regions (datasets/regions) |
+| regions | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India), placewise curated datasets: regions (datasets/regions) |
+| regions | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations, placewise curated datasets: regions (datasets/regions) |
 
 ## OurAirports
 
@@ -122,6 +129,8 @@ Catalogue 92-179-X, reference guide 92-179-G, whose use is governed by the Stati
 
 Geofenced delivery post office PIN code areas (19,312 polygons) published by the Department of Posts in 2025, with the 'Know Your PIN Code' portal, under GODL-India, which permits use, adaptation and redistribution, commercial or not, with attribution to the provider, source and licence. The official catalogue page (data.gov.in) and its AIKosh copies (https://aikosh.indiaai.gov.in/home/datasets/details/all_india_pincode_boundary_geo_json.html, https://aikosh.indiaai.gov.in/home/datasets/details/delivery_post_office_pincode_boundary.html) offer no file that can be fetched automatically: data.gov.in refused or blocked automated requests from the build machine in November 2026 and was reported returning 404 for this resource in May 2026, and AIKosh downloads go through a click-through. The build therefore fetches boundary_mirror, a copy of the official file All_India_pincode_Boundary-19312.geojson (90,323,809 bytes, git blob 6a73f2dfc85b9c7657b24c6523e8ca882cb4a8c7, byte-identical in three unrelated GitHub repositories), pinned to a commit, or takes a manually downloaded official copy (--pincode-boundaries). GeoJSON in WGS84 longitude/latitude (CRS84); properties Pincode, Office_Name, Division, Region, Circle, text padded with trailing spaces. It carries no district or state: the build joins those from the All India Pincode Directory. Boundaries are carried as published by the Department of Posts, a Government of India body, so any official-versus-de-facto question follows India's official view; the areas are delivery zones, not administrative units, and do not nest inside states or districts.
 
+India's curated regions are drawn as unions of PIN code areas grouped by district, since no district polygons are openly licensed.
+
 ## All India Pincode Directory (Department of Posts, Open Government Data Platform India)
 
 - Credit: Department of Posts, Ministry of Communications, Government of India. All India Pincode Directory, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl
@@ -129,3 +138,13 @@ Geofenced delivery post office PIN code areas (19,312 polygons) published by the
 - Website: https://www.data.gov.in/catalog/all-india-pincode-directory
 
 Every post office with its PIN code, office type (HO, SO, BO), delivery status, division, region, circle, district, state and, for most offices, a latitude and longitude, published under GODL-India (use, adaptation and redistribution allowed with attribution). The official file is the CSV download of data.gov.in resource 'All India Pincode Directory till last month' (API resource 5c2f62fe-5afa-4119-a499-fec9d604d5bd, which needs a free data.gov.in API key); data.gov.in refused or blocked automated requests from the build machine in November 2026. The build therefore fetches directory_mirror, a copy of that CSV taken from data.gov.in in May 2024 and pinned to a commit, or takes a manually downloaded current CSV (--pincode-directory). District and state names are upper case as published. Coordinates are WGS84; placeholder values (NA, 1/1, blanks) and points outside India's extent are dropped, not repaired. Districts and states are the Department of Posts' own assignment of each office.
+
+The directory's district column decides which PIN areas make up a district.
+
+## placewise curated datasets: regions (datasets/regions)
+
+- Credit: placewise curated datasets, CC BY 4.0
+- Licence: CC-BY-4.0
+- Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
+
+Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.

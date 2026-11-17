@@ -136,6 +136,49 @@ def directory_rows():
     ]  # fmt: skip
 
 
+# Offices placed against PIN areas, for the coordinate check: synthetic offices round the fixture
+# boxes, plus two synthetic nested boxes (600001 holds 600002) to show overlapping areas.
+TRIVANDRUM_GPO = (8.5005, 76.9480)
+LAHORE = (31.5497, 74.3436)  # a public place in Pakistan, as some directory rows have
+
+
+def placement_features():
+    poly = lambda *box: {"type": "Polygon", "coordinates": [ring(*box)]}  # noqa: E731
+    extra = [
+        _feature(_pin("695001", "Thiruvananthapuram G.P.O.", "Trivandrum ", "", "Kerala "),
+                 poly(8.48, 76.93, 8.52, 76.97)),
+        _feature(_pin("600001", "Outer Area S.O", "Synthetic ", "", "Tamil Nadu "),
+                 poly(13.5, 79.5, 14.5, 80.5)),
+        _feature(_pin("600002", "Inner Area S.O", "Synthetic ", "", "Tamil Nadu "),
+                 poly(13.9, 79.9, 14.1, 80.1)),
+    ]  # fmt: skip
+    return boundary_features() + extra
+
+
+def placement_rows():
+    """(office, pincode, lat, lon, where it lies against its own PIN area at the default 2 km)."""
+    return [
+        ("Bengaluru G.P.O.", "560001", 12.9839, 77.5929, "inside"),
+        ("Merged Part S.O", "560001", 13.015, 77.585, "inside"),  # the second polygon of 560001
+        ("Edge S.O", "560001", 12.97, 77.645, "near"),  # 0.015 deg (1.6 km) east of the box
+        ("Far S.O", "560001", 12.97, 77.70, "outside"),  # 7.6 km east, in no PIN area
+        ("Wrong Area S.O", "560001", 17.3616, 78.4747, "elsewhere"),  # at the Charminar, in 500002
+        ("Thiruvananthapuram G.P.O.", "695001", *TRIVANDRUM_GPO, "inside"),
+        ("Thiruvananthapuram Fort S.O", "695001", *LAHORE, "outside"),
+        ("Inner Area S.O", "600002", 14.0, 80.0, "inside"),  # behind 600001, which query names first
+        ("Silvassa S.O", "396230", 20.2740, 73.0120, "no_area"),  # no polygon for its PIN code
+    ]
+
+
+def write_placement_directory(path):
+    ka = ("Karnataka Circle", "Synthetic Region", "Synthetic Division")
+    rows = [
+        (*ka, office, pin, "PO", "Delivery", "SYNTHETIC", "KARNATAKA", str(lat), str(lon))
+        for office, pin, lat, lon, _ in placement_rows()
+    ]
+    return write_directory(path, rows=rows)
+
+
 def write_directory(path, rows=None, header=DIRECTORY_HEADER):
     with open(path, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f, quoting=csv.QUOTE_ALL)

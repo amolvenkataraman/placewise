@@ -100,9 +100,9 @@ def test_update_installs_newer_versions_and_never_deletes(data_dir, release):
 
 
 def test_update_named_pack_installs_it_and_ignores_older_index(data_dir, release):
-    release.add("ca", "2026.10")
+    release.add("can", "2026.10")
     store = install_versions(data_dir, release, "2026.11")
-    assert store.update(["ca"]) == [("ca", None, "2026.10")]
+    assert store.update(["can"]) == [("can", None, "2026.10")]
     release.add("world", "2026.10")  # index rolled back: nothing to do
     assert make_store(data_dir, release).update() == []
 
@@ -240,7 +240,7 @@ def test_pack_json_schema_2_is_refused(data_dir, release):
     assert_refused(data_dir, release, "schema", exc=StoreError)
 
 
-@pytest.mark.parametrize(("name", "version"), [("ca", "2026.11"), ("world", "2026.10")])
+@pytest.mark.parametrize(("name", "version"), [("can", "2026.11"), ("world", "2026.10")])
 def test_pack_json_must_match_the_index_entry(data_dir, release, name, version):
     manifest = pack_json(name, version, {})
     entries = [dir_entry("world-2026.11"), file_entry("world-2026.11/pack.json", manifest)]

@@ -8,13 +8,15 @@ from pathlib import Path
 
 import pytest
 import statcan_fixtures as fx
+from regions_kit import CA_REGIONS, use_regions
 
 from packbuild import arcgis, ca
 from packbuild.sources import SOURCES, statcan, url
 from placewise.packs import open_pack
 
-LAYERS = ["provinces", "cd", "csd", "cma", "fsa"]
-COUNTS = {"provinces": 3, "cd": 6, "csd": 8, "cma": 4, "fsa": 6}
+BASE = ["provinces", "cd", "csd", "cma", "fsa"]
+LAYERS = [*BASE, "regions"]
+COUNTS = {"provinces": 3, "cd": 6, "csd": 8, "cma": 4, "fsa": 6, "regions": 3}
 BOUNDARY_DOWNLOADS = [
     (statcan.BOUNDARIES, "provinces"),
     (statcan.BOUNDARIES, "cd"),
@@ -57,6 +59,7 @@ def offline(downloads, monkeypatch):
         return downloads[u.rsplit("/", 1)[1]]
 
     monkeypatch.setattr(ca, "fetch", fake_fetch)
+    use_regions(monkeypatch, CA_REGIONS)
     return requested
 
 
@@ -71,7 +74,7 @@ def test_the_registry_has_every_download_the_build_needs():
     assert "Canada Post" in SOURCES[statcan.FSA].credit
 
 
-def test_build_ca_fetches_from_the_registry_and_hands_five_layers_to_the_writer(
+def test_build_ca_fetches_from_the_registry_and_hands_six_layers_to_the_writer(
     tmp_path, offline, monkeypatch
 ):
     calls = []
@@ -82,10 +85,10 @@ def test_build_ca_fetches_from_the_registry_and_hands_five_layers_to_the_writer(
 
     monkeypatch.setattr(ca, "write_pack", fake_write_pack)
     out = ca.build_ca(tmp_path / "cache", tmp_path / "out", "2026.11")
-    assert out == tmp_path / "out" / "ca-2026.11"
+    assert out == tmp_path / "out" / "can-2026.11"
     assert sorted(offline) == sorted(url(s, n) for s, n in [*BOUNDARY_DOWNLOADS, *POPULATION_DOWNLOADS])
     [(out_dir, name, version, layers)] = calls
-    assert (out_dir, name, version) == (tmp_path / "out", "ca", "2026.11")
+    assert (out_dir, name, version) == (tmp_path / "out", "can", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
     assert {layer.name: len(layer.columns["id"]) for layer in layers} == COUNTS
     for layer in layers:
@@ -98,11 +101,11 @@ def test_build_ca_writes_a_pack_that_answers_for_public_places(tmp_path, offline
     pack = open_pack(path, verify=True)
     assert [layer.name for layer in pack] == LAYERS
     assert {name: len(pack[name]) for name in LAYERS} == COUNTS
-    assert set(pack.sources) == {statcan.BOUNDARIES, statcan.FSA, statcan.POPULATION}
+    assert set(pack.sources) == {statcan.BOUNDARIES, statcan.FSA, statcan.POPULATION, "placewise-regions"}
 
     def names(lat, lon):
         out = {}
-        for name in LAYERS:
+        for name in BASE:
             layer = pack[name]
             hits = layer.query_all(lat, lon)
             out[name] = [layer.value("name", int(i)) for i in hits]
@@ -129,6 +132,34 @@ def test_build_ca_writes_a_pack_that_answers_for_public_places(tmp_path, offline
     assert listuguj["population"] is None
     layer_json = json.loads((path / "fsa" / "layer.json").read_text())
     assert layer_json["sources"] == [statcan.FSA, statcan.POPULATION]
+
+
+def _region_ids(pack, lat, lon):
+    layer = pack["regions"]
+    return [layer.value("id", int(i)) for i in layer.query_all(lat, lon)]
+
+
+def test_build_ca_draws_regions_from_divisions_subdivisions_and_cmas(tmp_path, offline):
+    pack = open_pack(ca.build_ca(tmp_path / "cache", tmp_path / "out", "2026.11"), verify=True)
+    assert _region_ids(pack, *fx.CN_TOWER) == ["region:test-gta"]
+    assert _region_ids(pack, *fx.MISSISSAUGA) == ["region:test-gta"]
+    assert sorted(_region_ids(pack, *fx.MILTON_GO)) == ["region:test-gta", "region:test-milton"]
+    assert (
+        _region_ids(pack, *fx.PARLIAMENT_HILL) == _region_ids(pack, *fx.GATINEAU) == ["region:test-capital"]
+    )
+    assert _region_ids(pack, *fx.BANFF) == []
+    regions = pack["regions"]
+    assert regions.value("id", 0) == "region:test-milton"  # smallest first
+    gta = regions.feature(int(regions.find("id", "region:test-gta")[0]))
+    assert gta.properties["members"] == "statcan:3520,statcan:3521,statcan:3524"
+    # the union was simplified once: Toronto's dense edges are gone (the raw ring has ~200 vertices)
+    assert sum(len(r) for o in gta.outlines for r in o.rings) < 40
+
+
+def test_a_region_member_missing_from_the_census_layers_fails_the_build(tmp_path, offline, monkeypatch):
+    use_regions(monkeypatch, [{**CA_REGIONS[0], "members": ["statcan:3525"]}])
+    with pytest.raises(ValueError, match="region:test-gta: statcan:3525"):
+        ca.build_ca(tmp_path / "cache", tmp_path / "out", "2026.11")
 
 
 def test_a_bot_check_on_the_file_server_suggests_the_map_service(tmp_path, monkeypatch):
@@ -158,6 +189,7 @@ def fake_service(downloads, monkeypatch):
         return downloads[u.rsplit("/", 1)[1]]
 
     monkeypatch.setattr(ca, "fetch", fake_fetch)
+    use_regions(monkeypatch, CA_REGIONS)
     return fake
 
 

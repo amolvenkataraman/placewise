@@ -20,13 +20,14 @@ from pathlib import Path
 from placewise.constants import countries
 from placewise.constants._keys import city_key
 
+from . import datasets
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .sources import url
 from .sources.geonames import GEONAME_FIELDS, read_admin1, read_tsv
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = ROOT / "src" / "placewise" / "constants" / "countries"
-ALIASES = ROOT / "datasets" / "cities" / "aliases.json"
+ALIASES = datasets.path("cities", "aliases.json")  # in the placewise-data checkout (packbuild.datasets)
 POPULATION_MIN = 100_000
 SEATS = {"PPLA", "PPLC"}  # admin1 seats and national capitals
 FOLDERS = {"US": "usa", "CA": "can", "IN": "ind", "GB": "gbr"}

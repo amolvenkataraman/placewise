@@ -78,7 +78,7 @@ def test_add_may_match_an_area_instead_of_its_radius():
 
 def test_loader_errors_name_the_file_and_rule_number():
     doc = {
-        "alias": [{"text": "GTA", "means": "placewise:region/gta"}],
+        "alias": [{"text": "GTA", "means": "region:gta"}],
         "rename": [{"id": "x", "name": "Y"}, {"id": "y", "nmae": "Z"}],
     }
     with pytest.raises(ValueError, match=r"local:mine\.toml.*#3.*nmae"):

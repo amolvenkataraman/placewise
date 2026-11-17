@@ -12,10 +12,10 @@ from placewise.store import DownloadError, OfflineError, PackNotInstalled, Store
 
 def test_fetch_index_returns_pack_infos_and_caches_with_absolute_urls(data_dir, release):
     release.add("world", "2026.11")
-    release.add("ca", "2026.10")
+    release.add("can", "2026.10")
     store = make_store(data_dir, release)
     index = store.fetch_index()
-    assert set(index) == {"world", "ca"}
+    assert set(index) == {"world", "can"}
     world = index["world"]
     assert isinstance(world, PackInfo)
     assert (world.name, world.version, world.schema) == ("world", "2026.11", 1)

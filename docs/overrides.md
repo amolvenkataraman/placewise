@@ -25,7 +25,7 @@ from placewise.overrides import load_overrides
 overrides = load_overrides()                       # repo + your local file
 overrides = load_overrides(local_path="mine.toml", app_rules={"hide": [{"id": "osm:way/1"}]})
 result = overrides.apply(result, lat, lon)
-overrides.resolve_name("GTA")                      # ["placewise:region/gta"]
+overrides.resolve_name("GTA")                      # ["region:gta"]
 overrides.explain()                                # every rule, its layer and origin
 overrides.tuning(place)                            # merged tune knobs for a place
 ```
@@ -106,7 +106,7 @@ that aren't lose it. `remove = true` drops the region from every answer and from
 
 ```toml
 [[region]]
-id = "placewise:region/gta"
+id = "region:gta"
 label = "Greater Toronto Area"
 aliases = ["GTA"]
 members = { ca_cd = ["3518", "3519", "3520", "3521", "3524"] }   # census divisions
@@ -124,7 +124,7 @@ where the alias applies (`near` covers searches within 50 km of its point).
 ```toml
 [[alias]]
 text = "GTA"
-means = "placewise:region/gta"
+means = "region:gta"
 country = "CA"
 ```
 

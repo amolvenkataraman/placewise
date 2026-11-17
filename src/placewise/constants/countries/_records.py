@@ -17,7 +17,7 @@ class Metro:
     aliases: tuple[str, ...] = ()
     city_aliases: dict[str, str] = field(default_factory=dict)
     cities: dict[str, str] = field(default_factory=dict)
-    id: str = ""  # stable id: "placewise:region/gta"
+    id: str = ""  # stable id: "region:gta"
 
     @property
     def sole_admin1(self):

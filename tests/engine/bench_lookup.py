@@ -17,7 +17,7 @@ from placewise.engine import Geocoder
 from placewise.packs import open_pack
 
 OUT = Path(__file__).resolve().parents[2] / ".cache" / "packbuild" / "out"
-COUNTRY_PACKS = ("us", "ca", "in")
+COUNTRY_PACKS = ("usa", "can", "ind")
 
 
 def land_points(pack, n, seed=0, only=None):

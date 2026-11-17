@@ -275,6 +275,24 @@ def _layer(name, path, row, sources, population, tolerance_m):
     )
 
 
+# layer -> the attribute its ids are made of
+UID_FIELDS = {"provinces": "PRUID", "cd": "CDUID", "csd": "CSDUID", "cma": "CMAPUID", "fsa": "CFSAUID"}
+
+
+def raw_rings(paths, ids):
+    """{id: rings} for the wanted ids ("statcan:3520"), read again from the boundary files of the
+    layers in `paths` ({layer: path}) and left unsimplified and projected (EPSG:3347): neighbours'
+    shared borders still have the same vertices, so a union of them can drop those borders."""
+    wanted, out = set(ids), {}
+    for layer, path in paths.items():
+        field = UID_FIELDS[layer]
+        for props, rings in read_boundaries(path):
+            fid = f"statcan:{_text(props[field])}"
+            if fid in wanted:
+                out.setdefault(fid, []).extend(rings)
+    return out
+
+
 def _population(table, key):
     return None if table is None else table.get(key)
 

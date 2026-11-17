@@ -85,6 +85,35 @@ def test_attribution_markdown_and_json(serve):
     assert call(server, "GET", "/v1/attribution?format=xml").error_code == "bad_request"
 
 
+class _Pack:
+    def __init__(self, *sources):
+        self.sources = sources
+
+
+def test_attribution_lists_the_sources_of_the_packs_served(serve, fake):
+    fake.packs = [_Pack("naturalearth", "geonames"), _Pack("uscensus", "not-in-the-registry")]
+    server = serve()
+    served = ["naturalearth", "geonames", "uscensus"]
+    reply = call(server, "GET", "/v1/attribution")
+    subject = "the data packs served here"
+    assert reply.body.decode() == attribution.render_markdown(only=served, subject=subject)
+    assert set(call(server, "GET", "/v1/attribution?format=json").json) == set(served)
+
+    reply = call(server, "GET", "/v1/attribution?all=1")
+    assert reply.body.decode() == attribution.render_markdown()
+    everything = call(server, "GET", "/v1/attribution?format=json&all=1").json
+    assert set(everything) == set(attribution.load_sources())
+    assert call(server, "GET", "/v1/attribution?all=yes").error_code == "bad_request"
+
+
+def test_attribution_through_a_wrapping_geocoder_reads_the_wrapped_packs(serve, fake):
+    from placewise.service.local import CachedGeocoder
+
+    fake.packs = [_Pack("geonames")]
+    reply = call(serve(CachedGeocoder(fake)), "GET", "/v1/attribution?format=json")
+    assert set(reply.json) == {"geonames"}
+
+
 def test_version(serve):
     reply = call(serve(settings(max_batch=7)), "GET", "/v1/version")
     assert reply.json == {

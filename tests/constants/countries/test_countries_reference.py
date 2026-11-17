@@ -17,7 +17,7 @@ def _admin1_ok(country, code):
 def test_regions_are_well_formed():
     assert countries.METROS
     ids = [m.id for m in countries.METROS]
-    assert len(ids) == len(set(ids)) and all(i.startswith("placewise:region/") for i in ids)
+    assert len(ids) == len(set(ids)) and all(i.startswith("region:") for i in ids)
     for metro in countries.METROS:
         assert metro.country in countries.BY_ALPHA2, metro.key
         assert all(_admin1_ok(metro.country, code) for code in metro.admin1), metro.key
@@ -27,7 +27,7 @@ def test_regions_are_well_formed():
 
 def test_region_ids_the_overrides_use_are_kept():
     ids = {m.id for m in countries.METROS}
-    assert {"placewise:region/gta", "placewise:region/sf-bay-area"} <= ids
+    assert {"region:gta", "region:sf-bay-area"} <= ids
 
 
 def test_region_and_city_alias_names_are_unique():

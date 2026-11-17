@@ -1,7 +1,8 @@
 # Pack format, schema 1
 
 A **pack** is a versioned bundle of geographic data that placewise downloads on demand: `world`,
-`us`, `ca`, `in`, later `us-nature` and so on. This document is the contract between the code that
+`usa`, `can`, `ind`, later `usa-nature` and so on (a country pack is named by the country's
+lower-case ISO 3166-1 alpha-3 code). This document is the contract between the code that
 builds packs (`build/`), the code that stores them (`placewise.store`) and the code that reads them
 (`placewise.packs`). A reader in another language should be implementable from this page alone.
 
@@ -44,7 +45,9 @@ be opened with `numpy.load(path, mmap_mode="r")` and costs nothing until touched
 
 - `schema`: this document's version. A reader refuses packs whose schema it doesn't know.
 - `name`: `[a-z0-9][a-z0-9_-]*` (it becomes a directory name; layer names follow the same rule,
-  field names `[A-Za-z_][A-Za-z0-9_]*`).
+  field names `[A-Za-z_][A-Za-z0-9_]*`). A country pack is named by the country's lower-case
+  ISO 3166-1 alpha-3 code; a pack carrying share-alike sources (ODbL, CC BY-SA) ends in `-sa`, and
+  no other pack may carry them (checked at release).
 - `version`: CalVer `YYYY.MM` with MM 01–12, optionally `.N` (N ≥ 1, no leading zero) for
   re-releases in the same month.
 - `sources`: attribution source ids (`placewise.constants.licences`); each must also appear in a

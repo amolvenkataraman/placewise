@@ -5,8 +5,11 @@ import json
 from pathlib import Path
 
 import pytest
+from datasets_kit import needs_datasets
 
 from packbuild import country_groups as cg
+
+pytestmark = needs_datasets
 
 REPO = Path(__file__).resolve().parents[2]
 GENERATED = REPO / "src" / "placewise" / "constants" / "countries" / "groups.py"

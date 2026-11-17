@@ -1,4 +1,5 @@
-"""The India pack: PIN code areas and post offices (Department of Posts, GODL-India).
+"""The India pack: PIN code areas and post offices (Department of Posts, GODL-India), and the
+curated regions (Delhi NCR ...) as unions of PIN code areas.
 
     uv run python -m packbuild.india --version 2026.11
     uv run python -m packbuild.india --version 2026.11 \\
@@ -16,6 +17,7 @@ import datetime as dt
 import logging
 from pathlib import Path
 
+from . import regions_layer
 from .fetch import DEFAULT_CACHE, fetch
 from .layer import write_pack
 from .sources import SOURCES, indiapost, nwdp, url
@@ -24,9 +26,17 @@ log = logging.getLogger(__name__)
 
 
 def build_layers(
-    cache_dir, refresh=False, pincode_boundaries=None, pincode_directory=None, states=None, districts=None
+    cache_dir,
+    refresh=False,
+    pincode_boundaries=None,
+    pincode_directory=None,
+    states=None,
+    districts=None,
+    regions=None,
 ):
-    """The India layers. Each source is the given file if any, else the registry download."""
+    """The India layers. Each source is the given file if any, else the registry download. The
+    curated regions (`regions` None reads datasets/regions) are unions of PIN code areas: with no
+    openly licensed district polygons, a district is the PIN areas the directory files under it."""
     layers = []
     for path, loader in ((states, nwdp.states), (districts, nwdp.districts)):
         if path is not None:
@@ -44,17 +54,23 @@ def build_layers(
         pincode_directory = fetch(
             url(indiapost.DIRECTORY_SOURCE, "directory_mirror"), cache_dir, refresh=refresh
         )
-    layers.append(indiapost.pincodes(pincode_boundaries, pincode_directory))
-    layers.append(indiapost.post_offices(pincode_directory))
+    pincodes = indiapost.pincodes(pincode_boundaries, pincode_directory)
+    # an office keeps its coordinates only in or near its own PIN area (indiapost.OFFICE_BUFFER_KM)
+    offices, _ = indiapost.keep_placed_offices(indiapost.post_offices(pincode_directory), pincodes)
+    layers.extend([pincodes, offices])
+    curated = regions_layer.for_country(regions, "IN")
+    c = pincodes.columns
+    regions_layer.check_districts(curated, zip(c["id"], c["state_code"], c["district"], strict=True))
+    layers.append(regions_layer.from_features(curated, regions_layer.by_id(pincodes), pincodes.sources))
     return layers
 
 
 def build_india(cache_dir, out_dir, version, refresh=False, **paths):
-    """Build the layers (see build_layers for the optional file paths) and write `<out_dir>/in-<version>/`."""
+    """Build the layers (see build_layers for the optional file paths); write `<out_dir>/ind-<version>/`."""
     layers = build_layers(cache_dir, refresh=refresh, **paths)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "in", version, layers)
+    return write_pack(Path(out_dir), "ind", version, layers)
 
 
 def main(argv=None):

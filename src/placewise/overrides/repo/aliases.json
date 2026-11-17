@@ -2,22 +2,22 @@
   "alias": [
     {
       "text": "GTA",
-      "means": "placewise:region/gta",
+      "means": "region:gta",
       "country": "CA"
     },
     {
       "text": "Greater Toronto Area",
-      "means": "placewise:region/gta",
+      "means": "region:gta",
       "country": "CA"
     },
     {
       "text": "Bay Area",
-      "means": "placewise:region/sf-bay-area",
+      "means": "region:sf-bay-area",
       "country": "US"
     },
     {
       "text": "SF Bay Area",
-      "means": "placewise:region/sf-bay-area",
+      "means": "region:sf-bay-area",
       "country": "US"
     }
   ]

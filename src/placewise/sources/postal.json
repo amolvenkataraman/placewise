@@ -2,7 +2,7 @@
   "purpose": "postal",
   "description": "Postal-code areas: ZIP Code Tabulation Areas, forward sortation areas, PIN codes.",
   "regions": {
-    "us": [
+    "usa": [
       {
         "id": "uscensus",
         "name": "US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations",
@@ -10,12 +10,12 @@
         "licence": "LicenseRef-public-domain",
         "credit": "U.S. Census Bureau (census.gov), public domain",
         "used_in": [
-          "us/states",
-          "us/counties",
-          "us/places",
-          "us/cbsa",
-          "us/csa",
-          "us/zcta"
+          "usa/states",
+          "usa/counties",
+          "usa/places",
+          "usa/cbsa",
+          "usa/csa",
+          "usa/zcta"
         ],
         "downloads": {
           "zcta": "https://www2.census.gov/geo/tiger/GENZ2020/shp/cb_2020_us_zcta520_500k.zip",
@@ -24,7 +24,7 @@
         "notes": "Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025), which cover incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places) but not other census-designated places. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01). The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files."
       }
     ],
-    "ca": [
+    "can": [
       {
         "id": "statcan-fsa-2021",
         "name": "Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)",
@@ -32,7 +32,7 @@
         "licence": "LicenseRef-StatCan-Open-Licence",
         "credit": "Adapted from Statistics Canada, 2021 Census Forward Sortation Area Boundary File, reference date January 1, 2021. This does not constitute an endorsement by Statistics Canada of this product. This data includes information copied with permission from Canada Post Corporation. Postal code is an official mark of Canada Post.",
         "used_in": [
-          "ca/fsa"
+          "can/fsa"
         ],
         "downloads": {
           "fsa": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lfsa000b21a_e.zip",
@@ -47,11 +47,11 @@
         "licence": "LicenseRef-StatCan-Open-Licence",
         "credit": "Adapted from Statistics Canada, Census of Population 2021, Population and dwelling counts (tables 98-10-0002-01, 98-10-0005-01 and 98-10-0019-01), reference date May 11, 2021. This does not constitute an endorsement by Statistics Canada of this product.",
         "used_in": [
-          "ca/provinces",
-          "ca/cd",
-          "ca/csd",
-          "ca/cma",
-          "ca/fsa"
+          "can/provinces",
+          "can/cd",
+          "can/csd",
+          "can/cma",
+          "can/fsa"
         ],
         "downloads": {
           "fsa": "https://www150.statcan.gc.ca/n1/tbl/csv/98100019-eng.zip"
@@ -59,7 +59,7 @@
         "notes": "Full-table CSV downloads. 98-10-0002-01 covers Canada, provinces and territories, census divisions and census subdivisions; 98-10-0005-01 CMAs and CAs (whole and by provincial part); 98-10-0019-01 forward sortation areas. Joined to the boundaries on DGUID. 63 CSDs (incompletely enumerated Indian reserves and settlements) have no count (symbol '..'); they are stored as null, not zero."
       }
     ],
-    "in": [
+    "ind": [
       {
         "id": "indiapost-pincode-boundary",
         "name": "All India Pincode Boundary (Department of Posts, Open Government Data Platform India)",
@@ -67,7 +67,7 @@
         "licence": "LicenseRef-GODL-India",
         "credit": "Department of Posts, Ministry of Communications, Government of India. All India Pincode Boundary Geo JSON, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
         "used_in": [
-          "in/pincodes"
+          "ind/pincodes"
         ],
         "downloads": {
           "boundary_mirror": "https://raw.githubusercontent.com/iphils/geomap/6180dbf274ecefad92dbc6de01a6dd42ffcc3ae1/All_India_pincode_Boundary-19312.geojson"
@@ -81,8 +81,8 @@
         "licence": "LicenseRef-GODL-India",
         "credit": "Department of Posts, Ministry of Communications, Government of India. All India Pincode Directory, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
         "used_in": [
-          "in/pincodes",
-          "in/post_offices"
+          "ind/pincodes",
+          "ind/post_offices"
         ],
         "downloads": {
           "directory_mirror": "https://raw.githubusercontent.com/dropdevrahul/pincodes-india/d26206918dd2fb9f155bfba18de0421bd5fa0ca8/pincode.csv"

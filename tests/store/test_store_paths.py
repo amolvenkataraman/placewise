@@ -31,28 +31,18 @@ def test_user_paths_expand_tilde(bare_env):
     assert paths.resolve_data_dir(None, DataSettings(data_dir="~/pw2")) == bare_env / "pw2"
 
 
-def test_linux_uses_xdg_data_home_then_local_share(bare_env, monkeypatch, tmp_path):
-    monkeypatch.setattr("sys.platform", "linux")
-    assert paths.resolve_data_dir() == bare_env / ".local" / "share" / "placewise"
+@pytest.mark.parametrize("platform", ["linux", "darwin", "win32"])
+def test_default_is_dot_placewise_in_home_on_every_platform(bare_env, monkeypatch, tmp_path, platform):
+    """Unless configured, every download lives in ~/.placewise/ (one place to find, back up or delete)."""
+    monkeypatch.setattr("sys.platform", platform)
+    # platform data-dir conventions are ignored on purpose
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
-    assert paths.resolve_data_dir() == tmp_path / "xdg" / "placewise"
-    # the XDG spec says relative values are invalid and must be ignored
-    monkeypatch.setenv("XDG_DATA_HOME", "relative/dir")
-    assert paths.resolve_data_dir() == bare_env / ".local" / "share" / "placewise"
-
-
-def test_macos_uses_application_support(bare_env, monkeypatch, tmp_path):
-    monkeypatch.setattr("sys.platform", "darwin")
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))  # not a macOS convention
-    assert paths.resolve_data_dir() == bare_env / "Library" / "Application Support" / "placewise"
-
-
-def test_windows_uses_localappdata(bare_env, monkeypatch, tmp_path):
-    monkeypatch.setattr("sys.platform", "win32")
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "Local"))
-    assert paths.resolve_data_dir() == tmp_path / "Local" / "placewise"
-    monkeypatch.delenv("LOCALAPPDATA")
-    assert paths.resolve_data_dir() == bare_env / "AppData" / "Local" / "placewise"
+    assert paths.resolve_data_dir() == bare_env / ".placewise"
+
+
+def test_configured_dir_still_wins_over_the_default(bare_env, tmp_path):
+    assert paths.resolve_data_dir(None, DataSettings(data_dir=str(tmp_path / "mine"))) == tmp_path / "mine"
 
 
 def test_layout(tmp_path):

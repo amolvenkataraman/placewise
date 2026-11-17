@@ -11,11 +11,12 @@ from india_fixtures import (
     write_directory,
     write_nwdp_geojson,
 )
+from regions_kit import IN_REGIONS, use_regions
 
 from packbuild import india
 from packbuild.sources import SOURCES
 
-LAYERS = ["pincodes", "post_offices"]
+LAYERS = ["pincodes", "post_offices", "regions"]
 
 
 @pytest.fixture
@@ -40,6 +41,7 @@ def offline(downloads, monkeypatch):
         return downloads[url.rsplit("/", 1)[1]]
 
     monkeypatch.setattr(india, "fetch", fake_fetch)
+    use_regions(monkeypatch, IN_REGIONS)
     return requested
 
 
@@ -52,13 +54,13 @@ def test_build_india_fetches_both_sources_from_the_registry(tmp_path, offline, m
 
     monkeypatch.setattr(india, "write_pack", fake_write_pack)
     out = india.build_india(tmp_path / "cache", tmp_path / "out", "2026.11")
-    assert out == tmp_path / "out" / "in-2026.11"
+    assert out == tmp_path / "out" / "ind-2026.11"
     assert offline == [
         SOURCES["indiapost-pincode-boundary"].downloads["boundary_mirror"],
         SOURCES["indiapost-pincode-directory"].downloads["directory_mirror"],
     ]
     [(name, version, layers)] = calls
-    assert (name, version) == ("in", "2026.11")
+    assert (name, version) == ("ind", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
     for layer in layers:
         assert set(layer.sources) <= set(SOURCES)
@@ -71,7 +73,11 @@ def test_build_india_writes_a_pack_that_answers_the_spot_checks(tmp_path, offlin
     path = india.build_india(tmp_path / "cache", tmp_path / "out", "2026.11")
     pack = open_pack(path, verify=True)
     assert [layer.name for layer in pack] == LAYERS
-    assert set(pack.sources) == {"indiapost-pincode-boundary", "indiapost-pincode-directory"}
+    assert set(pack.sources) == {
+        "indiapost-pincode-boundary",
+        "indiapost-pincode-directory",
+        "placewise-regions",
+    }
     pincodes = pack["pincodes"]
 
     def at(point):
@@ -88,6 +94,34 @@ def test_build_india_writes_a_pack_that_answers_the_spot_checks(tmp_path, offlin
     i, km = offices.nearest(*CHARMINAR)
     assert offices.value("name", i) == "Charminar S.O" and km < 0.01
     assert offices.value("delivery", i) is True
+    regions = pack["regions"]
+    assert [regions.value("id", i) for i in regions.query_all(*INDIA_GATE)] == ["region:test-delhi"]
+    assert regions.query_all(*MG_ROAD) == []
+    assert regions.value("members", 0) == "pin:110001"
+
+
+def test_region_districts_must_match_their_pin_areas(tmp_path, offline, monkeypatch):
+    use_regions(monkeypatch, [{**IN_REGIONS[0], "districts": {"DL": ["NEW DELHI", "SHAHDARA"]}}])
+    with pytest.raises(ValueError, match="no PIN area in DL SHAHDARA"):
+        india.build_india(tmp_path / "cache", tmp_path / "out", "2026.11")
+    use_regions(monkeypatch, [{**IN_REGIONS[0], "members": ["pin:110001", "pin:560001"]}])
+    with pytest.raises(ValueError, match="not in its districts: pin:560001"):
+        india.build_india(tmp_path / "cache", tmp_path / "out", "2026.11")
+
+
+def test_build_keeps_only_offices_in_or_near_their_own_pin_area(tmp_path, offline, caplog):
+    import logging
+
+    from placewise.packs import open_pack
+
+    with caplog.at_level(logging.INFO):
+        path = india.build_india(tmp_path / "cache", tmp_path / "out", "2026.11")
+    offices = open_pack(path)["post_offices"]
+    names = [offices.value("name", i) for i in range(len(offices))]
+    # every fixture office with usable coordinates is in its PIN box, except Silvassa, whose PIN
+    # code 396230 has no polygon
+    assert len(names) == 8 and "Silvassa S.O" not in names
+    assert "kept 8 of 9 offices" in caplog.text
 
 
 def test_manually_downloaded_files_skip_the_download(tmp_path, downloads, offline):

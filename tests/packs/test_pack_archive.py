@@ -47,12 +47,12 @@ def test_pack_info_hashes_the_archive(tmp_path):
 
 
 def test_write_index(tmp_path):
-    infos = [pack_info(archive(_build(tmp_path, name))) for name in ("world", "ca")]
+    infos = [pack_info(archive(_build(tmp_path, name))) for name in ("world", "can")]
     path = write_index(tmp_path, infos)
     assert path == tmp_path / "index.json"
     index = json.loads(path.read_text())
     assert index["schema"] == 1
-    assert list(index["packs"]) == ["ca", "world"]  # sorted, so the same release gives the same bytes
+    assert list(index["packs"]) == ["can", "world"]  # sorted, so the same release gives the same bytes
     entry = index["packs"]["world"]
     assert entry == {
         "version": "2026.11",

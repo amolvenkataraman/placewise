@@ -1,8 +1,8 @@
 {
   "purpose": "regions",
-  "description": "Metropolitan and statistical regions (CBSA/CSA, CMA) that vernacular regions like the Bay Area or the GTA build on.",
+  "description": "Metropolitan, statistical and curated regions: CBSA/CSA and CMA layers, and the curated regions (Bay Area, GTA, GTHA, Delhi NCR ...) drawn in each country pack's `regions` layer as unions of official units.",
   "regions": {
-    "us": [
+    "usa": [
       {
         "id": "uscensus",
         "name": "US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations",
@@ -10,12 +10,13 @@
         "licence": "LicenseRef-public-domain",
         "credit": "U.S. Census Bureau (census.gov), public domain",
         "used_in": [
-          "us/states",
-          "us/counties",
-          "us/places",
-          "us/cbsa",
-          "us/csa",
-          "us/zcta"
+          "usa/states",
+          "usa/counties",
+          "usa/places",
+          "usa/cbsa",
+          "usa/csa",
+          "usa/zcta",
+          "usa/regions"
         ],
         "downloads": {
           "cbsa": "https://www2.census.gov/geo/tiger/GENZ2025/shp/cb_2025_us_cbsa_500k.zip",
@@ -23,9 +24,20 @@
           "delineation": "https://www2.census.gov/programs-surveys/metro-micro/geographies/reference-files/2023/delineation-files/list1_2023.xlsx"
         },
         "notes": "Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025), which cover incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places) but not other census-designated places. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01). The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files."
+      },
+      {
+        "id": "placewise-regions",
+        "name": "placewise curated datasets: regions (datasets/regions)",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
+        "licence": "CC-BY-4.0",
+        "credit": "placewise curated datasets, CC BY 4.0",
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
+        "used_in": [
+          "usa/regions"
+        ]
       }
     ],
-    "ca": [
+    "can": [
       {
         "id": "statcan-boundaries-2021",
         "name": "Statistics Canada, 2021 Census Boundary Files (cartographic)",
@@ -33,10 +45,11 @@
         "licence": "LicenseRef-StatCan-Open-Licence",
         "credit": "Adapted from Statistics Canada, 2021 Census Boundary Files (cartographic), reference date January 1, 2021. This does not constitute an endorsement by Statistics Canada of this product.",
         "used_in": [
-          "ca/provinces",
-          "ca/cd",
-          "ca/csd",
-          "ca/cma"
+          "can/provinces",
+          "can/cd",
+          "can/csd",
+          "can/cma",
+          "can/regions"
         ],
         "downloads": {
           "cma": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lcma000b21a_e.zip",
@@ -51,16 +64,62 @@
         "licence": "LicenseRef-StatCan-Open-Licence",
         "credit": "Adapted from Statistics Canada, Census of Population 2021, Population and dwelling counts (tables 98-10-0002-01, 98-10-0005-01 and 98-10-0019-01), reference date May 11, 2021. This does not constitute an endorsement by Statistics Canada of this product.",
         "used_in": [
-          "ca/provinces",
-          "ca/cd",
-          "ca/csd",
-          "ca/cma",
-          "ca/fsa"
+          "can/provinces",
+          "can/cd",
+          "can/csd",
+          "can/cma",
+          "can/fsa"
         ],
         "downloads": {
           "cma": "https://www150.statcan.gc.ca/n1/tbl/csv/98100005-eng.zip"
         },
         "notes": "Full-table CSV downloads. 98-10-0002-01 covers Canada, provinces and territories, census divisions and census subdivisions; 98-10-0005-01 CMAs and CAs (whole and by provincial part); 98-10-0019-01 forward sortation areas. Joined to the boundaries on DGUID. 63 CSDs (incompletely enumerated Indian reserves and settlements) have no count (symbol '..'); they are stored as null, not zero."
+      },
+      {
+        "id": "placewise-regions",
+        "name": "placewise curated datasets: regions (datasets/regions)",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
+        "licence": "CC-BY-4.0",
+        "credit": "placewise curated datasets, CC BY 4.0",
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
+        "used_in": [
+          "can/regions"
+        ]
+      }
+    ],
+    "ind": [
+      {
+        "id": "indiapost-pincode-boundary",
+        "name": "All India Pincode Boundary (Department of Posts, Open Government Data Platform India)",
+        "url": "https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json",
+        "licence": "LicenseRef-GODL-India",
+        "credit": "Department of Posts, Ministry of Communications, Government of India. All India Pincode Boundary Geo JSON, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
+        "used_in": [
+          "ind/regions"
+        ],
+        "notes": "India's curated regions are drawn as unions of PIN code areas grouped by district, since no district polygons are openly licensed."
+      },
+      {
+        "id": "indiapost-pincode-directory",
+        "name": "All India Pincode Directory (Department of Posts, Open Government Data Platform India)",
+        "url": "https://www.data.gov.in/catalog/all-india-pincode-directory",
+        "licence": "LicenseRef-GODL-India",
+        "credit": "Department of Posts, Ministry of Communications, Government of India. All India Pincode Directory, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
+        "used_in": [
+          "ind/regions"
+        ],
+        "notes": "The directory's district column decides which PIN areas make up a district."
+      },
+      {
+        "id": "placewise-regions",
+        "name": "placewise curated datasets: regions (datasets/regions)",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
+        "licence": "CC-BY-4.0",
+        "credit": "placewise curated datasets, CC BY 4.0",
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.",
+        "used_in": [
+          "ind/regions"
+        ]
       }
     ]
   }

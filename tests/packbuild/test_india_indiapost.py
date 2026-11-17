@@ -1,8 +1,17 @@
 import json
 import logging
 
+import numpy as np
 import pytest
-from india_fixtures import DIRECTORY_HEADER, directory_rows, write_boundaries, write_directory
+from india_fixtures import (
+    DIRECTORY_HEADER,
+    directory_rows,
+    placement_features,
+    placement_rows,
+    write_boundaries,
+    write_directory,
+    write_placement_directory,
+)
 
 from packbuild.sources import indiapost
 
@@ -14,6 +23,61 @@ def _col(layer, name):
 @pytest.fixture
 def files(tmp_path):
     return write_boundaries(tmp_path / "boundaries.geojson"), write_directory(tmp_path / "pincode.csv")
+
+
+# --- office coordinates against their own PIN area -------------------------------------------------
+
+
+@pytest.fixture
+def placed(tmp_path):
+    boundaries = write_boundaries(tmp_path / "b.geojson", placement_features())
+    offices = indiapost.post_offices(write_placement_directory(tmp_path / "d.csv"))
+    return offices, indiapost.pincodes(boundaries)
+
+
+def test_each_office_is_placed_against_its_own_pin_area(placed):
+    offices, pincodes = placed
+    assert _col(offices, "name") == [row[0] for row in placement_rows()]  # all have usable coordinates
+    where = indiapost.office_placement(offices, pincodes)
+    assert list(where) == [row[-1] for row in placement_rows()]
+
+
+def test_the_buffer_is_two_km_and_can_be_changed(placed):
+    assert indiapost.OFFICE_BUFFER_KM == 2.0
+    offices, pincodes = placed
+    edge = _col(offices, "name").index("Edge S.O")  # 1.6 km outside its area
+    assert indiapost.office_placement(offices, pincodes, buffer_km=1.0)[edge] == "outside"
+    assert indiapost.office_placement(offices, pincodes, buffer_km=0)[edge] == "outside"
+
+
+def test_only_offices_in_or_near_their_own_area_keep_their_coordinates(placed, caplog):
+    offices, pincodes = placed
+    with caplog.at_level(logging.INFO):
+        kept, counts = indiapost.keep_placed_offices(offices, pincodes)
+    expected = [row for row in placement_rows() if row[-1] in ("inside", "near")]
+    assert _col(kept, "name") == [row[0] for row in expected]
+    np.testing.assert_array_equal(kept.lat, [row[2] for row in expected])
+    np.testing.assert_array_equal(kept.lon, [row[3] for row in expected])
+    assert set(kept.columns) == set(offices.columns) and kept.types == offices.types
+    assert all(len(c) == len(expected) for c in kept.columns.values())
+    assert (kept.name, kept.kind, kept.sources) == (offices.name, offices.kind, offices.sources)
+    assert counts == {"inside": 4, "near": 1, "elsewhere": 1, "outside": 2, "no_area": 1}
+    assert "kept 5 of 9" in caplog.text and "4 in their own PIN area (44.4%)" in caplog.text
+    assert "2 in no PIN area" in caplog.text and "1 whose PIN code has no area" in caplog.text
+
+
+def test_ids_stay_as_the_directory_gave_them(placed):
+    offices, pincodes = placed
+    kept, _ = indiapost.keep_placed_offices(offices, pincodes)
+    assert set(_col(kept, "id")) <= set(_col(offices, "id"))
+    assert "indiapost:560001:Bengaluru G.P.O." in _col(kept, "id")
+
+
+def test_no_offices_is_not_an_error(tmp_path, placed):
+    _, pincodes = placed
+    empty = indiapost.post_offices(write_directory(tmp_path / "empty.csv", rows=[]))
+    kept, counts = indiapost.keep_placed_offices(empty, pincodes)
+    assert len(kept.columns["id"]) == 0 and sum(counts.values()) == 0
 
 
 def test_pincode_ids_names_and_postal_hierarchy(files):

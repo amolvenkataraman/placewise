@@ -2,7 +2,6 @@
 
 import os
 import re
-import sys
 from pathlib import Path
 
 from placewise.constants import store as const
@@ -15,23 +14,12 @@ _PACK_DIR = re.compile(rf"({const.PACK_NAME_PATTERN}?)-({const.PACK_VERSION_PATT
 
 def resolve_data_dir(explicit=None, settings=None):
     """The data directory: an explicit argument, then DataSettings.data_dir, then $PLACEWISE_DATA_DIR,
-    then the platform's per-user data location."""
+    then ~/.placewise on every platform (one place to find, back up or delete everything placewise
+    downloads)."""
     for candidate in (explicit, settings.data_dir if settings else None, os.environ.get(const.ENV_DATA_DIR)):
         if candidate:
             return Path(candidate).expanduser()
-    return _platform_default()
-
-
-def _platform_default():
-    if sys.platform == "win32":
-        base = os.environ.get("LOCALAPPDATA")
-        return (Path(base) if base else Path.home() / "AppData" / "Local") / const.APP_DIR_NAME
-    if sys.platform == "darwin":
-        return Path.home() / "Library" / "Application Support" / const.APP_DIR_NAME
-    xdg = os.environ.get("XDG_DATA_HOME")
-    # the XDG spec says a relative value is invalid and must be ignored
-    base = Path(xdg) if xdg and os.path.isabs(xdg) else Path.home() / ".local" / "share"
-    return base / const.APP_DIR_NAME
+    return Path.home() / const.DEFAULT_DATA_DIR
 
 
 def check_name(name):

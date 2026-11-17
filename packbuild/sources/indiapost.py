@@ -16,17 +16,24 @@ A PIN area may cross district lines, so this is the postal answer, not an admini
 
 Directory coordinates are used only when both parse as plain numbers inside India's extent; "NA",
 the 1/1 placeholder and values with stray characters (a trailing "-", a hemisphere letter) are
-dropped, never repaired.
+dropped, never repaired. The build then keeps an office only if its point lies inside its own PIN
+area or within OFFICE_BUFFER_KM of it (`keep_placed_offices`): about a third of the directory's
+points are elsewhere, some in other states or outside India.
 """
 
 import csv
+import dataclasses
 import logging
 import re
+import tempfile
 from collections import Counter, defaultdict
 
-from placewise.model import Feature
+import numpy as np
 
-from ..layer import LayerData
+from placewise.model import Feature
+from placewise.packs import open_pack
+
+from ..layer import LayerData, write_pack
 from ._india import ISO_NAMES, normalise_name, read_wgs84_geojson, text
 
 BOUNDARY_SOURCE = "indiapost-pincode-boundary"
@@ -36,6 +43,11 @@ _PIN = re.compile(r"^[1-9]\d{5}$")
 _NUMBER = re.compile(r"^-?\d+(\.\d+)?$")
 # generous box round India and its islands (degrees); points outside it are placeholders or typos
 INDIA_EXTENT = (6.0, 68.0, 38.0, 98.0)  # south, west, north, east
+# an office keeps its coordinates only inside its own PIN area or this close to it (km): PIN areas
+# are generalised delivery zones and offices often sit on a boundary road, while an office farther
+# out is in another area, so a lookup would name the wrong one (packbuild/README.md, India pack)
+OFFICE_BUFFER_KM = 2.0
+PLACEMENTS = ("inside", "near", "elsewhere", "outside", "no_area")
 _OFFICE_RANK = {"HO": 0, "PO": 1, "SO": 1, "BO": 2}
 _DIRECTORY_FIELDS = {
     "circle": "circlename", "region": "regionname", "division": "divisionname", "office": "officename",
@@ -159,6 +171,65 @@ def post_offices(directory_path):
     types = {name: "str" for name in columns}
     types["delivery"] = "bool"
     return LayerData("post_offices", "point", columns, (DIRECTORY_SOURCE,), lat=lat, lon=lon, types=types)
+
+
+def office_placement(offices, pincodes, buffer_km=OFFICE_BUFFER_KM):
+    """Where each office (a post_offices layer) lies against its own PIN area (a pincodes layer),
+    as an array of PLACEMENTS: "inside" it, "near" (outside it, but within buffer_km of its
+    boundary), "elsewhere" (in another PIN area), "outside" (in no PIN area: off the coast, or
+    outside India) or "no_area" (its PIN code has no polygon). The pincodes are written to a
+    temporary pack so placewise's own pack geometry answers (distances exact on the sphere)."""
+    count = len(offices.columns["id"])
+    where = np.full(count, "outside", dtype=object)
+    feature = {pin: i for i, pin in enumerate(pincodes.columns["pincode"])}
+    own = np.array([feature.get(pin, -1) for pin in offices.columns["pincode"]], dtype=np.int64)
+    where[own < 0] = "no_area"
+    if not count:
+        return where
+    lat, lon = np.asarray(offices.lat, dtype=np.float64), np.asarray(offices.lon, dtype=np.float64)
+    shapes = LayerData(
+        "pincodes",
+        "polygon",
+        {"id": pincodes.columns["id"], "name": pincodes.columns["pincode"]},
+        pincodes.sources,
+        features=pincodes.features,
+    )
+    with tempfile.TemporaryDirectory(prefix="placewise-pin-check-") as tmp:
+        areas = open_pack(write_pack(tmp, "pin-check", "2000.01", [shapes]))["pincodes"]
+        inside = areas.contains(lat, lon, own)
+        where[inside] = "inside"
+        rest = np.flatnonzero((own >= 0) & ~inside)
+        if len(rest) and buffer_km > 0:
+            point, near_feature, _ = areas.near_boundary(lat[rest], lon[rest], buffer_km)
+            where[rest[point[near_feature == own[rest][point]]]] = "near"
+        rest = rest[where[rest] == "outside"]
+        if len(rest):
+            where[rest[np.asarray(areas.query(lat[rest], lon[rest])) >= 0]] = "elsewhere"
+    return where
+
+
+def keep_placed_offices(offices, pincodes, buffer_km=OFFICE_BUFFER_KM):
+    """(the offices whose coordinates lie in or within buffer_km of their own PIN area, {placement:
+    count}); see office_placement. The rest are left out: their coordinates point somewhere else."""
+    where = office_placement(offices, pincodes, buffer_km)
+    counts = {p: int((where == p).sum()) for p in PLACEMENTS}
+    keep = np.flatnonzero((where == "inside") | (where == "near"))
+    columns = {name: [values[i] for i in keep] for name, values in offices.columns.items()}
+    lat, lon = np.asarray(offices.lat)[keep], np.asarray(offices.lon)[keep]
+    kept = dataclasses.replace(offices, columns=columns, lat=lat, lon=lon)
+    total = len(where)
+    log.info(
+        "post_offices: kept %d of %d offices with usable coordinates: %d in their own PIN area (%s), "
+        "%d within %g km of it; left out %d in another PIN area, %d in no PIN area (outside India or "
+        "off the coast) and %d whose PIN code has no area",
+        len(keep), total, counts["inside"], _share(counts["inside"], total), counts["near"], buffer_km,
+        counts["elsewhere"], counts["outside"], counts["no_area"],
+    )  # fmt: skip
+    return kept, counts
+
+
+def _share(part, total):
+    return f"{part / total:.1%}" if total else "-"
 
 
 def _coordinates(lat, lon):

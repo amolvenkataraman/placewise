@@ -9,20 +9,20 @@
 
 [[alias]]
 text = "GTA"
-means = "placewise:region/gta"  # Greater Toronto Area
+means = "region:gta"  # Greater Toronto Area
 country = "CA"
 
 [[alias]]
 text = "Greater Toronto Area"
-means = "placewise:region/gta"
+means = "region:gta"
 country = "CA"
 
 [[alias]]
 text = "Bay Area"
-means = "placewise:region/sf-bay-area"  # San Francisco Bay Area
+means = "region:sf-bay-area"  # San Francisco Bay Area
 country = "US"
 
 [[alias]]
 text = "SF Bay Area"
-means = "placewise:region/sf-bay-area"
+means = "region:sf-bay-area"
 country = "US"
