@@ -75,7 +75,8 @@ class State:
 
 
 def in_area(area, entry, state, lat, lon):
-    return area.matches(lat, lon, cc=state.cc, place_ids=state.place_ids, base_dir=entry.base_dir)
+    place_ids = state.place_ids if area.place is not None else None  # only place areas read them
+    return area.matches(lat, lon, cc=state.cc, place_ids=place_ids, base_dir=entry.base_dir)
 
 
 def tag(origin):

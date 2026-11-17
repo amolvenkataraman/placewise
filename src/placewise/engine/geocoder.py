@@ -8,7 +8,8 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 4. country packs' names: sublocality, locality, city, borough, admin2, postal, regions (naming);
 5. airport, and the nearest country far offshore (_nearby);
 6. parks the point is within or near, from the park packs (_within);
-7. the Results and their labels (_results).
+7. the sea or lake a point is on, and the water beside it, when a water pack is open (_water);
+8. the Results and their labels (_results).
 
 `lookup_many` runs every spatial query for all points at once and then builds the Results;
 `lookup` is `lookup_many` with one point, so the two always agree.
@@ -23,6 +24,7 @@ from placewise.config import effective_worldview
 from placewise.constants import lookup as const
 from placewise.constants import naming as naming_const
 from placewise.constants import parks as parks_const
+from placewise.constants import water as water_const
 from placewise.model import PlaceKind, Settings
 from placewise.packs import Pack, open_pack
 
@@ -30,6 +32,7 @@ from . import _nearby, _results
 from ._admin import Admin
 from ._cities import Cities
 from ._layers import Layers
+from ._water import Water
 from ._within import Parks
 from .naming import Naming
 
@@ -73,6 +76,11 @@ class Geocoder:
     def parks(self):
         """The park packs' layers (placewise.engine._within), or None when no pack has any."""
         return Parks(self.packs, self.layers, self.settings.near) or None
+
+    @cached_property
+    def water(self):
+        """The water layers (placewise.engine._water); falsy when no pack has them."""
+        return Water(self.packs, self.layers)
 
     @cached_property
     def naming(self):
@@ -126,6 +134,8 @@ class Geocoder:
         _nearby.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
         if self.parks is not None:
             a["parks"] = self.parks.answer(lat, lon, near)
+        if self.water:
+            self.water.answer(a, lat, lon, self.layers.layer(const.COUNTRIES))
         return a, named
 
     # -- worldview, settings, overrides -------------------------------------------------------------
@@ -158,13 +168,13 @@ class Geocoder:
 
 
 def _installed_country_packs(store):
-    """The country and park packs installed in the store that it can open (stores without
-    `installed()` have none)."""
+    """The country packs, the world-water pack and the park packs installed in the store that it
+    can open (stores without `installed()` have none)."""
     installed = getattr(store, "installed", None)
     if installed is None:
         return []
     names, found = installed(), []
-    for name in (*naming_const.COUNTRY_PACKS, *parks_const.PACKS):
+    for name in (*naming_const.COUNTRY_PACKS, water_const.PACK, *parks_const.PACKS):
         if name in names:
             try:
                 found.append(store.current(name))

@@ -1,5 +1,6 @@
 """One place-string into its parts: hierarchy splits, codes peeled off, parentheses, noise dropped."""
 
+import functools
 import re
 from dataclasses import dataclass
 
@@ -13,7 +14,10 @@ from .patterns import NOISE as _NOISE
 from .patterns import NOT_A_CITY as _NOT_A_CITY
 from .patterns import PARENS as _PARENS
 from .readings import _readings
-from .spans import _split, _trim
+from .spans import _split, _Text, _trim
+
+# location strings repeat the same pieces ("Toronto, ON", "Remote - US"): each piece is read once
+_PIECE_CACHE = 1 << 14
 
 
 @dataclass
@@ -29,13 +33,19 @@ class _Token:
     upper: bool = False
 
 
+_NOT_LETTERS = re.compile(r"[^A-Za-z]")
+_SPACE_RUNS = re.compile(r"\s+")
+_WORDS = re.compile(r"\S+")
+
+
+@functools.lru_cache(maxsize=1 << 16)
 def _is_upper(text):
-    letters = re.sub(r"[^A-Za-z]", "", text)
+    letters = _NOT_LETTERS.sub("", text)
     return bool(letters) and letters.isupper()
 
 
 def _display(text):
-    text = re.sub(r"\s+", " ", text).strip(" -,:/")
+    text = _SPACE_RUNS.sub(" ", text).strip(" -,:/")
     if len(text) > 3 and _is_upper(text):
         text = text.title()
     return text
@@ -112,7 +122,7 @@ def _expand(text, start, end):
                     spans.extend(_expand(text, pos, pos + len(piece)))
                     pos += len(piece) + 1
                 return spans
-    words = [(m.start(), m.end()) for m in re.finditer(r"\S+", chunk)]
+    words = [(m.start(), m.end()) for m in _WORDS.finditer(chunk)]
     if len(words) < 2:
         return [(start, end)]
     # leading code: "WI Madison", "VA Arlington"
@@ -138,6 +148,26 @@ def _expand(text, start, end):
 
 
 def _tokens(text, start, end):
+    """The parts of text[start:end], one place-string, in reading order, and leftover asides. They
+    depend on that text alone, so each distinct piece is read once; the tokens are fresh copies
+    (grouping edits them), placed at `start`. The working text itself is left as it was."""
+    tokens, leftovers = _piece(text.get(start, end))
+    return [
+        _Token(t, s + start, e + start, kind, readings, metro, alias, macro, upper)
+        for t, s, e, kind, readings, metro, alias, macro, upper in tokens
+    ], list(leftovers)
+
+
+@functools.lru_cache(maxsize=_PIECE_CACHE)
+def _piece(chunk):
+    tokens, leftovers = _read_piece(_Text(chunk), 0, len(chunk))
+    fields = tuple(
+        (t.text, t.start, t.end, t.kind, t.readings, t.metro, t.alias, t.macro, t.upper) for t in tokens
+    )
+    return fields, tuple(leftovers)
+
+
+def _read_piece(text, start, end):
     """The parts of one place-string, in reading order, and leftover asides. A parenthesis is an
     aside ("Montreal (St. Laurent)"), the place itself ("HQ (San Francisco, CA)") or more parts of
     it ("Austin (TX)")."""
@@ -148,7 +178,7 @@ def _tokens(text, start, end):
         text.blank(start + m.start(), start + m.end())
     tokens, leftovers = _plain_tokens(text, start, end), []
     for s, e, saved in asides:
-        text.chars[s:e] = list(saved)
+        text.put(s, saved)
         inner = _plain_tokens(text, s, e)
         if not inner:
             continue

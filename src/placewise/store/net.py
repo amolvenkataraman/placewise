@@ -1,26 +1,31 @@
 """Fetching URLs with the standard library: size limits, a generic User-Agent, and only the schemes
 the store expects (https, http, file)."""
 
+import functools
 import hashlib
-import urllib.error
 import urllib.parse
-import urllib.request
 
 import placewise
 from placewise.constants import store as const
 
 from .errors import DownloadError
 
-
-class _SafeRedirects(urllib.request.HTTPRedirectHandler):
-    # urllib would follow a redirect to ftp://; a server should only ever bounce us to another web URL
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        if urllib.parse.urlsplit(newurl).scheme not in ("http", "https"):
-            raise DownloadError(f"{req.full_url} redirected to a non-web URL {newurl}")
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
+# urllib.request (with http.client and email) costs ~20 ms to import and only downloads need it, so
+# lookups that read installed packs never load it
 
 
-_OPENER = urllib.request.build_opener(_SafeRedirects)
+@functools.cache
+def _opener():
+    import urllib.request
+
+    class _SafeRedirects(urllib.request.HTTPRedirectHandler):
+        # urllib would follow a redirect to ftp://; a server should only ever bounce us to another web URL
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            if urllib.parse.urlsplit(newurl).scheme not in ("http", "https"):
+                raise DownloadError(f"{req.full_url} redirected to a non-web URL {newurl}")
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    return urllib.request.build_opener(_SafeRedirects)
 
 
 def check_scheme(url):
@@ -30,12 +35,15 @@ def check_scheme(url):
 
 
 def _open(url):
+    import urllib.error
+    import urllib.request
+
     check_scheme(url)
     request = urllib.request.Request(
         url, headers={"User-Agent": const.USER_AGENT.format(version=placewise.__version__)}
     )
     try:
-        return _OPENER.open(request, timeout=const.HTTP_TIMEOUT_S)
+        return _opener().open(request, timeout=const.HTTP_TIMEOUT_S)
     except urllib.error.HTTPError as e:
         raise DownloadError(f"HTTP {e.code} {e.reason}") from None
     except urllib.error.URLError as e:

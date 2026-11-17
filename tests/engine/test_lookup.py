@@ -215,7 +215,8 @@ def test_worldview_column_switches_the_country(geo):
 
 
 def test_views_without_an_answer_fall_through(geo):
-    r = geo.lookup(2.25, -139.75, worldview=("UN", "ZZ", "de_facto"))  # UN is all -99; no ZZ column
+    with pytest.warns(UserWarning, match="'ZZ' is not in this pack"):
+        r = geo.lookup(2.25, -139.75, worldview=("UN", "ZZ", "de_facto"))  # UN is all -99; no ZZ column
     assert r.country.id == "iso:XC" and r.disputed.applied_view == "de_facto"
 
 

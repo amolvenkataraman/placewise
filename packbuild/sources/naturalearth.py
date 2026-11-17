@@ -1,4 +1,4 @@
-"""Natural Earth 1:10m (public domain): the `countries` and `admin1` polygon layers.
+"""Natural Earth 1:10m (public domain): the `countries`, `admin1` and `worldviews` polygon layers.
 
 Natural Earth's default files draw borders "de facto" (who administers the ground). It also ships
 per-country point-of-view attributes: `ADM0_A3_XX` (how worldview XX groups each unit into a
@@ -13,6 +13,7 @@ Feature order: Natural Earth's countries and admin-1 polygons tile the land with
 import re
 from collections import Counter
 
+from placewise.constants import worldviews as worldview_const
 from placewise.io import read_shapefile
 from placewise.model import Feature
 
@@ -21,6 +22,7 @@ from ..layer import LayerData
 SOURCE = "naturalearth"
 
 _WORLDVIEW = re.compile(r"^(ADM0_A3|FCLASS)_([A-Z]{2,3})$", re.IGNORECASE)
+_VIEW_UNIT = re.compile(r"^ADM0_A3_([A-Z]{2,3})$", re.IGNORECASE)
 _ISO2 = re.compile(r"^[A-Z]{2}$")
 _ISO3 = re.compile(r"^[A-Z]{3}$")
 _ISO_3166_2 = re.compile(r"^([A-Z]{2})-(?!X\d+$)([A-Z0-9]{1,3})$")  # NE invents "XX-X01" (often with "~")
@@ -100,6 +102,30 @@ def admin1(shp_path):
     columns.update(_worldview_columns(props))
     types = {name: "str" for name in columns}
     return LayerData("admin1", "polygon", columns, (SOURCE,), features=_with_ids(raw, ids), types=types)
+
+
+def disputed_areas(shp_path):
+    """Natural Earth's disputed areas (Aksai Chin, Crimea, Kosovo ...: 99 polygons in 5.1.2) as the
+    `worldviews` layer. They overlay the countries polygons (none overlaps another) and say, per
+    view, which admin-0 unit each area belongs to; together with the countries' own view columns
+    they reproduce Natural Earth's point-of-view countries files. id is "ne:<NE_ID>"; name is the
+    area's (BRK_NAME, Natural Earth's typos corrected); adm0_a3 is the unit that holds it."""
+    raw = read_shapefile(shp_path)
+    props = [f.properties for f in raw]
+    ids = [f"ne:{int(p.get('NE_ID') or 0)}" for p in props]
+    names = [_text(p.get("BRK_NAME")).lstrip("\ufeff") or _text(p.get("NAME")) for p in props]
+    columns = {
+        "id": ids,
+        "name": [worldview_const.AREA_NAMES.get(n, n) for n in names],
+        "adm0_a3": [_text(p.get("ADM0_A3")) for p in props],
+        "type": [_text(p.get("TYPE")) for p in props],
+        "note": [_text(p.get("NOTE_BRK")) for p in props],
+    }
+    views = sorted({k for p in props for k in p if _VIEW_UNIT.match(k)})
+    columns.update({name.lower(): [_text(p.get(name)) for p in props] for name in views})
+    types = {name: "str" for name in columns}
+    layer = worldview_const.WORLDVIEWS
+    return LayerData(layer, "polygon", columns, (SOURCE,), features=_with_ids(raw, ids), types=types)
 
 
 def worldviews(layer):

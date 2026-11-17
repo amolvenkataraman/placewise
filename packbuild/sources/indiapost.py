@@ -30,6 +30,7 @@ from collections import Counter, defaultdict
 
 import numpy as np
 
+from placewise.constants.packs import E7
 from placewise.model import Feature
 from placewise.packs import open_pack
 
@@ -47,6 +48,10 @@ INDIA_EXTENT = (6.0, 68.0, 38.0, 98.0)  # south, west, north, east
 # are generalised delivery zones and offices often sit on a boundary road, while an office farther
 # out is in another area, so a lookup would name the wrong one (packbuild/README.md, India pack)
 OFFICE_BUFFER_KM = 2.0
+# office_placement measures an office's distance to its own PIN area only when it lies within this
+# many degrees (plus the buffer) of the area's bbox
+_BBOX_MARGIN_DEG = 0.5
+_KM_PER_DEG_LAT = 110.5  # the least km per degree of latitude (at the equator), so margins err wide
 PLACEMENTS = ("inside", "near", "elsewhere", "outside", "no_area")
 _OFFICE_RANK = {"HO": 0, "PO": 1, "SO": 1, "BO": 2}
 _DIRECTORY_FIELDS = {
@@ -195,17 +200,43 @@ def office_placement(offices, pincodes, buffer_km=OFFICE_BUFFER_KM):
         features=pincodes.features,
     )
     with tempfile.TemporaryDirectory(prefix="placewise-pin-check-") as tmp:
-        areas = open_pack(write_pack(tmp, "pin-check", "2000.01", [shapes]))["pincodes"]
+        pack_dir = write_pack(tmp, "pin-check", "2000.01", [shapes])
+        areas = open_pack(pack_dir)["pincodes"]
         inside = areas.contains(lat, lon, own)
         where[inside] = "inside"
         rest = np.flatnonzero((own >= 0) & ~inside)
         if len(rest) and buffer_km > 0:
-            point, near_feature, _ = areas.near_boundary(lat[rest], lon[rest], buffer_km)
-            where[rest[point[near_feature == own[rest][point]]]] = "near"
+            bbox = np.load(pack_dir / "pincodes" / "geom" / "bbox.npy") / E7
+            near = _near_own_area(areas, bbox, lat[rest], lon[rest], own[rest], buffer_km)
+            where[rest[near]] = "near"
         rest = rest[where[rest] == "outside"]
         if len(rest):
             where[rest[np.asarray(areas.query(lat[rest], lon[rest])) >= 0]] = "elsewhere"
     return where
+
+
+def _near_own_area(areas, bbox, lat, lon, own, buffer_km):
+    """Whether each point is within buffer_km of its own feature's boundary (`areas`, a
+    PolygonLayer, and its (n, 4) bbox in degrees): PolygonLayer.nearest_edge_km against that one
+    feature only, for the points near its bbox. The margin is generous: PIN areas' great-circle
+    edges stray from their vertices' bbox by far less than _BBOX_MARGIN_DEG."""
+    margin = _BBOX_MARGIN_DEG + buffer_km / _KM_PER_DEG_LAT
+    south, west, north, east = bbox[own].T
+    lon_margin = margin / np.cos(
+        np.radians(np.minimum(np.maximum(np.abs(south), np.abs(north)) + margin, 89))
+    )
+    close = np.flatnonzero(
+        (lat >= south - margin)
+        & (lat <= north + margin)
+        & (lon >= west - lon_margin)
+        & (lon <= east + lon_margin)
+    )
+    near = np.zeros(len(lat), dtype=bool)
+    order = close[np.argsort(own[close], kind="stable")]
+    cuts = np.flatnonzero(np.diff(own[order])) + 1
+    for group in np.split(order, cuts) if len(order) else ():
+        near[group] = areas.nearest_edge_km(lat[group], lon[group], int(own[group[0]])) <= buffer_km
+    return near
 
 
 def keep_placed_offices(offices, pincodes, buffer_km=OFFICE_BUFFER_KM):

@@ -13,21 +13,24 @@ should still read each licence for its own obligations.
 | Source | Licence | Used in |
 |---|---|---|
 | [OurAirports](https://ourairports.com/data/) | LicenseRef-public-domain | world/airports |
-| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/country_facts |
+| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/worldviews, world/country_facts |
 | [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | usa/states, usa/counties, usa/places, usa/cbsa, usa/csa, usa/zcta, usa/regions |
 | [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/regions |
-| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated) |
+| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated), usa/zcta |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
-| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-parks/park_points |
+| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-parks/park_points, world-water/lakes |
 | [National Park Service Administrative Boundaries of National Park System Units](https://irma.nps.gov/DataStore/Reference/Profile/2321443) | LicenseRef-public-domain | usa-parks/parks_national, usa-parks/parks_regional, usa-parks/parks_local |
 | [USDA Forest Service Administrative Forest Boundaries](https://data.fs.usda.gov/geodata/edw/datasets.php) | LicenseRef-public-domain | usa-parks/parks_state |
 | [Protected Areas Database of the United States (PAD-US) 4.1](https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e) | LicenseRef-public-domain | usa-parks/parks_state, usa-parks/parks_regional, usa-parks/parks_local |
 | [Canadian Protected and Conserved Areas Database (CPCAD), December 2025](https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c) | OGL-Canada-2.0 | can-parks/parks_national, can-parks/parks_state, can-parks/parks_regional, can-parks/parks_local |
 | [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
+| [Canadian Geographical Names Database (CGNDB), Natural Resources Canada](https://open.canada.ca/data/en/dataset/e27c6eba-3c5d-4051-9db2-082dc6411c2c) | OGL-Canada-2.0 | can/populated_places |
 | [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/pincodes, ind/regions |
 | [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/pincodes, ind/post_offices, ind/regions |
 | [placewise curated datasets: regions (datasets/regions)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | usa/regions, can/regions, ind/regions |
+| [Natural Earth 1:10m Physical Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world-water/marine, world-water/lakes, world-water/rivers |
+| [HydroLAKES v1.0](https://www.hydrosheds.org/products/hydrolakes) | CC-BY-4.0 | world-water/lakes |
 
 ## Coverage
 
@@ -44,14 +47,15 @@ should still read each licence for its own obligations.
 | parks | ind | none: No openly licensed outlines: WII/ENVIS publishes lists marked All Rights Reserved, and Bhuvan, PARIVESH and NTCA maps are view-only; OpenStreetMap's outlines are ODbL (share-alike pack only, not built yet). India's national parks, tiger reserves and sanctuaries are Wikidata points in world-parks. |
 | parks | usa | National Park Service Administrative Boundaries of National Park System Units, USDA Forest Service Administrative Forest Boundaries, Protected Areas Database of the United States (PAD-US) 4.1 |
 | places | world | GeoNames |
-| places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts |
+| places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts, Canadian Geographical Names Database (CGNDB), Natural Resources Canada |
 | places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 | postal | can | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
 | postal | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India) |
-| postal | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| postal | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations, GeoNames |
 | regions | can | Statistics Canada, 2021 Census Boundary Files (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts, placewise curated datasets: regions (datasets/regions) |
 | regions | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India), placewise curated datasets: regions (datasets/regions) |
 | regions | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations, placewise curated datasets: regions (datasets/regions) |
+| water | world | Natural Earth 1:10m Physical Vectors, HydroLAKES v1.0, Wikidata |
 
 ## OurAirports
 
@@ -67,7 +71,7 @@ Released into the public domain by the maintainers. The world pack keeps large a
 - Licence: LicenseRef-public-domain
 - Website: https://www.naturalearthdata.com
 
-Public domain (naturalearthdata.com/about/terms-of-use). Borders are de facto; per-country ADM0_A3_XX and FCLASS_XX columns describe other worldviews and are kept for the worldview setting. Text fields are NUL-padded.
+Public domain (naturalearthdata.com/about/terms-of-use). Borders are de facto; per-country ADM0_A3_XX and FCLASS_XX columns describe other worldviews and are kept for the worldview setting; the disputed-areas file (99 polygons with every view's ADM0_A3_XX) is the world pack's worldviews layer. Text fields are NUL-padded.
 
 country_facts uses each country's label point (LABEL_X, LABEL_Y) where GeoNames has no capital.
 
@@ -77,7 +81,7 @@ country_facts uses each country's label point (LABEL_X, LABEL_Y) where GeoNames 
 - Licence: LicenseRef-public-domain
 - Website: https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html
 
-Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025), which cover incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places) but not other census-designated places. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01). The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files.
+Works of the US federal government are not subject to copyright (17 U.S.C. 105). Boundaries are the 2025 cartographic boundary files at 1:500,000 (generalised from TIGER/Line and clipped to the shoreline, so points in bays and coastal water fall in no county or place); ZIP Code Tabulation Areas exist only in the 2020 vintage, since ZCTAs are defined once per decennial census. ZCTAs approximate USPS ZIP Code delivery areas, which USPS does not publish as areas. Place populations are the Vintage 2025 Population Estimates (SUB-EST2025, July 2025) for incorporated places (and Urban Honolulu CDP, Hawaii having no incorporated places), and the American Community Survey 2020-2024 5-year estimates (table B01003, total population, from the table-based summary file, which needs no API key) for census-designated places and any place SUB-EST lacks; ZCTA populations are ACS too. CBSA and CSA membership is the July 2023 delineation (OMB Bulletin 23-01): list 1 for counties, list 2 for principal cities. Each ZCTA's postal city name is the city ZIP Code Business Patterns 2023 (County Business Patterns program) gives its ZIP Code, matched to a census place by name within the state, preferring places the 2020 ZCTA-to-place relationship file says overlap the ZCTA; ZIP Codes Business Patterns lacks are named from the other US postal source in postal.json. The files are NAD83 (EPSG:4269), used as WGS84: the two differ by 1-2 m in the US, within the generalisation of these files.
 
 ## Statistics Canada, 2021 Census Boundary Files (cartographic)
 
@@ -97,6 +101,8 @@ The world pack's country_facts layer takes capital, area, population, top-level 
 
 Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists.
 
+GeoNames postal codes for the United States (export/zip/US.zip: 41,490 ZIP Codes with the USPS default city name, state, county and a centroid), under CC BY 4.0 per its readme. The US pack takes a ZCTA's postal city from it only where ZIP Code Business Patterns has no row for the ZIP Code (about 2,700 of 33,791 ZCTAs, mostly rural residential ones); the readme does not name the upstream source of the US file.
+
 ## Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0
 
 - Credit: Unicode Common Locale Data Repository (CLDR), Copyright © 2015-2024 Unicode, Inc., Unicode License v3
@@ -114,6 +120,8 @@ The cldr-json packages (github.com/unicode-org/cldr-json), pinned to release 49.
 Driving side (property P1622, values Q11920728 left and Q14565199 right) of every item with an ISO 3166-1 alpha-2 code (P297), leaving out deprecated statements and ones with an end time (P582). A code whose current statements disagree gets no driving side. The query result is cached on the first build; rebuilding with --refresh asks again.
 
 Parks known only by a point: items that are national parks or tiger reserves of India (or subclasses), wildlife refuges, and India's protected areas, with an English label, a coordinate (P625) and no dissolution date, outside the US and Canada (whose parks have outlines in usa-parks and can-parks). The radius is that of a circle of the item's area (P2046), capped at 30 km; such parks are only ever 'near' (in the area of), never 'within'. Country (P17) is read only to leave out the US and Canada: the packs carry no park's country, which comes from the boundary layers and the chosen worldview.
+
+English names of lakes (Q23397), reservoirs (Q131681), lagoons (Q187223), salt lakes (Q188025), marine lakes (Q1898470), artificial lakes (Q3215290) and crater lakes (Q204324) that have coordinates and an English Wikipedia article, two queries (about 14,000 and 4,000 items, November 2026). An item names a HydroLAKES outline its point falls in when neither Natural Earth nor another item already names it (Dal Lake, Wular Lake, Loktak Lake).
 
 ## National Park Service Administrative Boundaries of National Park System Units
 
@@ -155,6 +163,14 @@ The Open Government Portal record and the map service's copyright text give the 
 
 Full-table CSV downloads. 98-10-0002-01 covers Canada, provinces and territories, census divisions and census subdivisions; 98-10-0005-01 CMAs and CAs (whole and by provincial part); 98-10-0019-01 forward sortation areas. Joined to the boundaries on DGUID. 63 CSDs (incompletely enumerated Indian reserves and settlements) have no count (symbol '..'); they are stored as null, not zero.
 
+## Canadian Geographical Names Database (CGNDB), Natural Resources Canada
+
+- Credit: Contains information licensed under the Open Government Licence – Canada (Canadian Geographical Names Database, Natural Resources Canada).
+- Licence: OGL-Canada-2.0
+- Website: https://open.canada.ca/data/en/dataset/e27c6eba-3c5d-4051-9db2-082dc6411c2c
+
+Official geographical names approved by the Geographical Names Board of Canada and its provincial and territorial members, refreshed weekly (the national English-format CSV; names keep the language they were decided in, English or French, and are not translated). The Canada pack keeps generic category 'Populated Place' (hamlets, communities, towns, urban communities, neighbourhoods, Montreal's boroughs: about 26,000 points) without railway points, post offices, stations and former or vacated places, with the 'Relevance at Scale' field as a prominence. Coordinates are NAD83, used as WGS84. Points only, no boundaries or populations.
+
 ## Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)
 
 - Credit: Adapted from Statistics Canada, 2021 Census Forward Sortation Area Boundary File, reference date January 1, 2021. This does not constitute an endorsement by Statistics Canada of this product. This data includes information copied with permission from Canada Post Corporation. Postal code is an official mark of Canada Post.
@@ -190,3 +206,19 @@ The directory's district column decides which PIN areas make up a district.
 - Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
 
 Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): each region's name, aliases, kind, cited definition and member units. The outlines in the packs are unions of the member units' boundaries, so they are also credited to the boundary source.
+
+## Natural Earth 1:10m Physical Vectors
+
+- Credit: Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.
+- Licence: LicenseRef-public-domain
+- Website: https://www.naturalearthdata.com
+
+Public domain (naturalearthdata.com/about/terms-of-use). Version 5.1 marine polygons (geography_marine_polys: 306 seas, gulfs, bays, straits and ocean halves covering the whole ocean, 271 with Wikidata ids), lakes with the North America and Europe supplements, and river centerlines with the same supplements. Marine names are name_en (from Wikidata labels) except oceans and rivers, which keep name ('North Atlantic Ocean' where name_en says 'Atlantic Ocean'); lakes keep name, which holds the generic ('Lake Ontario' where name_en says 'Ontario'); unnamed features and lake centerlines are left out. namealt holds alternatives such as Persian Gulf / Arabian Gulf and Sea of Japan / East Sea (aliases; per-worldview water names are not applied yet). These replace the Marine Regions IHO Sea Areas, which are CC BY-NC-SA 4.0 (non-commercial: rejected).
+
+## HydroLAKES v1.0
+
+- Credit: HydroLAKES: Messager, M.L., Lehner, B., Grill, G., Nedeva, I., Schmitt, O. (2016): Estimating the volume and age of water stored in global lakes using a geo-statistical approach. Nature Communications 7: 13603. doi:10.1038/ncomms13603. Data at www.hydrosheds.org, CC BY 4.0
+- Licence: CC-BY-4.0
+- Website: https://www.hydrosheds.org/products/hydrolakes
+
+CC BY 4.0 (HydroLAKES Technical Documentation v1.0, section 4.1), which also asks users "to refrain from redistributing the data in whole in its original format on other websites without the explicit written permission from the authors": the pack carries a filtered, simplified derivative in placewise's own format (lakes of 10 km² or more, about 1.2% of the 1.43 million lakes, outlines simplified to 30 m), not the original files. The build reads only the start of the 820 MB archive by HTTP range requests (its records run largest first), about 220 MB in all. Names are joined from Natural Earth and Wikidata (packbuild.sources.water.names); HydroLAKES' Country field is the country of the outflow (Lake Ontario: United States), so it is not used: a lake's country comes from the world pack's polygons and the worldview.

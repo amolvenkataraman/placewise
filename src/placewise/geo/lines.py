@@ -144,6 +144,51 @@ def _metres_xy(pts, lat0, lon0):
 
 
 def _douglas_peucker(pts, tolerance_m):
+    """Douglas-Peucker, splitting every open range of a recursion level in one numpy pass. Which
+    point splits a range depends only on that range, so the order ranges are handled in doesn't
+    change the result, and each one is measured exactly as on its own (see _douglas_peucker_one)."""
+    if not np.all(np.isfinite(pts)):
+        return _douglas_peucker_one(pts, tolerance_m)
+    keep = np.zeros(len(pts), dtype=bool)
+    keep[[0, -1]] = True
+    m_per_deg = math.radians(MEAN_RADIUS_KM * METRES_PER["km"])
+    i, j = np.array([0]), np.array([len(pts) - 1])
+    while len(i):
+        size = j - i + 1  # points in each range, ends included
+        first = np.cumsum(size) - size  # where each range starts in the flat arrays
+        rng = np.repeat(np.arange(len(i)), size)
+        idx = np.arange(len(rng)) - np.repeat(first, size) + i[rng]
+        # project around each range's start, scaled for its mean latitude
+        lat0 = (pts[i, 0] + pts[j, 0]) / 2
+        scale = np.array([math.cos(math.radians(v)) for v in lat0.tolist()])
+        x = wrap_lon(pts[idx, 1] - pts[i, 1][rng]) * scale[rng] * m_per_deg
+        y = (pts[idx, 0] - lat0[rng]) * m_per_deg
+        x, y = x - x[first][rng], y - y[first][rng]
+        last = first + size - 1
+        dx, dy = x[last], y[last]
+        seg2 = dx * dx + dy * dy
+        dx, dy, seg2 = dx[rng], dy[rng], seg2[rng]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            t = np.where(seg2 > 0, np.clip((x * dx + y * dy) / seg2, 0.0, 1.0), 0.0)
+        dist = np.hypot(x - t * dx, y - t * dy)
+        inner = np.ones(len(rng), dtype=bool)
+        inner[first], inner[last] = False, False
+        dist, inner_rng, inner_idx = dist[inner], rng[inner], idx[inner]
+        starts = first - 2 * np.arange(len(i))  # each range's first inner point, ends dropped
+        top = np.maximum.reduceat(dist, starts)
+        hits = np.flatnonzero(dist == top[inner_rng])
+        _, at = np.unique(inner_rng[hits], return_index=True)  # the first maximum of each range
+        k = inner_idx[hits[at]]
+        split = top > tolerance_m
+        k = k[split]
+        keep[k] = True
+        i, j = np.r_[i[split], k], np.r_[k, j[split]]
+        open_ = j - i >= 2
+        i, j = i[open_], j[open_]
+    return keep
+
+
+def _douglas_peucker_one(pts, tolerance_m):
     keep = np.zeros(len(pts), dtype=bool)
     keep[[0, -1]] = True
     stack = [(0, len(pts) - 1)]

@@ -13,7 +13,10 @@ plain words on the simple path, precise terms (EPSG codes, ellipsoids, error bou
 provinces, 172k cities, time zones, airports, worldviews) and, where they are installed, the US,
 Canada and India packs, with the first naming rules (`docs/naming.md`): three names per point
 (sublocality, locality, city), county or census division, NYC borough, ZIP Code area / FSA / PIN
-code and metro areas. Parks (`docs/parks.md`: `within` and nearby parks from the usa-parks, can-parks and world-parks packs) are in; water is next. The toolkit, tracks, privacy
+code and metro areas. With the optional `world-water` pack, points on water name it ("Over Lake
+Ontario", "On Lake Tahoe", "Over the North Atlantic Ocean") and points beside a sea, lake or river
+list it in `near` (`docs/water.md`). Parks (`docs/parks.md`: `within` and nearby parks from the usa-parks, can-parks and world-parks
+packs) too. Curated regions are next. The toolkit, tracks, privacy
 tools, data store, overrides, config and the server are done.
 
 ```python
@@ -23,6 +26,7 @@ r = placewise.lookup(43.6426, -79.3871)       # downloads the world pack on firs
 r.label                                       # "Toronto, Ontario, Canada"
 r.admin1.codes, r.tz, r.airport               # ISO codes, "America/Toronto", Nearby(YTZ, 1.8 km)
 placewise.Geocoder().lookup_many(lats, lons)  # vectorised, ~30k points/s
+placewise.lookup(35.9208, 74.3089, worldview="IN").label   # "Gilgit, Ladakh, India" (docs/worldviews.md)
 
 r = placewise.lookup(36.1147, -115.1728)      # with the US pack installed: the Las Vegas Strip
 r.locality.name, r.sublocality.name           # "Las Vegas", "Paradise" (the census place)

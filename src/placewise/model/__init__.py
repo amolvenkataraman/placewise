@@ -4,35 +4,56 @@ Every type round-trips through plain dicts (`to_dict` / `from_dict`), so JSON re
 answers and TOML configuration all map onto the same objects.
 """
 
-from .attribution import PackInfo, Source
-from .geometry import BBox, Feature, Outline, Point
-from .overrides import (
-    Add,
-    Alias,
-    AreaSelector,
-    CityRule,
-    Hide,
-    Label,
-    Layer,
-    OverrideSet,
-    RegionRule,
-    Rename,
-    Tune,
-)
-from .places import AppPlace, Disputed, Entity, Nearby, Place, PlaceKind, Relation, Relative, Result
-from .presence import DayPresence, PresenceDays
-from .privacy import PrivacyPolicy, PrivacyZone
-from .settings import (
-    ComplianceSettings,
-    DataSettings,
-    LabelSettings,
-    NameSettings,
-    NearSettings,
-    ServerSettings,
-    Settings,
-    WorldviewSettings,
-)
-from .world import Country, CountryGroup, Currency, Membership, Profile, Statistic, Subregion
+import importlib
+
+# name -> submodule; imported on first use, so `placewise.model` costs nothing until then
+_LAZY = {
+    "PackInfo": "attribution",
+    "Source": "attribution",
+    "BBox": "geometry",
+    "Feature": "geometry",
+    "Outline": "geometry",
+    "Point": "geometry",
+    "Add": "overrides",
+    "Alias": "overrides",
+    "AreaSelector": "overrides",
+    "CityRule": "overrides",
+    "Hide": "overrides",
+    "Label": "overrides",
+    "Layer": "overrides",
+    "OverrideSet": "overrides",
+    "RegionRule": "overrides",
+    "Rename": "overrides",
+    "Tune": "overrides",
+    "AppPlace": "places",
+    "Disputed": "places",
+    "Entity": "places",
+    "Nearby": "places",
+    "Place": "places",
+    "PlaceKind": "places",
+    "Relation": "places",
+    "Relative": "places",
+    "Result": "places",
+    "DayPresence": "presence",
+    "PresenceDays": "presence",
+    "PrivacyPolicy": "privacy",
+    "PrivacyZone": "privacy",
+    "ComplianceSettings": "settings",
+    "DataSettings": "settings",
+    "LabelSettings": "settings",
+    "NameSettings": "settings",
+    "NearSettings": "settings",
+    "ServerSettings": "settings",
+    "Settings": "settings",
+    "WorldviewSettings": "settings",
+    "Country": "world",
+    "CountryGroup": "world",
+    "Currency": "world",
+    "Membership": "world",
+    "Profile": "world",
+    "Statistic": "world",
+    "Subregion": "world",
+}
 
 __all__ = [
     "Add",
@@ -81,3 +102,20 @@ __all__ = [
     "Tune",
     "WorldviewSettings",
 ]
+
+
+_SUBMODULES = frozenset(_LAZY.values())
+
+
+def __getattr__(name):
+    if name in _SUBMODULES:  # placewise.model.geometry and the like, as plain attributes
+        return importlib.import_module(f".{name}", __name__)
+    if name not in _LAZY:
+        raise AttributeError(f"module 'placewise.model' has no attribute {name!r}")
+    value = getattr(importlib.import_module(f".{_LAZY[name]}", __name__), name)
+    globals()[name] = value  # later lookups skip this function
+    return value
+
+
+def __dir__():
+    return sorted({*globals(), *__all__})

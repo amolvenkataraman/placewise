@@ -1,5 +1,6 @@
 """The record types the country reference data is written in."""
 
+import functools
 from dataclasses import dataclass, field
 
 from .._keys import city_key
@@ -26,8 +27,15 @@ class Metro:
 
     def admin1_of(self, city):
         """The admin1 of a member city, by name, or None."""
-        k = city_key(city)
-        return next((code for name, code in self.cities.items() if city_key(name) == k), None)
+        return self._admin1_by_key.get(city_key(city))
+
+    @functools.cached_property
+    def _admin1_by_key(self):
+        """city key -> admin1 of the first member city with that key."""
+        out = {}
+        for name, code in self.cities.items():
+            out.setdefault(city_key(name), code)
+        return out
 
 
 @dataclass(frozen=True)

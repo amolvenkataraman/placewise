@@ -143,7 +143,8 @@ matters.
 ## Distribution
 
 A release publishes, per pack, `<name>-<version>.tar.xz` (the directory, compressed with the
-standard library's `tarfile`/`lzma`) and one `index.json` for all packs:
+standard library's `tarfile`/`lzma`; LZMA2 preset 9 with lc=0, lp=2, pb=2, which suits the int32
+arrays and any xz decoder reads) and one `index.json` for all packs:
 
 ```json
 {

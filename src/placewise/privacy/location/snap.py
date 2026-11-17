@@ -22,7 +22,7 @@ import numpy as np
 from placewise.constants.privacy import METRES_PER_DEGREE
 from placewise.geo._arrays import as_floats, out, wrap_lon
 
-from .._common import check_key, keyed_uniforms
+from .._common import check_key, keyed_uniforms, keyed_uniforms_each
 
 _MIN_COS = 1e-12  # keeps polar rows finite; they become one cell wide
 
@@ -49,7 +49,8 @@ def cells(lat, lon, cell_m, key, purpose="snap"):
     )
     rows, inverse = np.unique(row, return_inverse=True)
     # one HMAC per distinct row, not per point
-    row_offset = np.array([keyed_uniforms(key, purpose + "-row", cell_m, int(r))[0] for r in rows])
+    offsets = keyed_uniforms_each(key, purpose + "-row", cell_m, rows=rows[:, None])
+    row_offset = np.array([u[0] for u in offsets])
     lon_offset = row_offset[inverse.reshape(row.shape)] * dlon
     col = np.floor((lon + 180.0 - lon_offset) / dlon).astype(np.int64)
     centre_lon = wrap_lon(-180.0 + lon_offset + (col + 0.5) * dlon)

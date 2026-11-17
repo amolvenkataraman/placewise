@@ -24,6 +24,12 @@ def _all():
     }
 
 
+@functools.cache
+def _sorted():
+    """Every country, sorted by name."""
+    return tuple(sorted(_all().values(), key=lambda c: c.name))
+
+
 def country(x):
     """The country an ISO 3166-1 alpha-2, alpha-3 or numeric code, name or alias means, in any
     case: "CA", "can", "124", 124, "Canada", "U.S.". KeyError names the input and close matches."""
@@ -47,7 +53,7 @@ def countries(group=None, continent=None, kind=None, as_of=None):
     - kind: a group kind ("union", "alliance", "currency-union" ...): countries in any group of it;
     - as_of: the date memberships are taken on (a date or "YYYY-MM-DD"; default today).
     """
-    from .groups import codes as _codes
+    from .groups import _codes
     from .groups import group as _group
     from .groups import groups as _groups
 
@@ -64,4 +70,4 @@ def countries(group=None, continent=None, kind=None, as_of=None):
         codes &= _codes(found, on)
     if kind is not None:
         codes &= set().union(*(_codes(g, on) for g in _groups(kind=kind)))
-    return sorted((_all()[c] for c in codes), key=lambda c: c.name)
+    return [c for c in _sorted() if c.alpha2 in codes]

@@ -27,7 +27,7 @@ import numpy as np
 from placewise.io.shapefile import _encoding, _read_dbf, _read_shp  # low-level parsers, no CRS check
 
 from ..layer import LayerData
-from ..polygons import to_feature
+from ..polygons import to_features
 from ..projection import STATCAN_LAMBERT
 
 BOUNDARIES = "statcan-boundaries-2021"
@@ -160,7 +160,7 @@ def _read_service_pages(folder):
 # --- layers -------------------------------------------------------------------------------------
 
 
-def provinces(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M):
+def provinces(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M, raw=None):
     """Provinces and territories: id statcan:<PRUID>, English and French names, SGC code."""
 
     def row(p):
@@ -174,10 +174,10 @@ def provinces(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M):
             "population": _population(population, dguid("pr", pruid)),
         }
 
-    return _layer("provinces", path, row, (BOUNDARIES,), population, tolerance_m)
+    return _layer("provinces", path, row, (BOUNDARIES,), population, tolerance_m, raw)
 
 
-def census_divisions(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M):
+def census_divisions(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M, raw=None):
     """Census divisions (counties, regional municipalities such as Halton and Peel, ...)."""
 
     def row(p):
@@ -190,10 +190,10 @@ def census_divisions(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M):
             "population": _population(population, dguid("cd", cduid)),
         }
 
-    return _layer("cd", path, row, (BOUNDARIES,), population, tolerance_m)
+    return _layer("cd", path, row, (BOUNDARIES,), population, tolerance_m, raw)
 
 
-def census_subdivisions(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M):
+def census_subdivisions(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M, raw=None):
     """Census subdivisions: municipalities (and their equivalents: reserves, unorganised areas).
     cduid is the CSDUID's first four digits, as the Standard Geographical Classification nests."""
 
@@ -208,10 +208,10 @@ def census_subdivisions(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M):
             "population": _population(population, dguid("csd", csduid)),
         }
 
-    return _layer("csd", path, row, (BOUNDARIES,), population, tolerance_m)
+    return _layer("csd", path, row, (BOUNDARIES,), population, tolerance_m, raw)
 
 
-def metro_areas(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M):
+def metro_areas(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M, raw=None):
     """Census metropolitan areas (CMATYPE B) and census agglomerations (D tracted, K not). One
     feature per provincial part; name drops the "(Ontario part / ...)" suffix (kept in name_full)
     and population is the whole CMA's, the same on both parts."""
@@ -231,10 +231,10 @@ def metro_areas(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M):
             "population": _population(population, dguid(kind.lower(), cmauid)),
         }
 
-    return _layer("cma", path, row, (BOUNDARIES,), population, tolerance_m)
+    return _layer("cma", path, row, (BOUNDARIES,), population, tolerance_m, raw)
 
 
-def forward_sortation_areas(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M):
+def forward_sortation_areas(path, population=None, tolerance_m=DEFAULT_TOLERANCE_M, raw=None):
     """Census forward sortation areas: the first three characters of postal codes, as census
     respondents reported them (each dissemination area gets one FSA), not Canada Post's own."""
 
@@ -247,16 +247,25 @@ def forward_sortation_areas(path, population=None, tolerance_m=DEFAULT_TOLERANCE
             "population": _population(population, dguid("fsa", fsa)),
         }
 
-    return _layer("fsa", path, row, (FSA,), population, tolerance_m)
+    return _layer("fsa", path, row, (FSA,), population, tolerance_m, raw)
 
 
-def _layer(name, path, row, sources, population, tolerance_m):
-    columns, features = {}, []
-    for props, rings in read_boundaries(path):
-        values = row(props)
-        for key, value in values.items():
-            columns.setdefault(key, []).append(value)
-        features.append(to_feature(rings, tolerance_m, STATCAN_LAMBERT, values["id"]))
+def _layer(name, path, row, sources, population, tolerance_m, raw=None):
+    """The layer, one feature per record. `raw` ({id: []}, optional) collects the unsimplified
+    projected rings of the ids it lists as the file is read (the curated regions' members, whose
+    union needs their exact shared borders; packbuild.ca), so the file is read only once."""
+    columns = {}
+
+    def records():
+        for props, rings in read_boundaries(path):
+            values = row(props)
+            for key, value in values.items():
+                columns.setdefault(key, []).append(value)
+            if raw is not None and values["id"] in raw:
+                raw[values["id"]].extend(rings)
+            yield rings, values["id"]
+
+    features = to_features(records(), tolerance_m, STATCAN_LAMBERT)
     if population is not None:
         missing = sum(v is None for v in columns.get("population", ()))
         if missing:
@@ -273,24 +282,6 @@ def _layer(name, path, row, sources, population, tolerance_m):
         types=types,
         nulls={"population": POPULATION_NULL},
     )
-
-
-# layer -> the attribute its ids are made of
-UID_FIELDS = {"provinces": "PRUID", "cd": "CDUID", "csd": "CSDUID", "cma": "CMAPUID", "fsa": "CFSAUID"}
-
-
-def raw_rings(paths, ids):
-    """{id: rings} for the wanted ids ("statcan:3520"), read again from the boundary files of the
-    layers in `paths` ({layer: path}) and left unsimplified and projected (EPSG:3347): neighbours'
-    shared borders still have the same vertices, so a union of them can drop those borders."""
-    wanted, out = set(ids), {}
-    for layer, path in paths.items():
-        field = UID_FIELDS[layer]
-        for props, rings in read_boundaries(path):
-            fid = f"statcan:{_text(props[field])}"
-            if fid in wanted:
-                out.setdefault(fid, []).extend(rings)
-    return out
 
 
 def _population(table, key):

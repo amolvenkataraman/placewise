@@ -81,7 +81,7 @@ def _describe(part):
 
 def _in_metro(part, metro_key):
     """(matched, by city name only)."""
-    metro = _metros.all_metros()[metro_key]
+    metro = _metros.by_id()[metro_key]
     if part.region == metro_key:
         return True, False
     if part.city and part.admin1_code:
@@ -93,7 +93,7 @@ def _in_metro(part, metro_key):
 
 def _metro_reaches(part, admin1_iso):
     """A part naming a metro that spans this subdivision: "DMV" reaches VA."""
-    metro = _metros.all_metros().get(part.region) if part.region and not part.admin1_code else None
+    metro = _metros.by_id().get(part.region) if part.region and not part.admin1_code else None
     if metro is None:
         return False
     country, code = admin1_iso.split("-", 1)
@@ -227,7 +227,7 @@ class LocationFilter(Model):
         for code in self.admin1:
             out.setdefault(code.split("-", 1)[0], []).append(code)
         for metro_key in self.metros:
-            out.setdefault(_metros.all_metros()[metro_key].country, []).append(metro_key)
+            out.setdefault(_metros.by_id()[metro_key].country, []).append(metro_key)
         return out
 
     def _allowed_countries(self):
