@@ -169,7 +169,7 @@ uv run python -m packbuild.india --version 2026.11 \
 | Layer | Kind | Source | Licence |
 |---|---|---|---|
 | `pincodes` | polygon | All India Pincode Boundary (Department of Posts, 2025), district and state joined from the directory | GODL-India |
-| `post_offices` | point | All India Pincode Directory (Department of Posts): offices with usable coordinates | GODL-India |
+| `post_offices` | point | All India Pincode Directory (Department of Posts): offices whose coordinates lie in or within 2 km of their own PIN area | GODL-India |
 
 Registry: `indiapost-pincode-boundary`, `indiapost-pincode-directory`. Ids: `pin:560001`;
 `indiapost:<pincode>:<office name>` (`#2`, `#3`, ... when a name repeats under one PIN code).
@@ -190,6 +190,22 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
 - **Coordinates.** Directory coordinates are kept only when both are plain numbers inside a box
   round India (6-38 N, 68-98 E); "NA", the 1/1 placeholder and values with stray characters (a
   trailing "-") are dropped, not repaired. GeoJSON whose `crs` is not WGS84 is refused.
+- **Offices against their PIN areas.** Many directory coordinates are wrong: on the 2026.11
+  build only 91,016 of the 143,571 offices with usable coordinates (63.4%) lie inside their own
+  PIN area, 41,573 lie in another PIN area (often another district or state) and 1,577 in none
+  (outside India, some in neighbouring countries, or off the coast). So an office keeps its point
+  only if it is inside its own PIN polygon or within 2 km of its boundary
+  (`indiapost.OFFICE_BUFFER_KM`, `keep_placed_offices`); the rest, and the 283 offices whose PIN
+  code has no polygon, are left out of `post_offices`, and the build logs each count. That kept
+  100,138 offices: the 91,016 inside, which are now 90.9% of the layer, and 9,122 within 2 km.
+  Why 2 km: PIN areas are generalised delivery zones and offices often sit on the road that bounds
+  one, so a strict inside test drops good points (4,109 lie within 500 m outside, 6,342 within
+  1 km); past a couple of km the point is inside a neighbouring area, and the count keeps rising
+  with no clear break (13,961 within 5 km, 19,218 within 10 km), which is the signature of points
+  misplaced by whole areas rather than metres. The test runs on placewise's own pack geometry
+  (`PolygonLayer.contains`, `near_boundary`; distances exact on the sphere): the PIN areas are
+  written to a temporary pack first; the check takes about 35 s of the build's ~50 s. Ids keep
+  the directory's numbering, so a left-out office leaves a gap rather than renumbering the rest.
 - **Disputed areas.** PIN areas are delivery zones as published by the Department of Posts (a
   Government of India body), not administrative boundaries; the pack carries them unchanged.
   Whether any extend into areas whose status is disputed has not been checked yet (do it on the

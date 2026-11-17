@@ -44,9 +44,10 @@ def build_layers(
         pincode_directory = fetch(
             url(indiapost.DIRECTORY_SOURCE, "directory_mirror"), cache_dir, refresh=refresh
         )
-    layers.append(indiapost.pincodes(pincode_boundaries, pincode_directory))
-    layers.append(indiapost.post_offices(pincode_directory))
-    return layers
+    pincodes = indiapost.pincodes(pincode_boundaries, pincode_directory)
+    # an office keeps its coordinates only in or near its own PIN area (indiapost.OFFICE_BUFFER_KM)
+    offices, _ = indiapost.keep_placed_offices(indiapost.post_offices(pincode_directory), pincodes)
+    return [*layers, pincodes, offices]
 
 
 def build_india(cache_dir, out_dir, version, refresh=False, **paths):

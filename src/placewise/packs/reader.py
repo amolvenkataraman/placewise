@@ -375,6 +375,26 @@ class PolygonLayer(Layer):
     def _tested(self):
         return np.zeros(self.count, dtype=np.int64)
 
+    def contains(self, lats, lons, features):
+        """Whether each point lies inside the feature given for it (an index per point; -1 is in
+        none), whichever feature `query` would name first. Vectorised, the same even-odd test as
+        `query`; keeps the input's shape, plain bool for a scalar."""
+        lat, lon, feature = np.broadcast_arrays(
+            np.asarray(lats, dtype=np.float64), np.asarray(lons, dtype=np.float64), np.asarray(features)
+        )
+        shape = lat.shape
+        flat_lat, flat_lon = gm.normalise(lat.ravel(), lon.ravel())
+        feature = feature.ravel().astype(np.int64)
+        if len(feature) and (feature.max() >= self.count or feature.min() < -1):
+            raise IndexError(f"feature index out of range for a layer of {self.count}")
+        inside = np.zeros(flat_lat.shape, dtype=bool)
+        ok = np.flatnonzero((feature >= 0) & np.isfinite(flat_lat))
+        ok = ok[self._in_bbox(feature[ok], flat_lat[ok], flat_lon[ok])]
+        if len(ok):
+            inside[ok] = self._contains(feature[ok], flat_lat[ok], flat_lon[ok])
+        inside = inside.reshape(shape)
+        return bool(inside) if inside.ndim == 0 else inside
+
     def query_all(self, lat, lon):
         """Indexes of every feature containing one point, ascending."""
         lat, lon = gm.normalise(np.array([float(lat)]), np.array([float(lon)]))

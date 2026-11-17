@@ -90,6 +90,21 @@ def test_build_india_writes_a_pack_that_answers_the_spot_checks(tmp_path, offlin
     assert offices.value("delivery", i) is True
 
 
+def test_build_keeps_only_offices_in_or_near_their_own_pin_area(tmp_path, offline, caplog):
+    import logging
+
+    from placewise.packs import open_pack
+
+    with caplog.at_level(logging.INFO):
+        path = india.build_india(tmp_path / "cache", tmp_path / "out", "2026.11")
+    offices = open_pack(path)["post_offices"]
+    names = [offices.value("name", i) for i in range(len(offices))]
+    # every fixture office with usable coordinates is in its PIN box, except Silvassa, whose PIN
+    # code 396230 has no polygon
+    assert len(names) == 8 and "Silvassa S.O" not in names
+    assert "kept 8 of 9 offices" in caplog.text
+
+
 def test_manually_downloaded_files_skip_the_download(tmp_path, downloads, offline):
     path = india.build_india(
         tmp_path / "cache",
