@@ -60,7 +60,7 @@ class Place(Model):
     kind: PlaceKind
     point: Point | None = None
     bbox: BBox | None = None
-    tier: int | None = None  # parks: 1 national ... 3 local
+    tier: int | None = None  # parks: 1 national, 2 state / provincial, 3 regional, 4 local
     codes: dict[str, str] = field(default_factory=dict)  # iata, icao, iso2, postal ...
     aliases: tuple[str, ...] = ()
     source: str | None = None  # attribution source id
@@ -176,7 +176,7 @@ class Result(Model):
     postal: Place | None = None  # ZIP Code area (ZCTA), forward sortation area, PIN code area
     tz: str | None = None
     regions: tuple[Place, ...] = ()  # smallest first
-    within: tuple[Place, ...] = ()  # parks, campuses ... most significant first
+    within: tuple[Place, ...] = ()  # parks, campuses ... most significant first (docs/parks.md)
     near: tuple[Nearby, ...] = ()
     airport: Nearby | None = None
     water: Nearby | None = None

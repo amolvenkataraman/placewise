@@ -56,6 +56,7 @@ def build(geo, lat, lon, a, named, order, locked):
     empty = [None] * n
     sub_l, loc_l, city_l, bor_l, adm2_l, post_l = (named_lists.get(k, empty) for k in NAMED)
     regions_l, sources_l = named_lists.get("regions", empty), named_lists.get("sources", empty)
+    parks = a.get("parks")  # (within, near, sources) per point (placewise.engine._within)
     results = []
     for i in range(n):
         ci, vi, ai = cidx[i], view[i], aidx[i]
@@ -100,10 +101,16 @@ def build(geo, lat, lon, a, named, order, locked):
         )
         if near:
             sources["near"] = src[const.CITIES, const.NEAREST]
+        within = ()
+        if parks is not None:
+            within, park_near, park_sources = parks[i]
+            near += park_near
+            for field, rule in park_sources.items():
+                sources.setdefault(field, rule)
         fields = {
             "country": country, "admin1": admin1, "admin2": adm2_l[i], "city": city_place,
             "locality": locality, "sublocality": sub_l[i], "borough": bor_l[i], "postal": post_l[i],
-            "regions": regions_l[i] or (), "airport": air, "water": water_near,
+            "regions": regions_l[i] or (), "within": within, "airport": air, "water": water_near,
         }  # fmt: skip
         if ci >= 0:
             label = compose(geo.settings.label, fields)
@@ -150,6 +157,8 @@ def compose(label_settings, fields):
     names["locality"] = names["locality"] or names["city"]
     names["city"] = names["city"] or names["locality"]
     names["region"] = regions[0].name if regions else ""
+    within = get("within")
+    names["within"] = within[0].name if within else ""
     names["airport"] = get("airport").place.name if get("airport") else ""
     names["water"] = get("water").place.name if get("water") else ""
     text = template.format_map(_Blank(names))
