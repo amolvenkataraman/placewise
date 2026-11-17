@@ -102,6 +102,12 @@ Packs are published as release assets of `amolvenkataraman/placewise-data` (`ind
 - Distances are kilometres unless a name ends in `_m`.
 - English names only; standard coordinate systems only (no obfuscated ones like GCJ-02).
 
+## Disclaimer
+
+placewise and its data packs are provided "as is" and "where is", with no warranty of any kind and
+no legal liability for their use. Names, boundaries and other data may be wrong or out of date and
+are not an official determination of any territory's status. See [DISCLAIMER.md](DISCLAIMER.md).
+
 ## Development
 
 ```
