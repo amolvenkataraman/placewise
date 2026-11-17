@@ -20,7 +20,15 @@ def _index():
             by_city[(key(city), metro.country, code)] = metro
     for alias, entry in CITY_ALIASES.items():
         by_city_alias[key(alias)] = entry
-    return {m.key: m for m in METROS}, by_name, by_city_alias, by_city
+    naming = {}  # city key -> metros listing a city of that name, in by_city order
+    for (name, _, _), metro in by_city.items():
+        naming.setdefault(name, []).append(metro)
+    return {m.key: m for m in METROS}, by_name, by_city_alias, by_city, naming
+
+
+def by_id():
+    """Every metro, keyed by its short id (shared: don't modify)."""
+    return _index()[0]
 
 
 def all_metros():
@@ -47,11 +55,9 @@ def metro_of(city, country, admin1):
 
 def metros_naming(city):
     """Metros listing a city of this name in any admin1 (for matching a city given without one)."""
-    k = key(city)
-    return [metro for (name, _, _), metro in _index()[3].items() if name == k]
+    return list(_index()[4].get(key(city), ()))
 
 
 def is_member_city(text):
     """Is this a city some metro lists (so noise words like "Greater" in it are part of the name)?"""
-    k = key(text)
-    return any(name == k for name, _, _ in _index()[3])
+    return key(text) in _index()[4]

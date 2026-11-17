@@ -7,7 +7,9 @@ from .codab import PACKS as CODAB_PACKS
 # layers the naming rules read from country packs (packbuild/README.md)
 REGIONS = "regions"  # curated region polygons, in any country pack: id, name, kind, country
 USA_LAYERS = {"county": "counties", "place": "places", "postal": "zcta", "cbsa": "cbsa", "csa": "csa"}
-CAN_LAYERS = {"division": "cd", "subdivision": "csd", "metro": "cma", "postal": "fsa"}
+CAN_LAYERS = {
+    "division": "cd", "subdivision": "csd", "metro": "cma", "postal": "fsa", "named": "populated_places",
+}  # fmt: skip
 IND_LAYERS = {"postal": "pincodes"}
 # installed packs the default Geocoder opens beside "world" (alpha-3 names, and the older alpha-2),
 # then the COD-AB packs (constants/codab.py)
@@ -15,6 +17,7 @@ COUNTRY_PACKS = ("usa", "us", "can", "ca", "ind", "in", *CODAB_PACKS)
 
 # rule names in Result.sources ("us/places:metro")
 METRO = "metro"  # the metro area's principal city (US) or first city (Canada) stands for the point
+POSTAL = "postal"  # the ZIP Code's postal city stands for a CDP or unincorporated land (US)
 INSIDE = "inside"  # a GeoNames place inside the boundary names a rural or unorganised one
 NAME = "name"  # a name derived from the layer's own: the PIN area's post office, NYC's boroughs
 STATE = "state"  # admin1 from the state or province a country-pack feature belongs to
@@ -33,20 +36,52 @@ SUBLOCALITY_EXCLUDED_FEATURE_CODES = frozenset({"PPLH", "PPLQ", "PPLW", "PPLCH"}
 # district) is named by the nearest GeoNames place inside it, this close
 RURAL_PLACE_KM = 8.0
 
+# Canada's named places (CGNDB populated places, can/populated_places). A rural or unorganised
+# subdivision is named first by the nearest settlement inside it within CGNDB_LOCALITY_KM (Lake
+# Louise, 0.2 km from its hamlet point and 2.7 km from it at the lake), then by GeoNames
+CGNDB_LOCALITY_KM = 4.0
+CGNDB_LOCALITY_TERMS = frozenset(
+    {
+        "Hamlet", "Community", "Compact Rural Community", "Dispersed Rural Community", "Rural Community",
+        "Settlement", "Organized Hamlet", "Northern Hamlet", "Northern Community", "Northern Settlement",
+        "Northern Village", "Suburban Community", "Village", "Town", "City", "Rural Village",
+        "Resort Village", "Summer Village", "Police Village", "Local Urban District",
+        "Recreational Community",
+        "Resort", "Resort Area", "Townsite", "Metis Settlement", "First Nation Village", "Cree Village",
+        "Naskapi Village", "Amerindian Settlement", "Charter Community", "Forest Village",
+    }
+)  # fmt: skip
+# a subdivision named as itself (a city, a township) takes as sublocality the neighbourhood or
+# community inside it whose reach the point is deepest inside; the reach grows with the name's
+# "Relevance at Scale" (shown from 1:700,000 and up: Scarborough, Kanata, Etobicoke), as
+# (scale at least, km), largest first. Railway points, localities without people and dispersed
+# rural communities never name a sublocality
+CGNDB_SUBLOCALITY_KM = ((700_000, 4.0), (250_000, 2.5), (0, 1.5))
+CGNDB_SUBLOCALITY_TERMS = frozenset(
+    {
+        "Urban Community", "Neighbourhood", "Community", "Suburban Community", "Residential Area", "Borough",
+        "Administrative Sector", "Subdivision", "Village", "Town", "Hamlet", "Compact Rural Community",
+    }
+)  # fmt: skip
+CGNDB_CANDIDATES = 8  # nearest named points looked at per query point
+
 # city roll-up (design page "Three names per point"): a locality stays the city when it has
 # CITY_KEEP_POPULATION people or is named in its metro's title; otherwise the metro's first city
 # stands for it when that city is CITY_ROLL_UP_RATIO times bigger (Pickering -> Toronto)
 CITY_KEEP_POPULATION = 100_000
 CITY_ROLL_UP_RATIO = 10
 
-# a US census-designated place or unincorporated land takes its metro's principal city (the first
-# one in the CBSA title in the same state) when that city's boundary is this close: the proxy for
-# the ZIP Code's postal city (Paradise -> Las Vegas, SFO -> San Francisco) until postal cities are
-# in the pack
+# US postal city: inside a metro area, a census-designated place (CDP) or unincorporated land takes
+# the city its ZIP Code's addresses name (Paradise -> Las Vegas, SFO -> San Francisco) when that
+# city's boundary is this close; farther off, a ZIP Code's name is a post office, not a place
+POSTAL_CITY_KM = 20.0
+# a CDP this populous keeps its own name when its postal city is just another CDP (The Woodlands,
+# addressed Spring); a smaller one takes it. An incorporated postal city wins regardless (design:
+# "CDP of 5,000+ people stays", unless the postal city says otherwise)
+CDP_KEEP_POPULATION = 5_000
+# unincorporated land with no postal city takes its metro's largest principal city (OMB list 2)
+# when that city's boundary is this close
 METRO_CITY_KM = 25.0
-# a CDP is that city's suburb only when it is this close to the city (East Los Angeles, Paradise);
-# farther out it stays itself (Stanford, Brandon FL)
-METRO_CDP_KM = 5.0
 
 # New York City's boroughs are its five counties (county GEOID -> the name people use)
 NYC_BOROUGHS = {

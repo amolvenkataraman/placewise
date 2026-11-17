@@ -19,86 +19,133 @@ from placewise.tracks import TrackMeta
 from ._track_common import (
     build_track,
     format_iso_time,
+    iter_xml,
     local_name,
     new_points,
     parse_iso_time,
-    parse_xml,
     read_source,
     source_name,
     to_float,
     warn_skipped,
     xml_child,
-    xml_children,
     xml_text,
 )
 
 _COLUMNS = ("ele", "speed", "hr", "cadence", "power")
 
 
+_CONTAINERS = ("Activity", "Course")
+
+
+class _Container:
+    """Points of one Activity or Course, gathered as its Trackpoints stream past."""
+
+    __slots__ = ("element", "kind", "points", "segments", "skipped", "track_starts")
+
+    def __init__(self, element, kind):
+        self.element, self.kind = element, kind
+        self.points = new_points(_COLUMNS)
+        self.segments, self.skipped = [], 0
+        self.track_starts = []  # point count at the start of each open Track
+
+
 def read_tcx(source):
     """Tracks from a TCX path, bytes or file object: one per Activity and per Course.
 
     Trackpoints without a Position (heart rate logged before the GPS fix, indoor sessions) are
-    skipped; a TrackReadWarning reports how many."""
-    root = parse_xml(read_source(source))
-    if local_name(root.tag) != tcx.ROOT_ELEMENT:
-        raise ValueError(f"not TCX: root element is <{local_name(root.tag)}>")
+    skipped; a TrackReadWarning reports how many. The file is streamed: each Trackpoint is read
+    when it ends and then dropped."""
+    data = read_source(source)
     origin = source_name(source, "tcx")
     tracks, skipped = [], 0
-    for element in root.iter():
-        kind = local_name(element.tag)
-        if kind not in ("Activity", "Course"):
+    stack, containers, root = [], [], None
+    for event, element in iter_xml(data):
+        if root is None:
+            root = local_name(element.tag)
+        if root != tcx.ROOT_ELEMENT:  # read on: malformed XML is reported before a wrong root
+            element.clear()
             continue
-        track, missing = _read_container(element, kind, origin)
-        skipped += missing
-        if track is not None:
-            tracks.append(track)
+        if event == "start":
+            kind = local_name(element.tag)
+            stack.append(element)
+            if kind in _CONTAINERS:
+                containers.append(_Container(element, kind))
+            elif kind == "Track":
+                for c in containers:
+                    c.track_starts.append(len(c.points["time"]))
+            continue
+        stack.pop()
+        kind = local_name(element.tag)
+        if kind == "Trackpoint":
+            if containers and stack and local_name(stack[-1].tag) == "Track":
+                for c in containers:
+                    if not _read_trackpoint(element, c.points):
+                        c.skipped += 1
+                del stack[-1][:]  # read: drop it, so memory stays flat on huge files
+        elif kind == "Track":
+            for c in containers:
+                start = c.track_starts.pop()
+                if len(c.points["time"]) > start:
+                    c.segments.append(start)
+        elif kind in _CONTAINERS and containers and containers[-1].element is element:
+            container = containers.pop()
+            track = _finish(container, origin)
+            skipped += container.skipped
+            if track is not None:
+                tracks.append(track)
+            if stack:
+                stack[-1].remove(element)
+    if root != tcx.ROOT_ELEMENT:
+        raise ValueError(f"not TCX: root element is <{root}>")
     warn_skipped(skipped, "trackpoint(s)", "no Position", "TCX")
     return tracks
 
 
-def _read_container(container, kind, origin):
-    points = new_points(_COLUMNS)
-    segments, skipped = [], 0
-    # a Course keeps its Track beside its Laps, an Activity inside each Lap; both are just Track elements
-    for track_el in (e for e in container.iter() if local_name(e.tag) == "Track"):
-        start = len(points["time"])
-        for tp in xml_children(track_el, "Trackpoint"):
-            if not _read_trackpoint(tp, points):
-                skipped += 1
-        if len(points["time"]) > start:
-            segments.append(start)
+def _finish(container, origin):
+    points = container.points
     if not points["time"]:
-        return None, skipped
-    if kind == "Activity":
-        name, activity = None, container.get("Sport")
+        return None
+    element = container.element
+    if container.kind == "Activity":
+        name, activity = None, element.get("Sport")
     else:
-        name, activity = xml_text(xml_child(container, "Name")), None
-    device = xml_text(xml_child(xml_child(container, "Creator"), "Name"))
+        name, activity = xml_text(xml_child(element, "Name")), None
+    device = xml_text(xml_child(xml_child(element, "Creator"), "Name"))
     meta = TrackMeta(name=name, activity=activity, device=device, source=origin)
-    return build_track(points, segments, meta), skipped
+    return build_track(points, container.segments, meta)
 
 
 def _read_trackpoint(tp, points):
-    position = xml_child(tp, "Position")
-    lat = to_float(xml_text(xml_child(position, "LatitudeDegrees")))
-    lon = to_float(xml_text(xml_child(position, "LongitudeDegrees")))
+    child = _children(tp)
+    position = _children(child.get("Position"))
+    lat = to_float(xml_text(position.get("LatitudeDegrees")))
+    lon = to_float(xml_text(position.get("LongitudeDegrees")))
     if math.isnan(lat) or math.isnan(lon):
         return False
-    time_text = xml_text(xml_child(tp, "Time"))
+    time_text = xml_text(child.get("Time"))
     points["time"].append(parse_iso_time(time_text) if time_text else math.nan)
     points["lat"].append(lat)
     points["lon"].append(lon)
-    points["ele"].append(to_float(xml_text(xml_child(tp, "AltitudeMeters"))))
-    points["hr"].append(to_float(xml_text(xml_child(xml_child(tp, "HeartRateBpm"), "Value"))))
-    tpx = xml_child(xml_child(tp, "Extensions"), "TPX")
-    cadence = to_float(xml_text(xml_child(tp, "Cadence")))
+    points["ele"].append(to_float(xml_text(child.get("AltitudeMeters"))))
+    points["hr"].append(to_float(xml_text(_children(child.get("HeartRateBpm")).get("Value"))))
+    tpx = _children(_children(child.get("Extensions")).get("TPX"))
+    cadence = to_float(xml_text(child.get("Cadence")))
     if math.isnan(cadence):  # runners' footpods report steps per minute in the extension instead
-        cadence = to_float(xml_text(xml_child(tpx, "RunCadence")))
+        cadence = to_float(xml_text(tpx.get("RunCadence")))
     points["cadence"].append(cadence)
-    points["speed"].append(to_float(xml_text(xml_child(tpx, "Speed"))))
-    points["power"].append(to_float(xml_text(xml_child(tpx, "Watts"))))
+    points["speed"].append(to_float(xml_text(tpx.get("Speed"))))
+    points["power"].append(to_float(xml_text(tpx.get("Watts"))))
     return True
+
+
+def _children(element):
+    """The first child of each local name (as xml_child finds it); none for no element."""
+    if element is None:
+        return {}
+    found = {}
+    for c in element:
+        found.setdefault(local_name(c.tag), c)
+    return found
 
 
 def write_tcx(track, path=None):

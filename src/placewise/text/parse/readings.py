@@ -32,7 +32,7 @@ def _admin1_name(country, code):
     return entry.name if entry else None
 
 
-@functools.cache
+@functools.lru_cache(maxsize=1 << 16)
 def _readings(text, upper):
     """Every state, province or country `text` can mean, likeliest first. `upper`: written in
     capitals, which three-letter country codes need ("CAN", "SGP")."""
@@ -77,23 +77,33 @@ def _readings(text, upper):
     return tuple(unique.values())
 
 
+_NOT_LETTERS = re.compile(r"[^A-Za-z]")
+
+
 def readings(text):
     """Every state, province or country a location part can mean, likeliest first, as
     (country, admin1) pairs: "CA" -> [("US", "CA"), ("CA", None)]."""
-    letters = re.sub(r"[^A-Za-z]", "", text)
+    letters = _NOT_LETTERS.sub("", text)
     return [(r.country, r.admin1) for r in _readings(text, bool(letters) and letters.isupper())]
+
+
+@functools.cache
+def _by_key(table_name):
+    """key -> value of a name table, the first name with each key winning."""
+    out = {}
+    for name, value in {"ambiguous": AMBIGUOUS_CITIES, "clashes": NAME_CLASHES}[table_name].items():
+        out.setdefault(key(name), value)
+    return out
 
 
 def _ambiguous_city(city):
     """The candidates of a bare city name several places share ("London"), or None."""
-    k = key(city)
-    return next((v for name, v in AMBIGUOUS_CITIES.items() if key(name) == k), None)
+    return _by_key("ambiguous").get(key(city))
 
 
 def _name_clash(text):
     """The NameClash for a name that is a state and a country ("Georgia"), or None."""
-    k = key(text)
-    return next((v for name, v in NAME_CLASHES.items() if key(name) == k), None)
+    return _by_key("clashes").get(key(text))
 
 
 @functools.cache

@@ -10,7 +10,10 @@ Big comparisons stay fast by ruling pairs out before measuring them exactly, wit
 inequality twice: consecutive fixes and steps are grouped into blocks of _BLOCK inside spherical
 caps, and only step blocks that could hold a fix block's nearest step survive; then, fix by fix,
 only steps whose nearer end, less half the step, is no further than the nearest step end so far.
-That leaves a few exact point-to-arc distances per fix for tracks that run near each other.
+That leaves a few exact point-to-arc distances per fix for tracks that run near each other. Long
+tracks screen super-blocks of _SUPER blocks the same way first, so the block screen only compares
+blocks near each other rather than every block with every other. Screening only decides which
+pairs get measured, never how, so every distance is the same exact minimum either way.
 """
 
 from dataclasses import dataclass
@@ -30,8 +33,11 @@ from placewise.geo.lines import _angle, _nearest_on_arcs, simplify
 from placewise.model._base import Model
 
 from .._ops import M_PER_KM, in_segment_steps, step_km, unit_vectors
+from ._frechet import discrete_frechet_d2
 
 _BLOCK = 8  # fixes or steps per cap: small enough for tight caps, big enough to vectorise
+_SUPER = 8  # blocks per super-block cap, for the coarse screen of long tracks
+_DIRECT_CAP_PAIRS = 1 << 22  # block pairs screened directly, without super-blocks
 _PAIRS = 1 << 20  # fix-step pairs screened at once, which bounds temporary memory
 _CAP_PAIRS = 1 << 20  # cap-to-cap angles computed at once
 # radians of allowance on the bounds: arccos of a dot product is only good to ~1.5e-8 near 0
@@ -73,7 +79,8 @@ def frechet_km(a, b, simplify_m=FRECHET_SIMPLIFY_M):
     simplify_m simplifies both tracks first (Douglas-Peucker, tolerance in metres) for speed; the
     walkers then step between the remaining vertices, which on long straight stretches can add up
     to half their spacing. The DP keeps only two anti-diagonals of the n x m table, O(n + m)
-    memory, and each anti-diagonal is one vectorised step."""
+    memory, and computes only the band of cells that can still matter (exactly; see _frechet),
+    so two recordings of one route cost about O(n + m) time too."""
     pa, pb = _fixes(a, simplify_m), _fixes(b, simplify_m)
     return float(_discrete_frechet(pa, pb) * MEAN_RADIUS_KM)
 
@@ -132,7 +139,7 @@ class _Line:
     """A track's polyline as great-circle steps (unit vectors a -> b), with a cap around each
     block of _BLOCK consecutive steps."""
 
-    __slots__ = ("a", "b", "centre", "half", "radius")
+    __slots__ = ("a", "b", "centre", "half", "radius", "super_centre", "super_radius")
 
     def __init__(self, track):
         n = len(track)
@@ -147,6 +154,7 @@ class _Line:
         self.b = u[np.r_[steps + 1, lone][order]]
         self.half = _angle(self.a, self.b) / 2
         self.centre, self.radius = _caps(self.a, self.b)
+        self.super_centre, self.super_radius = _caps(self.a, self.b, _BLOCK * _SUPER)
 
 
 def _fixes(track, simplify_m=None):
@@ -159,23 +167,18 @@ def _fixes(track, simplify_m=None):
     return unit_vectors(lat, lon)
 
 
-def _caps(first, second):
-    """(centres, radii) of caps holding rows first[i] and second[i] of each block of _BLOCK rows.
+def _caps(first, second, block=_BLOCK):
+    """(centres, radii) of caps holding rows first[i] and second[i] of each block of `block` rows.
     Radii beyond 90° become pi (no bound): only caps under a hemisphere are convex, i.e. hold
     the arcs between their points."""
     n = len(first)
-    starts = np.arange(0, n, _BLOCK)
+    starts = np.arange(0, n, block)
     sums = np.add.reduceat(first, starts, axis=0) + np.add.reduceat(second, starts, axis=0)
     norm = np.linalg.norm(sums, axis=1)
     centre = sums / np.where(norm > 0, norm, 1.0)[:, None]
-    of = centre[np.arange(n) // _BLOCK]
+    of = centre[np.arange(n) // block]
     radius = np.maximum.reduceat(np.maximum(_angle(first, of), _angle(second, of)), starts)
     return centre, np.where((norm > 0) & (radius < np.pi / 2), radius + _SLACK, np.pi)
-
-
-def _cap_angles(centres, line):
-    """Angles (k, blocks) between cap centres and the line's cap centres."""
-    return np.arccos(np.clip(centres @ line.centre.T, -1.0, 1.0))
 
 
 def _to_line(points, line):
@@ -183,27 +186,66 @@ def _to_line(points, line):
     the line."""
     out = np.full(len(points), np.inf)
     centre, radius = _caps(points, points)
-    for blocks in _block_pairs(centre, radius, line):
+    if len(centre) * len(line.centre) <= _DIRECT_CAP_PAIRS:
+        pairs = _block_pairs(centre, radius, line.centre, line.radius)
+    else:
+        pairs = _two_level_pairs(points, centre, radius, line)
+    for blocks in _chunks(pairs, max(1, _PAIRS // (_BLOCK * _BLOCK))):
         _measure(points, line, blocks, out)
     return out
 
 
-def _block_pairs(centre, radius, line):
-    """Chunks of (fix block, step block) index pairs that could hold each fix's nearest step.
+def _chunks(pairs, per):
+    """The (fix, step) index pairs regrouped into chunks of `per` (the last one may be short)."""
+    held, count = [], 0
+    for fix, step in pairs:
+        held.append((fix, step))
+        count += len(fix)
+        while count >= per:
+            fix, step = np.concatenate([h[0] for h in held]), np.concatenate([h[1] for h in held])
+            yield fix[:per], step[:per]
+            held, count = [(fix[per:], step[per:])], len(fix) - per
+    if count:
+        yield np.concatenate([h[0] for h in held]), np.concatenate([h[1] for h in held])
+
+
+def _block_pairs(centre, radius, line_centre, line_radius, budget=_CAP_PAIRS):
+    """Chunks of (fix cap, step cap) index pairs that could hold each fix's nearest step.
 
     For a fix in a cap of radius r_p and any point x on a step in a step cap at angle D, the
     triangle inequality gives D - r_p - r_s <= |fix x|, and the step cap's endpoints lie within
-    D + r_p + r_s. So only step blocks whose lower bound is within the fix block's best upper
+    D + r_p + r_s. So only step caps whose lower bound is within the fix cap's best upper
     bound can matter."""
-    rows = max(1, _CAP_PAIRS // len(line.centre))
-    per = max(1, _PAIRS // (_BLOCK * _BLOCK))
+    rows = max(1, budget // len(line_centre))
     for r in range(0, len(centre), rows):
-        d = _cap_angles(centre[r : r + rows], line)
-        reach = radius[r : r + rows, None] + line.radius[None, :]
+        d = np.arccos(np.clip(centre[r : r + rows] @ line_centre.T, -1.0, 1.0))
+        reach = radius[r : r + rows, None] + line_radius[None, :]
         upper = np.min(d + reach, axis=1) + _SLACK
-        fix_block, step_block = np.nonzero(d - reach <= upper[:, None])
-        for c in range(0, len(fix_block), per):
-            yield fix_block[c : c + per] + r, step_block[c : c + per]
+        fix_cap, step_cap = np.nonzero(d - reach <= upper[:, None])
+        yield fix_cap + r, step_cap
+
+
+def _two_level_pairs(points, centre, radius, line):
+    """_block_pairs for long tracks: super-block pairs first, then the block pairs inside the
+    surviving ones. The nearest step of any fix lies in a surviving super-block pair (the same
+    bound one level up), and each fix block's upper bound comes from real steps, so the block
+    screen inside them keeps every block that _block_pairs would need."""
+    super_centre, super_radius = _caps(points, points, _BLOCK * _SUPER)
+    budget = max(1, _CAP_PAIRS // (_SUPER * _SUPER))
+    offsets = np.arange(_SUPER)
+    for fix_super, step_super in _block_pairs(
+        super_centre, super_radius, line.super_centre, line.super_radius, budget
+    ):
+        fix = (fix_super[:, None, None] * _SUPER + offsets[None, :, None]).repeat(_SUPER, axis=2).ravel()
+        step = (step_super[:, None, None] * _SUPER + offsets[None, None, :]).repeat(_SUPER, axis=1).ravel()
+        valid = (fix < len(centre)) & (step < len(line.centre))
+        fix, step = fix[valid], step[valid]
+        d = np.arccos(np.clip(np.sum(centre[fix] * line.centre[step], axis=1), -1.0, 1.0))
+        reach = radius[fix] + line.radius[step]
+        upper = np.full(len(centre), np.inf)
+        np.minimum.at(upper, fix, d + reach)
+        keep = d - reach <= upper[fix] + _SLACK
+        yield fix[keep], step[keep]
 
 
 def _measure(points, line, blocks, out):
@@ -273,27 +315,5 @@ def _densify(track, step_m):
 
 
 def _discrete_frechet(pa, pb):
-    """Discrete Fréchet distance (radians) between unit-vector sequences, by the classic DP
-    c[i, j] = max(d(i, j), min(c[i-1, j], c[i, j-1], c[i-1, j-1])) swept by anti-diagonals
-    i + j = k: every cell of one depends only on the two before it, so each is a single numpy
-    step. It runs on squared chord length, which orders pairs exactly as distance does and is
-    accurate at millimetres, and converts the answer to an angle at the end.
-
-    Each diagonal lives in a buffer indexed by row + 1 (index 0 standing for row -1), padded with
-    inf where the cell doesn't exist."""
-    n, m = len(pa), len(pb)
-    ax, ay, az = (np.ascontiguousarray(pa[:, c]) for c in range(3))
-    # b reversed, so the cells of a diagonal (i up, j down) are contiguous in both
-    bx, by, bz = (np.ascontiguousarray(pb[::-1, c]) for c in range(3))
-    prev1, prev2 = np.full(n + 1, np.inf), np.full(n + 1, np.inf)  # diagonals k-1 and k-2
-    for k in range(n + m - 1):
-        lo, hi = max(0, k - m + 1), min(k, n - 1)
-        rows, cols = slice(lo, hi + 1), slice(m - 1 - k + lo, m - k + hi)
-        d2 = (ax[rows] - bx[cols]) ** 2 + (ay[rows] - by[cols]) ** 2 + (az[rows] - bz[cols]) ** 2
-        if k:
-            reach = np.minimum(np.minimum(prev1[lo : hi + 1], prev1[lo + 1 : hi + 2]), prev2[lo : hi + 1])
-            d2 = np.maximum(d2, reach)
-        prev2[lo + 1 : hi + 2] = d2  # diagonal k-2 is no longer needed: reuse its buffer
-        prev2[lo] = np.inf  # row lo-1 isn't on this diagonal, whatever was left there
-        prev1, prev2 = prev2, prev1
-    return 2 * np.arcsin(min(1.0, np.sqrt(prev1[n]) / 2))
+    """Discrete Fréchet distance (radians) between unit-vector sequences (see _frechet)."""
+    return 2 * np.arcsin(min(1.0, np.sqrt(discrete_frechet_d2(pa, pb)) / 2))

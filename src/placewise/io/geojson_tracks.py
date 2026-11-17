@@ -61,10 +61,14 @@ def _read_feature(feature, origin):
         column = _PER_POINT.get(key)
         if column and column != "time" and column not in extras and (shaped := _per_part(values, parts)):
             extras[column] = shaped
-    points = new_points(OPTIONAL_COLUMNS)
+    # elevation comes from the positions; a column with no per-point values would be all NaN,
+    # which build_track leaves out anyway
+    columns = [c for c in OPTIONAL_COLUMNS if c != "ele" and c in extras]
+    points = new_points(("ele", *columns))
     segments = []
     for p, part in enumerate(parts):
         segments.append(len(points["time"]))
+        part_extras = [(points[c], extras[c][p]) for c in columns]
         for i, position in enumerate(part):
             points["lon"].append(float(position[0]))
             points["lat"].append(float(position[1]))
@@ -73,9 +77,8 @@ def _read_feature(feature, origin):
                 points["time"].append(_time(times[p][i]))
             else:
                 points["time"].append(_time(position[3]) if len(position) > 3 else math.nan)
-            for column in OPTIONAL_COLUMNS:
-                if column != "ele":
-                    points[column].append(_number(extras[column][p][i]) if column in extras else math.nan)
+            for values, given in part_extras:
+                values.append(_number(given[i]))
     activities = (props[k] for k in track_files.GEOJSON_ACTIVITY_KEYS if isinstance(props.get(k), str))
     meta = TrackMeta(
         name=_string(props.get("name")),

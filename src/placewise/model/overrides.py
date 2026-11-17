@@ -1,12 +1,14 @@
 """Manual overrides: rules that beat the data. Layers stack data < repo < app < local."""
 
 import functools
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
 import numpy as np
 
+from placewise.constants.earth import MEAN_RADIUS_KM
 from placewise.geo.distances import haversine
 
 from ._base import Model, set_field
@@ -55,6 +57,10 @@ class AreaSelector(Model):
         Point, bbox and GeoJSON areas need only coordinates. A country area compares `cc` (a code,
         or an array of codes, one per point); a place area looks its id up in `place_ids` (a set
         of ids for one point, or a sequence of sets, one per point)."""
+        if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+            found = self._matches_point(float(lat), float(lon), cc, place_ids, base_dir)
+            if found is not None:
+                return found
         lat, lon = np.broadcast_arrays(np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64))
         if self.point is not None:
             inside = np.asarray(haversine(self.point.lat, self.point.lon, lat, lon)) <= self.km
@@ -73,6 +79,52 @@ class AreaSelector(Model):
         else:
             inside = np.broadcast_to(_has_place(place_ids, self.place, lat.ndim), lat.shape)
         return bool(inside) if inside.ndim == 0 else np.array(inside, dtype=bool)
+
+    def _matches_point(self, lat, lon, cc, place_ids, base_dir):
+        """`matches` for one point without numpy, or None where only the array path can tell."""
+        if not (math.isfinite(lat) and math.isfinite(lon)):
+            return None
+        if self.bbox is not None:
+            south, west, north, east = self.bbox.as_tuple()
+            in_lon = (west <= lon <= east) if west <= east else (lon >= west or lon <= east)
+            return south <= lat <= north and in_lon
+        if self.country is not None:
+            return _same_country(cc, self.country) if cc is None or isinstance(cc, str) else None
+        if self.place is not None:
+            return place_ids is not None and self.place in place_ids
+        if self.point is not None:  # settle the clear cases; the edge is left to numpy's haversine
+            d = _haversine_km(self.point.lat, self.point.lon, lat, lon)
+            if d > self.km * (1 + _CLEAR) + _CLEAR:
+                return False
+            if d < self.km * (1 - _CLEAR) - _CLEAR:
+                return True
+            return None
+        boxes = _outline_boxes(_geojson_features(_resolve(self.geojson, base_dir)))
+        if not any(s <= lat <= n and w <= lon <= e for s, w, n, e in boxes):
+            return False  # each outline tests its box before the polygon
+        return None
+
+
+_BOXES = {}  # id(features) -> (features, their outlines' boxes)
+
+
+def _outline_boxes(features):
+    hit = _BOXES.get(id(features))
+    if hit is None or hit[0] is not features:
+        if len(_BOXES) >= 256:
+            _BOXES.clear()
+        boxes = tuple(o.bbox.as_tuple() for f in features for o in f.outlines)
+        hit = _BOXES[id(features)] = (features, boxes)
+    return hit[1]
+
+
+_CLEAR = 1e-9  # relative (and km) margin between math's and numpy's haversine, far above rounding
+
+
+def _haversine_km(lat1, lon1, lat2, lon2):
+    lat1, lon1, lat2, lon2 = map(math.radians, (lat1, lon1, lat2, lon2))
+    a = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
+    return 2 * MEAN_RADIUS_KM * math.asin(math.sqrt(min(max(a, 0.0), 1.0)))
 
 
 def _same_country(code, wanted):
