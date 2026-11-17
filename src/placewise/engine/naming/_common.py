@@ -123,10 +123,7 @@ def _near_features(layer, lat, lon, km):
         q_all.append(q + s)
         f_all.append(f)
     q, f = np.concatenate(q_all), np.concatenate(f_all)
-    d = np.full(len(q), np.inf)
-    for feature in np.unique(f).tolist():
-        sel = np.flatnonzero(f == feature)
-        d[sel] = np.atleast_1d(layer.nearest_edge_km(lat[q[sel]], lon[q[sel]], feature))
+    d = np.atleast_1d(layer.nearest_edge_km(lat[q], lon[q], f))  # each to its own feature, at once
     keep = d <= km
     return q[keep], f[keep], d[keep]
 

@@ -88,6 +88,29 @@ def test_nearest_boundary_equals_brute_force(tmp_path, kind):
         assert np.isnan(at_lat[~found]).all() and np.isnan(at_lon[~found]).all()
 
 
+@pytest.mark.parametrize("kind", list(LAYERS))
+def test_nearest_edge_km_equals_measuring_every_edge(tmp_path, kind):
+    """Measuring only the runs of edges whose caps can hold the nearest gives the very same numbers
+    as measuring every edge, bit for bit, for points near the edges, anywhere, and at the poles."""
+    layer = _open(tmp_path, LAYERS[kind])
+    lat, lon = _points(layer, LAYERS[kind], np.random.default_rng(54), 300)
+    lat, lon = np.append(lat, [90.0, -90.0, 0.0, -17.5]), np.append(lon, [0.0, 45.0, 180.0, -180.0])
+    for f in range(layer.count):
+        got = layer.nearest_edge_km(lat, lon, f)
+        np.testing.assert_array_equal(got, layer._every_edge_km(lat, lon, f))
+        assert np.isfinite(got).all()
+
+
+def test_nearest_edge_km_odd_input(tmp_path):
+    layer = _open(tmp_path, [box_feature(0, 0, 10, 10, (4, 4, 6, 6)), fiji()])
+    got = layer.nearest_edge_km([np.nan, 5.0, 5.0, 95.0], [0.0, np.inf, 365.0, 5.0], 0)
+    assert np.isinf(got[:2]).all()
+    assert got[2] == pytest.approx(111.2, rel=1e-2)  # 365 is 5 degrees east
+    assert np.isfinite(got[3])
+    assert layer.nearest_edge_km(5.0, 5.0, 0) == pytest.approx(111.2, rel=1e-2)
+    assert layer.nearest_edge_km(np.zeros((2, 3)), np.zeros((2, 3)), 0).shape == (2, 3)
+
+
 def test_boundary_queries_shapes_and_odd_input(tmp_path):
     layer = _open(tmp_path, [box_feature(0, 0, 10, 10, (4, 4, 6, 6)), fiji()])
     point, feature, dist = layer.near_boundary([5.0, 2.0, np.nan, 95.0], [5.0, 2.0, 0.0, 0.0], 250.0)

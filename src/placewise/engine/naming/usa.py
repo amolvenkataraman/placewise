@@ -173,10 +173,9 @@ class Usa:
         layer = self.layers.layer(self.place)
         limit = np.where(place >= 0, const.METRO_CDP_KM, const.METRO_CITY_KM)
         out[~common.near_bbox(layer.bboxes(), out, lat, lon, limit)] = -1  # cheap test first
-        for head in np.unique(out[out >= 0]).tolist():
-            group = np.flatnonzero(out == head)
-            km = np.atleast_1d(layer.nearest_edge_km(lat[group], lon[group], head))
-            out[group[km > limit[group]]] = -1
+        group = np.flatnonzero(out >= 0)
+        km = np.atleast_1d(layer.nearest_edge_km(lat[group], lon[group], out[group]))
+        out[group[km > limit[group]]] = -1
         return out
 
     def _borough(self, out, county):
