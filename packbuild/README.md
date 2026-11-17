@@ -323,6 +323,39 @@ of a point (CN Tower: GTA, GTHA, Golden Horseshoe). Regions overlap freely.
   same files. A region with `search_as` (the GTHA, the Delhi NCR core, the Bengaluru Metropolitan
   Region) has no entry there: location search reads its names as the region it names.
 
+## Water pack (`world-water`)
+
+```
+uv run python -m packbuild.water --version 2026.11                  # writes ~/.placewise/packbuild/out/world-water-2026.11/
+uv run python -m packbuild.water --version 2026.11 --no-hydrolakes  # Natural Earth lakes only (12 MB pack)
+```
+
+| Layer | Kind | Source | Licence |
+|---|---|---|---|
+| `marine` | polygon | Natural Earth 1:10m `geography_marine_polys`: 294 named seas, gulfs, bays, straits, ocean halves | public domain |
+| `lakes` | polygon | HydroLAKES v1.0 lakes of 10 km² or more (`--min-lake-km2`), simplified to 30 m (`--tolerance-m`), named from Natural Earth, then Wikidata (CC0), then HydroLAKES; plus Natural Earth's lakes (and NA/Europe supplements) HydroLAKES doesn't cover | CC BY 4.0, public domain |
+| `rivers` | polygon | Natural Earth 1:10m river centerlines + NA/Europe supplements, as zero-area polygons (each line out and back, so boundary distances measure the line) | public domain |
+
+Columns: `id` (`wikidata:Q...` where unique, else `ne:<ne_id>` / `hydrolakes:<Hylak_id>`), `name`,
+`type`, `wikidata`, `aliases` (pipe-separated), `area_km2` (polygons; rows smallest first),
+`source` (lakes: `hydrolakes` / `naturalearth`, which sets the shore margin), `scalerank` (rivers).
+Sources live in `packbuild/sources/water/` (registry `sources/water.json`).
+
+- **Why a separate pack.** HydroLAKES makes it tens of MB, as big as the world pack (35 MB), and
+  many users never need water; it rebuilds on its own schedule; and HydroLAKES' "don't redistribute
+  in the original format" request stays scoped to the pack that carries a derivative of it. The
+  Natural-Earth-only build is 12 MB (rivers 7.7, lakes 2.5, marine 1.5).
+- **HydroLAKES download.** The 820 MB zip holds polygons largest first, so the build reads the
+  zip's central directory by HTTP range request, fetches the .dbf (52 MB) and .shx, and inflates
+  the .shp only up to the end of the last record kept (`sources/water/ranged_zip.py`): about
+  220 MB in all at 10 km² (16,689 lakes); 1 km² (185,181 lakes) would need ~350 MB more.
+- **Names.** HydroLAKES names 1,837 of its 16,689 lakes of 10 km²+. Natural Earth lakes covering an
+  outline give it their name and Wikidata id (and are dropped); Wikidata lakes with an English
+  Wikipedia article whose point falls inside name more (Dal Lake); unnamed outlines are dropped.
+  HydroLAKES' `Country` (the outflow's) is never used.
+- **Rejected:** Marine Regions IHO Sea Areas (CC BY-NC-SA 4.0) and HydroRIVERS (HydroSHEDS v1
+  licence); both ids are in `constants.licences.DENIED_SOURCES`. See `docs/water.md`.
+
 ## Releasing data
 
 Packs are published as GitHub release assets of `amolvenkataraman/placewise-data` (no data in its

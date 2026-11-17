@@ -13,7 +13,9 @@ plain words on the simple path, precise terms (EPSG codes, ellipsoids, error bou
 provinces, 172k cities, time zones, airports, worldviews) and, where they are installed, the US,
 Canada and India packs, with the first naming rules (`docs/naming.md`): three names per point
 (sublocality, locality, city), county or census division, NYC borough, ZIP Code area / FSA / PIN
-code and metro areas. Parks, water and curated regions are next. The toolkit, tracks, privacy
+code and metro areas. With the optional `world-water` pack, points on water name it ("Over Lake
+Ontario", "On Lake Tahoe", "Over the North Atlantic Ocean") and points beside a sea, lake or river
+list it in `near` (`docs/water.md`). Parks and curated regions are next. The toolkit, tracks, privacy
 tools, data store, overrides, config and the server are done.
 
 ```python

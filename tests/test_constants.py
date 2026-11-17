@@ -56,3 +56,11 @@ def test_unicode_licence_v3_is_accepted_and_permissive():
     # CLDR's licence (SPDX Unicode-3.0): attribution only, so not share-alike
     assert "Unicode-3.0" in licences.KNOWN
     assert "Unicode-3.0" not in licences.SHARE_ALIKE | licences.NEEDS_DERIVED_DATABASE
+
+
+def test_rejected_water_sources_can_never_be_registered():
+    from placewise.constants import water
+
+    # IHO Sea Areas are CC BY-NC-SA (non-commercial); HydroRIVERS forbids stand-alone redistribution
+    assert set(water.REJECTED) == {"marineregions-iho", "hydrorivers"}
+    assert set(water.REJECTED) <= licences.DENIED_SOURCES
