@@ -7,6 +7,8 @@ with the naming rules that read them (placewise.engine.naming).
 """
 
 from placewise.constants import lookup as const
+from placewise.constants.countries import BY_ALPHA2
+from placewise.constants.countries import lookup as country_code
 from placewise.model import Place, PlaceKind, Point
 
 WORLD_ROLES = (const.COUNTRIES, const.ADMIN1, const.CITIES, const.AIRPORTS)
@@ -101,15 +103,16 @@ def source_of(layer):
 
 
 def _country(get, layer, i):
-    pid, name = get("id"), get("name") or get("id")
+    pid, name, iso2 = get("id"), get("name") or get("id"), get("iso2")
+    aliases = ()
+    # Natural Earth's long forms ("United States of America") give way to the ISO short name, when
+    # they are a name of that very country (not "Coral Sea Islands", which shares AU)
+    if iso2 in BY_ALPHA2 and BY_ALPHA2[iso2].name != name and country_code(name) == iso2:
+        name, aliases = BY_ALPHA2[iso2].name, (name,)
     return Place(
-        pid,
-        name,
-        PlaceKind.COUNTRY,
-        bbox=layer.bbox(i),
-        codes=codes(get, "iso2", "iso3"),
+        pid, name, PlaceKind.COUNTRY, bbox=layer.bbox(i), codes=codes(get, "iso2", "iso3"), aliases=aliases,
         source=source_of(layer),
-    )
+    )  # fmt: skip
 
 
 def _admin1(get, layer, i):

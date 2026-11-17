@@ -84,7 +84,7 @@ def test_engine_uses_only_public_pack_apis():
 
     import placewise.engine
 
-    for path in Path(placewise.engine.__file__).parent.glob("*.py"):
+    for path in Path(placewise.engine.__file__).parent.rglob("*.py"):
         source = path.read_text(encoding="utf-8")
         assert "placewise.packs._" not in source and "from placewise.packs import _" not in source, path.name
         assert '"geom"' not in source and ".npy" not in source, path.name

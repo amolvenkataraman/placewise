@@ -3,9 +3,11 @@
 The rules, in the order they run (constants in placewise.constants.lookup):
 
 1. country and admin1 (_admin), with the worldview order applied;
-2. GeoNames cities: the provisional city score, time zone, notable cities (_cities);
-3. airport, and the nearest country far offshore (_nearby);
-4. the Results and their labels (_results).
+2. country packs' boundaries: admin1 corrected by their states, provinces or PIN areas (naming);
+3. GeoNames cities: the provisional city score, time zone, notable cities (_cities);
+4. country packs' names: sublocality, locality, city, borough, admin2, postal, regions (naming);
+5. airport, and the nearest country far offshore (_nearby);
+6. the Results and their labels (_results).
 
 `lookup_many` runs every spatial query for all points at once and then builds the Results;
 `lookup` is `lookup_many` with one point, so the two always agree.
@@ -18,6 +20,7 @@ import numpy as np
 
 from placewise.config import effective_worldview
 from placewise.constants import lookup as const
+from placewise.constants import naming as naming_const
 from placewise.model import PlaceKind, Settings
 from placewise.packs import Pack, open_pack
 
@@ -25,15 +28,18 @@ from . import _nearby, _results
 from ._admin import Admin
 from ._cities import Cities
 from ._layers import Layers
+from .naming import Naming
 
 
 class Geocoder:
-    """Reverse geocoder over one or more packs. For each layer it needs (countries, admin1, cities,
-    airports) it reads the first pack that has it; a missing layer leaves its fields empty.
+    """Reverse geocoder over one or more packs. For each world layer it needs (countries, admin1,
+    cities, airports) it reads the first pack that has it; a missing layer leaves its fields empty.
+    Country packs (us, ca, in) name the points in their country (placewise.engine.naming).
 
     packs: opened Pack objects or pack directories; default: the "world" pack from the store
-    (downloaded on first use unless settings.data.offline). overrides: any object with
-    `apply(result, lat, lon) -> Result`, applied last to every answer."""
+    (downloaded on first use unless settings.data.offline) and the country packs installed beside
+    it. overrides: any object with `apply(result, lat, lon) -> Result`, applied last to every
+    answer."""
 
     def __init__(self, packs=None, settings=None, store=None, overrides=None):
         self.settings = settings or Settings()
@@ -42,7 +48,7 @@ class Geocoder:
                 from placewise.store import Store
 
                 store = Store(settings=self.settings.data)
-            packs = [store.ensure(const.DEFAULT_PACK)]
+            packs = [store.ensure(const.DEFAULT_PACK), *_installed_country_packs(store)]
         self.packs = [p if isinstance(p, Pack) else open_pack(p) for p in packs]
         if not self.packs:
             raise ValueError("a Geocoder needs at least one pack")
@@ -59,6 +65,11 @@ class Geocoder:
     @cached_property
     def cities(self):
         return Cities(self.layers, self.admin) if self.layers.has(const.CITIES) else None
+
+    @cached_property
+    def naming(self):
+        """The country packs' rules; they need the GeoNames cities beside them."""
+        return Naming(self.packs, self.layers, self.admin, self.cities) if self.cities is not None else None
 
     # -- public API -------------------------------------------------------------------------------
 
@@ -95,9 +106,13 @@ class Geocoder:
         a = {}
         self.admin.answer(a, lat, lon, order)
         named = {}
+        naming = self.naming
+        work = naming.boundaries(a, lat, lon) if naming else ()
         if self.cities is not None:
             k_notable = max(const.NOTABLE_CANDIDATES, self.settings.near.max_near + 1)
             self.cities.answer(a, lat, lon, near, self._near_km(PlaceKind.LOCALITY), k_notable)
+        if work:
+            named = naming.names(a, lat, lon, work)
         if self.layers.has(const.AIRPORTS):
             _nearby.airports(a, self.layers.layer(const.AIRPORTS), lat, lon, self._near_km(PlaceKind.AIRPORT))
         _nearby.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
@@ -130,6 +145,15 @@ class Geocoder:
         if result.country is None and result.admin1 is None:
             return result.label  # offshore labels name a reference place, not the result's fields
         return _results.compose(self.settings.label, result)
+
+
+def _installed_country_packs(store):
+    """The country packs installed in the store (stores without `installed()` have none)."""
+    installed = getattr(store, "installed", None)
+    if installed is None:
+        return []
+    names = installed()
+    return [store.current(name) for name in naming_const.COUNTRY_PACKS if name in names]
 
 
 def _accepts(func, name):

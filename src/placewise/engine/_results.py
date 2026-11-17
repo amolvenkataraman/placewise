@@ -98,9 +98,6 @@ def build(geo, lat, lon, a, named, order, locked):
             Nearby(place(const.CITIES, row), Relation.NEAR, km, deg, word)
             for row, km, deg, word in near_rows[i]
         )
-        if sources_l[i] is not None:  # a census city's GeoNames twin isn't "near" it
-            skip = {p.name for p in (city_place, locality) if p is not None}
-            near = tuple(x for x in near if x.place.name not in skip)
         if near:
             sources["near"] = src[const.CITIES, const.NEAREST]
         fields = {
