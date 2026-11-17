@@ -9,6 +9,7 @@ names a reference place: "Offshore, 15 km S of Toronto".
 import numpy as np
 
 from placewise.constants import lookup as const
+from placewise.constants.worldviews import WORLDVIEW_RULE
 from placewise.model import Nearby, PlaceKind, Relation, Result
 
 from . import _nearby as nearby
@@ -34,7 +35,7 @@ def build(geo, lat, lon, a, named, order, locked):
         cities_layer, a, lat, lon, city, geo.settings.near.max_near, geo._near_km(PlaceKind.LOCALITY)
     )
 
-    cidx, view, aidx, foreign = (a[k].tolist() for k in ("cidx", "view", "aidx", "foreign"))
+    cidx, view, aidx = (a[k].tolist() for k in ("cidx", "view", "aidx"))
     cmode, amode = a["cmode"].tolist(), a["amode"].tolist()
     city, far_city = city.tolist(), far_city.tolist()
     city_km = a.get("city_km", np.full(n, np.inf)).tolist()
@@ -45,9 +46,8 @@ def build(geo, lat, lon, a, named, order, locked):
     water_deg, water_word, back_word = water_deg.tolist(), water_word.tolist(), back_word.tolist()
     lats, lons = lat.tolist(), lon.tolist()
     tz_col = geo.cities.table["tz"] if layers.has(const.CITIES) else None
-    applied = a.get("applied")
     view_rows = admin.worldviews.resolve(order)[0].tolist() if admin.worldviews is not None else None
-    rules = (const.POLYGON, const.OFFSHORE, const.NEAREST, const.SCORE)
+    rules = (const.POLYGON, const.OFFSHORE, const.NEAREST, const.SCORE, WORLDVIEW_RULE)
     src = {(role, rule): layers.source(role, rule) for role in _ROLES if layers.has(role) for rule in rules}
     place = layers.place
     # the place caches, read directly in the loop below (place() fills them on a miss)
@@ -69,7 +69,7 @@ def build(geo, lat, lon, a, named, order, locked):
             sources["admin1"] = src[const.ADMIN1, amode[i]]
         locality = None
         if ci >= 0:
-            disputed = admin.disputed(ci, ai, foreign[i], applied, locked)
+            disputed = admin.disputed(a, i, locked)
             if city[i] >= 0:
                 city_place = locality = city_places.get(city[i]) or place(const.CITIES, city[i])
                 sources["city"] = sources["locality"] = src[const.CITIES, const.SCORE]

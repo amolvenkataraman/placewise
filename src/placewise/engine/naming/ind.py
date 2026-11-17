@@ -18,6 +18,7 @@ import numpy as np
 from placewise.constants import lookup as lookup_const
 from placewise.constants import naming as const
 from placewise.constants.countries.ind import subregions
+from placewise.constants.worldviews import IND_VIEW_ONLY
 from placewise.model import Place, PlaceKind
 
 from . import _common as common
@@ -54,6 +55,8 @@ class Ind:
 
     def boundaries(self, a, pts, lat, lon):
         pin, rule = common.polygon(self.layers.layer(self.pin), lat, lon)
+        # PIN areas on ground only India's view puts in India answer only under that view
+        pin = self.admin.view_only(a, pts, pin, self.layers.column(self.pin, IND_VIEW_ONLY), "IN")
         admin1 = np.where(pin >= 0, self._admin1[np.maximum(pin, 0)], -1)
         fixed = admin1 >= 0
         a["aidx"][pts[fixed]] = admin1[fixed]

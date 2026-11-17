@@ -13,7 +13,7 @@ should still read each licence for its own obligations.
 | Source | Licence | Used in |
 |---|---|---|
 | [OurAirports](https://ourairports.com/data/) | LicenseRef-public-domain | world/airports |
-| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/country_facts |
+| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/worldviews, world/country_facts |
 | [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | usa/states, usa/counties, usa/places, usa/cbsa, usa/csa, usa/zcta, usa/regions |
 | [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/regions |
 | [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated) |
@@ -59,7 +59,7 @@ Released into the public domain by the maintainers. The world pack keeps large a
 - Licence: LicenseRef-public-domain
 - Website: https://www.naturalearthdata.com
 
-Public domain (naturalearthdata.com/about/terms-of-use). Borders are de facto; per-country ADM0_A3_XX and FCLASS_XX columns describe other worldviews and are kept for the worldview setting. Text fields are NUL-padded.
+Public domain (naturalearthdata.com/about/terms-of-use). Borders are de facto; per-country ADM0_A3_XX and FCLASS_XX columns describe other worldviews and are kept for the worldview setting; the disputed-areas file (99 polygons with every view's ADM0_A3_XX) is the world pack's worldviews layer. Text fields are NUL-padded.
 
 country_facts uses each country's label point (LABEL_X, LABEL_Y) where GeoNames has no capital.
 

@@ -33,6 +33,7 @@ from . import (
     wgs84,
     work_modes,
     world,
+    worldviews,
 )
 
 __all__ = [
@@ -68,4 +69,5 @@ __all__ = [
     "wgs84",
     "work_modes",
     "world",
+    "worldviews",
 ]

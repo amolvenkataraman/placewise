@@ -23,6 +23,7 @@ r = placewise.lookup(43.6426, -79.3871)       # downloads the world pack on firs
 r.label                                       # "Toronto, Ontario, Canada"
 r.admin1.codes, r.tz, r.airport               # ISO codes, "America/Toronto", Nearby(YTZ, 1.8 km)
 placewise.Geocoder().lookup_many(lats, lons)  # vectorised, ~30k points/s
+placewise.lookup(35.9208, 74.3089, worldview="IN").label   # "Gilgit, Ladakh, India" (docs/worldviews.md)
 
 r = placewise.lookup(36.1147, -115.1728)      # with the US pack installed: the Las Vegas Strip
 r.locality.name, r.sublocality.name           # "Las Vegas", "Paradise" (the census place)
