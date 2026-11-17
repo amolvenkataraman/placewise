@@ -1,24 +1,47 @@
 """Tracks: the columnar Track model and what you can do with one.
 
-- clean: sort, dedupe, drop invalid points, remove spikes, split gaps, smooth, thin;
-- measure: stats, splits, best efforts, grade, heart-rate zones;
-- interpolate: position at any time, photo geotagging, camera clock offsets, resampling;
-- segment: stays, trips, travel modes, flights;
-- spatial: time inside an area, border crossings, closest pass, bounding box, days in each country;
-- combine: concat, merge recordings from several devices, split, crop, reverse;
-- compare: Hausdorff and Fréchet distances, corridor overlap ("same route?"), deviations from a route.
+- track: the Track container (columns, segments, metadata);
+- cleaning: sort, dedupe, drop invalid points, remove spikes, split gaps, smooth, thin;
+- metrics: stats, splits, best efforts, grade, heart-rate zones;
+- timing: position at any time, photo geotagging, camera clock offsets, resampling;
+- movement: stays, trips, travel modes, flights;
+- areas: time inside an area, border crossings, closest pass, bounding box, days in each country;
+- routes: concat, merge recordings from several devices, split, crop, reverse; Hausdorff and
+  Fréchet distances, corridor overlap ("same route?"), deviations from a route.
 
 Track has thin methods for the common operations (`track.clean()`, `track.stats()` ...).
 """
 
-from . import clean, combine, compare, interpolate, measure, segment, spatial
-from .combine import concat, crop, merge, reverse, split
-from .compare import Deviation, Overlap, deviations, frechet_km, hausdorff_km, overlap, same_route
-from .interpolate import ClockOffset, Geotags, estimate_clock_offset, geotag, position_at, resample
-from .measure import BestEffort, HrZone, Split, TrackStats, best_efforts, grade, hr_zones, pace, splits, stats
-from .segment import Flight, ModeRun, Stay, Trip, flights, mode_runs, stays, travel_mode, trips
-from .spatial import ClosestPass, Crossing, bbox, closest_pass, crossings, presence_days, time_inside
+from . import areas, cleaning, metrics, movement, routes, timing
+from .areas import ClosestPass, Crossing, bbox, closest_pass, crossings, presence_days, time_inside
+from .metrics import BestEffort, HrZone, Split, TrackStats, best_efforts, grade, hr_zones, pace, splits, stats
+from .movement import Flight, ModeRun, Stay, Trip, flights, mode_runs, stays, travel_mode, trips
+from .routes import (
+    Deviation,
+    Overlap,
+    combine,
+    compare,
+    concat,
+    crop,
+    deviations,
+    frechet_km,
+    hausdorff_km,
+    merge,
+    overlap,
+    reverse,
+    same_route,
+    split,
+)
+from .timing import ClockOffset, Geotags, estimate_clock_offset, geotag, position_at, resample
 from .track import OPTIONAL_COLUMNS, REQUIRED_COLUMNS, Track, TrackMeta
+
+# The modules of the first, flat layout, as aliases of what replaced them, so that
+# `placewise.tracks.clean.smooth`, `placewise.tracks.measure.stats` and the like keep working.
+clean = cleaning
+interpolate = timing
+measure = metrics
+segment = movement
+spatial = areas
 
 __all__ = [
     "OPTIONAL_COLUMNS",
@@ -39,9 +62,11 @@ __all__ = [
     "TrackMeta",
     "TrackStats",
     "Trip",
+    "areas",
     "bbox",
     "best_efforts",
     "clean",
+    "cleaning",
     "closest_pass",
     "combine",
     "compare",
@@ -59,13 +84,16 @@ __all__ = [
     "interpolate",
     "measure",
     "merge",
+    "metrics",
     "mode_runs",
+    "movement",
     "overlap",
     "pace",
     "position_at",
     "presence_days",
     "resample",
     "reverse",
+    "routes",
     "same_route",
     "segment",
     "spatial",
@@ -74,6 +102,7 @@ __all__ = [
     "stats",
     "stays",
     "time_inside",
+    "timing",
     "travel_mode",
     "trips",
 ]

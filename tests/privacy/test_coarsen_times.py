@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from privacy_synth import HOME, RIDE_META, T0, same_track, walk
+from privacy_kit import HOME, RIDE_META, T0, same_track, walk
 
 from placewise.privacy.time import coarsen_times, shift_times
 from placewise.tracks import Track

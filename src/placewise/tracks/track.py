@@ -140,86 +140,86 @@ class Track:
 
     def clean(self):
         """The usual cleaning pipeline with default settings: sort_and_dedupe -> drop_invalid ->
-        remove_spikes -> split_gaps. Call the functions in `placewise.tracks.clean` to tune them or
+        remove_spikes -> split_gaps. Call the functions in `placewise.tracks.cleaning` to tune them or
         add filter_accuracy, smooth or thin."""
-        from .clean import drop_invalid, remove_spikes, sort_and_dedupe, split_gaps
+        from .cleaning import drop_invalid, remove_spikes, sort_and_dedupe, split_gaps
 
         return split_gaps(remove_spikes(drop_invalid(sort_and_dedupe(self))))
 
     def smooth(self, **options):
-        from .clean import smooth
+        from .cleaning import smooth
 
         return smooth(self, **options)
 
     def thin(self, **options):
-        from .clean import thin
+        from .cleaning import thin
 
         return thin(self, **options)
 
     def stats(self, **options):
-        from .measure import stats
+        from .metrics import stats
 
         return stats(self, **options)
 
     def splits(self, **options):
-        from .measure import splits
+        from .metrics import splits
 
         return splits(self, **options)
 
     def position_at(self, times, **options):
-        from .interpolate import position_at
+        from .timing import position_at
 
         return position_at(self, times, **options)
 
     def resample(self, **options):
-        from .interpolate import resample
+        from .timing import resample
 
         return resample(self, **options)
 
     def stays(self, **options):
-        from .segment import stays
+        from .movement import stays
 
         return stays(self, **options)
 
     def trips(self, stays=None, **stay_options):
         """Trips between `stays`, found with `stay_options` when not given."""
-        from .segment import trips
+        from .movement import trips
 
         return trips(self, self.stays(**stay_options) if stays is None else stays)
 
     def time_inside(self, shape):
-        from .spatial import time_inside
+        from .areas import time_inside
 
         return time_inside(self, shape)
 
     def crossings(self, features):
-        from .spatial import crossings
+        from .areas import crossings
 
         return crossings(self, features)
 
     def closest_pass(self, lat, lon):
-        from .spatial import closest_pass
+        from .areas import closest_pass
 
         return closest_pass(self, lat, lon)
 
     @property
     def bbox(self):
-        from .spatial import bbox
+        from .areas import bbox
 
         return bbox(self)
 
     def crop(self, start=None, end=None):
-        from .combine import crop
+        from .routes import crop
 
         return crop(self, start, end)
 
     def split(self, by="segment", **options):
-        from .combine import split
+        from .routes import split
 
         return split(self, by, **options)
 
     def reverse(self):
-        from .combine import reverse
+        from .routes import reverse
 
         return reverse(self)
 

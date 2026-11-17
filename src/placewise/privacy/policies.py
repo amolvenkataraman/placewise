@@ -17,11 +17,8 @@ because the trim jitter is seeded by the track's real first timestamp.
 from placewise.tracks import TrackMeta
 
 from ._common import check_key, replace_columns
-from .noise import geo_indistinguishable
-from .snap import keyed_snap
+from .location import apply_zones, geo_indistinguishable, keyed_snap, trim_ends
 from .time import coarsen_times
-from .trim import trim_ends
-from .zones import apply_zones
 
 _REVEALING_COLUMNS = ("speed", "heading", "accuracy")
 

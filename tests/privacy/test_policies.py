@@ -2,17 +2,14 @@
 
 import numpy as np
 import pytest
-from privacy_synth import HOME, KEY, OTHER_KEY, RIDE_META, distance_m, same_track
-from privacy_synth import street_route as route
+from privacy_kit import HOME, KEY, OTHER_KEY, RIDE_META, distance_m, same_track
+from privacy_kit import street_route as route
 
 from placewise.constants import privacy as constants
 from placewise.model import Point, PrivacyPolicy, PrivacyZone
 from placewise.privacy import policies, presets
-from placewise.privacy.noise import geo_indistinguishable
-from placewise.privacy.snap import keyed_snap
+from placewise.privacy.location import apply_zones, geo_indistinguishable, keyed_snap, trim_ends
 from placewise.privacy.time import coarsen_times
-from placewise.privacy.trim import trim_ends
-from placewise.privacy.zones import apply_zones
 from placewise.tracks import Track, TrackMeta
 
 ZONE = PrivacyZone("home", Point(*HOME), 200.0)

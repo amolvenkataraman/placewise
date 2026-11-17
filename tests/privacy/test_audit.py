@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from privacy_synth import HOME, T0, WORK, distance_m, straight
+from privacy_kit import HOME, T0, WORK, distance_m, straight
 
 from placewise.privacy.audit import AuditReport, Finding, audit
 from placewise.tracks import Track
