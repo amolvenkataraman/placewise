@@ -10,6 +10,7 @@ import cgndb_fixtures
 import pytest
 import statcan_fixtures as fx
 from regions_kit import CA_REGIONS, use_regions
+from timezones_kit import use_timezones
 
 from packbuild import arcgis, ca
 from packbuild.sources import SOURCES, statcan, url
@@ -17,8 +18,17 @@ from packbuild.sources.can import cgndb
 from placewise.packs import open_pack
 
 BASE = ["provinces", "cd", "csd", "cma", "fsa"]
-LAYERS = [*BASE, "populated_places", "regions"]
-COUNTS = {"provinces": 3, "cd": 6, "csd": 8, "cma": 4, "fsa": 6, "populated_places": 5, "regions": 3}
+LAYERS = [*BASE, "populated_places", "regions", "timezones"]
+COUNTS = {
+    "provinces": 3,
+    "cd": 6,
+    "csd": 8,
+    "cma": 4,
+    "fsa": 6,
+    "populated_places": 5,
+    "regions": 3,
+    "timezones": 5,
+}
 BOUNDARY_DOWNLOADS = [
     (statcan.BOUNDARIES, "provinces"),
     (statcan.BOUNDARIES, "cd"),
@@ -64,6 +74,7 @@ def offline(downloads, monkeypatch):
 
     monkeypatch.setattr(ca, "fetch", fake_fetch)
     use_regions(monkeypatch, CA_REGIONS)
+    use_timezones(monkeypatch)
     return requested
 
 
@@ -108,6 +119,7 @@ def test_build_ca_writes_a_pack_that_answers_for_public_places(tmp_path, offline
     assert {name: len(pack[name]) for name in LAYERS} == COUNTS
     assert set(pack.sources) == {
         statcan.BOUNDARIES, statcan.FSA, statcan.POPULATION, cgndb.SOURCE, "placewise-regions",
+        "placewise-timezones",
     }  # fmt: skip
     i, km = pack["populated_places"].nearest(*fx.LAKE_LOUISE)
     assert pack["populated_places"].row(int(i))["name"] == "Lake Louise" and float(km) < 1
@@ -146,6 +158,17 @@ def test_build_ca_writes_a_pack_that_answers_for_public_places(tmp_path, offline
 def _region_ids(pack, lat, lon):
     layer = pack["regions"]
     return [layer.value("id", int(i)) for i in layer.query_all(lat, lon)]
+
+
+def test_build_ca_draws_time_zones_finest_unit_first(tmp_path, offline):
+    zones = open_pack(ca.build_ca(tmp_path / "cache", tmp_path / "out", "2026.11"))["timezones"]
+
+    def at(point):
+        return zones.value("id", zones.query(*point)), zones.value("zone", zones.query(*point))
+
+    assert at(fx.MILTON_GO) == ("tz:statcan:3524009", "America/Atikokan")  # the subdivision, inside Halton
+    assert at(fx.CN_TOWER) == ("tz:statcan:35", "America/Toronto")
+    assert at(fx.BANFF) == ("tz:statcan:48", "America/Edmonton")
 
 
 def test_build_ca_draws_regions_from_divisions_subdivisions_and_cmas(tmp_path, offline):
@@ -199,6 +222,7 @@ def fake_service(downloads, monkeypatch):
 
     monkeypatch.setattr(ca, "fetch", fake_fetch)
     use_regions(monkeypatch, CA_REGIONS)
+    use_timezones(monkeypatch)
     return fake
 
 

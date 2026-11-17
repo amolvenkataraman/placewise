@@ -2,6 +2,8 @@
 and the distances and sizes the rules use. Thresholds are starting points, to tune against a
 labelled set of public places (tests/e2e)."""
 
+from .codab import PACKS as CODAB_PACKS
+
 # layers the naming rules read from country packs (packbuild/README.md)
 REGIONS = "regions"  # curated region polygons, in any country pack: id, name, kind, country
 USA_LAYERS = {"county": "counties", "place": "places", "postal": "zcta", "cbsa": "cbsa", "csa": "csa"}
@@ -9,8 +11,9 @@ CAN_LAYERS = {
     "division": "cd", "subdivision": "csd", "metro": "cma", "postal": "fsa", "named": "populated_places",
 }  # fmt: skip
 IND_LAYERS = {"postal": "pincodes"}
-# installed packs the default Geocoder opens beside "world" (alpha-3 names, and the older alpha-2)
-COUNTRY_PACKS = ("usa", "us", "can", "ca", "ind", "in")
+# installed packs the default Geocoder opens beside "world" (alpha-3 names, and the older alpha-2),
+# then the COD-AB packs (constants/codab.py)
+COUNTRY_PACKS = ("usa", "us", "can", "ca", "ind", "in", *CODAB_PACKS)
 
 # rule names in Result.sources ("us/places:metro")
 METRO = "metro"  # the metro area's principal city (US) or first city (Canada) stands for the point

@@ -27,6 +27,7 @@ committed.
 | `admin1` | polygon | Natural Earth 1:10m admin-1 states/provinces | public domain |
 | `cities` | point | GeoNames cities1000 + admin1CodesASCII + countryInfo | CC BY 4.0 |
 | `airports` | point | OurAirports airports.csv (large, medium, scheduled small) | public domain |
+| `timezones` | polygon | `datasets/timezones/world.json` drawn with the Natural Earth units (see [Time zones](#time-zones)) | CC BY 4.0 + public domain |
 | `country_facts` | point | one row per country (`iso:XX`, at its capital, else Natural Earth's label point): GeoNames countryInfo, timeZones and capitals; CLDR currency, conventions and date patterns; Wikidata driving side (`packbuild.country_profiles`) | CC BY 4.0, Unicode-3.0, CC0 |
 
 Attribution records (`placewise.model.Source`) are in `packbuild/sources/__init__.py`; building
@@ -41,20 +42,37 @@ are the `worldviews` polygon layer (0.95 MB); see `docs/worldviews.md`.
 
 ## Time zones
 
-The world pack carries no time-zone polygons. The usual source, timezone-boundary-builder, is
-built from OpenStreetMap and is ODbL (share-alike), and share-alike data may only go in the
-separate share-alike packs (`placewise.constants.licences.SHARE_ALIKE`; named `<name>-sa`), never in
-`world`.
+Every pack can carry a `timezones` polygon layer (`packbuild/timezones.py`), drawn from the
+curated tables in placewise-data's `datasets/timezones/` (CC BY 4.0; registry id
+`placewise-timezones`), so `Result.tz` doesn't need the share-alike timezone-boundary-builder data.
+216 of tzdb's 247 countries have one zone: the country polygon is the zone. The rest follow admin
+lines, so `world.json` maps Natural Earth countries and admin-1 units to IANA zones, `usa.json`
+states and Census counties (plus the Navajo Nation and Annette Island from Census AIANNH,
+`uscensus` download `aiannh`), `can.json` provinces, census divisions and subdivisions; each entry
+cites tzdb or the law it follows, and a few hand-drawn boxes cover what no unit fits (Eucla, the
+western Aleutians, research stations, remote islands).
 
-Plan:
+| Column | |
+|---|---|
+| `zone` | the IANA zone; "" where tzdb records none (the nearest-city rule answers) |
+| `zones` | for a unit split along a line no pack draws: all its zones, `|`-separated; the nearest GeoNames city inside the unit whose zone is listed decides |
+| `basis` | `shape`, `part` (county, CD, CSD), `admin1`, `country` |
+| `unit`, `within`, `country` | the unit drawn, the unit a shape applies in, the countries-layer id |
 
-- **Now:** every GeoNames city carries its IANA zone (`cities.timezone`). A point's zone is the
-  zone of the nearest city *in the same country* (country from the `countries` polygon), so a
-  point near a border doesn't borrow the neighbour's zone. Good enough for almost all populated
-  places; wrong in sparse areas cut by a zone line (e.g. parts of the US Midwest, Russia, Brazil).
-- **Later:** zone polygons arrive with the OSM-based share-alike pack, with the ODbL
-  derived-database offer that licence requires. When it is installed, polygons win; the
-  nearest-city rule stays as the fallback.
+Rows are in priority order (shapes, then finer parts, then admin-1, then countries); units keep
+their own outlines (nothing dissolved). The build fails, listing every problem, on a zone missing
+from `zoneinfo.available_timezones()`, a unit of the layer without an entry (full coverage), an
+entry naming a unit the layer lacks or one of another country, an unknown source or a bad shape.
+
+The engine (`placewise.engine._timezones`): the worldview's country's zone where it reports a
+disputed area in a one-zone country; else the finest country pack's polygon (on agreed ground in
+its country); else the world unit the admin answer already found; else the nearest city of the
+same country (as before). At sea beyond the territorial sea: none. India is one zone
+(Asia/Kolkata); with the de facto polygons it covers India-administered ground.
+
+Known gaps (the unit is split, so the nearest city decides): Mexico's US-border municipios and
+Bahía de Banderas, Pará (east/west), Sakha's districts, Broken Hill (Yancowinna). Not drawn:
+Europe/Busingen, Australia/Lindeman.
 
 ## US pack (`usa`)
 
@@ -281,6 +299,56 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
   countries administer; Natural Earth's world admin1 is de facto.
 - *Census 2011 towns.* The Town Directory has no coordinates; GeoNames in the world pack covers
   towns.
+
+## COD-AB packs (`lka`, `npl`, `bgd`, `tha`, ...)
+
+```
+uv run python -m packbuild.codab lka npl bgd tha --version 2026.11   # one pack per country
+```
+
+OCHA's Common Operational Datasets for administrative boundaries (COD-AB), published on HDX under
+CC BY 3.0 IGO, each from the country's own agency (Survey Department of Sri Lanka, Royal Thai
+Survey Department, INEGI ...). One generic builder (`packbuild/codab.py`, reader
+`packbuild/sources/ocha.py`) makes a pack per country, named by its lower-case alpha-3 code, with
+one polygon layer per level: `admin1`, `admin2`, ... (COD-AB ADM1, ADM2, ...). The countries and
+their depth are `placewise.constants.codab.COUNTRIES`; each has a registry entry
+`ocha-cod-ab-<iso3>` in `sources/boundaries.json` whose credit line names its agency.
+
+| Column | |
+|---|---|
+| `id` | `codab:<P-code>` (`codab:NP0327301`); P-codes are unique across levels and join COD-PS population tables |
+| `name` | the English or romanised name (`adm<n>_name`); "" for the 65 Sri Lankan Grama Niladhari divisions that have none |
+| `pcode`, `parent` | the unit's P-code and the id of the unit one level up ("" for ADM1) |
+| `type` | the unit type where the package has one (Viet Nam: Province, City) |
+| `valid_on` | the boundaries' reference date |
+
+No population: the COD-AB packages carry none (COD-PS tables are separate datasets, not joined yet).
+
+- **Downloads.** Packages hold every level in one zip (Thailand's 377 MB; the GeoJSON is bigger
+  and the GDB needs GDAL), so the build reads just the level shapefiles it needs by HTTP range
+  requests (`packbuild/zipranges.py`: the zip's central directory, then those members, CRC-checked;
+  sidecar `<zip stem>.members.json`). The edge-matched `_em` layers (fitted to the UN international
+  boundary, so neighbours don't overlap) are used where a package has them (Nepal, UAE).
+- **Simplification.** Douglas-Peucker at 10 m (`--tolerance-m`), each feature on its own, in a
+  plate carrée centred on the feature (x scaled by the cosine of its middle latitude): metres on
+  the ground, within about 2% across a unit a few degrees tall. A feature never loses its last
+  ring; shared borders can differ by up to the tolerance.
+- **Areas India claims.** No pack carries ground whose sovereignty India disputes inside another
+  country (`packbuild/claims.py`). Nepal's COD-AB draws Nepal's view of the Kalapani sector (about
+  35 km2 that Natural Earth marks "administered by India, claimed by Nepal") and of Susta (about
+  15 km2); in those sector boxes every Nepal unit is cut back to India's polygon in Natural Earth's
+  India point-of-view edition (Greiner-Hormann clipping, `packbuild/clip.py`), and the build fails
+  if any grid point (200 m) of the claimed ground is still inside a unit. Limpiyadhura, on Nepal's
+  2020 map, is not in the COD-AB; the first box covers it anyway. Elsewhere on the border the two
+  datasets differ only by Natural Earth's 1:10m generalisation and the units are as surveyed; the
+  lookup uses a COD-AB pack only where the world pack puts the point in that country.
+  Pakistan's COD-AB (Azad Kashmir and Gilgit-Baltistan as Pakistani units) is not built.
+- **Viet Nam** is the September 2025 edition, after the July 2025 reform (63 provinces merged
+  into 34, districts abolished): ADM1 only; Natural Earth's world admin1 still has the old 63.
+- **Not here.** Thailand and Indonesia's deeper levels beyond what's configured, the Philippines
+  (each level of its shapefile zip is ~140 MB compressed, past the download budget), Colombia (its
+  COD-AB is DANE's own zips in the older schema), South Africa's wards (numbered, and the
+  Demarcation Board restricts their commercial use), Egypt's ADM3 (Arabic names only).
 
 ## Regions layer (US, Canada and India packs)
 

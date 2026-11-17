@@ -1,0 +1,79 @@
+{
+  "purpose": "timezones",
+  "description": "Time-zone polygons: the IANA zone of every country, and of the admin units where zone lines cross a country (datasets/timezones), drawn with each pack's own boundaries in its `timezones` layer.",
+  "regions": {
+    "world": [
+      {
+        "id": "placewise-timezones",
+        "name": "placewise curated datasets: time zones (datasets/timezones)",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
+        "licence": "CC-BY-4.0",
+        "credit": "placewise curated datasets, CC BY 4.0",
+        "used_in": [
+          "world/timezones"
+        ],
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): the IANA zone of each country, admin-1 unit, county or census subdivision, with the tz database (public domain), 49 CFR Part 71 (public domain) and the provincial acts cited per entry, and a few hand-drawn areas (Eucla, the western Aleutians, research stations). The outlines in the packs are the units' own boundaries, so they are also credited to the boundary source. Zone names are checked against the tz database at build time."
+      },
+      {
+        "id": "naturalearth",
+        "name": "Natural Earth 1:10m Cultural Vectors",
+        "url": "https://www.naturalearthdata.com",
+        "licence": "LicenseRef-public-domain",
+        "credit": "Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.",
+        "used_in": [
+          "world/timezones"
+        ]
+      }
+    ],
+    "usa": [
+      {
+        "id": "placewise-timezones",
+        "name": "placewise curated datasets: time zones (datasets/timezones)",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
+        "licence": "CC-BY-4.0",
+        "credit": "placewise curated datasets, CC BY 4.0",
+        "used_in": [
+          "usa/timezones"
+        ],
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): the IANA zone of each country, admin-1 unit, county or census subdivision, with the tz database (public domain), 49 CFR Part 71 (public domain) and the provincial acts cited per entry, and a few hand-drawn areas (Eucla, the western Aleutians, research stations). The outlines in the packs are the units' own boundaries, so they are also credited to the boundary source. Zone names are checked against the tz database at build time."
+      },
+      {
+        "id": "uscensus",
+        "name": "US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations",
+        "url": "https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html",
+        "licence": "LicenseRef-public-domain",
+        "credit": "U.S. Census Bureau (census.gov), public domain",
+        "used_in": [
+          "usa/timezones"
+        ],
+        "downloads": {
+          "aiannh": "https://www2.census.gov/geo/tiger/GENZ2025/shp/cb_2025_us_aiannh_500k.zip"
+        },
+        "notes": "The American Indian/Alaska Native/Native Hawaiian Areas cartographic boundary file (2025, 1:500,000) draws the Navajo Nation (which observes daylight saving time inside Arizona) and the Annette Island Reserve (America/Metlakatla)."
+      }
+    ],
+    "can": [
+      {
+        "id": "placewise-timezones",
+        "name": "placewise curated datasets: time zones (datasets/timezones)",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
+        "licence": "CC-BY-4.0",
+        "credit": "placewise curated datasets, CC BY 4.0",
+        "used_in": [
+          "can/timezones"
+        ],
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): the IANA zone of each country, admin-1 unit, county or census subdivision, with the tz database (public domain), 49 CFR Part 71 (public domain) and the provincial acts cited per entry, and a few hand-drawn areas (Eucla, the western Aleutians, research stations). The outlines in the packs are the units' own boundaries, so they are also credited to the boundary source. Zone names are checked against the tz database at build time."
+      },
+      {
+        "id": "statcan-boundaries-2021",
+        "name": "Statistics Canada, 2021 Census Boundary Files (cartographic)",
+        "url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21",
+        "licence": "LicenseRef-StatCan-Open-Licence",
+        "credit": "Adapted from Statistics Canada, 2021 Census Boundary Files (cartographic), reference date January 1, 2021. This does not constitute an endorsement by Statistics Canada of this product.",
+        "used_in": [
+          "can/timezones"
+        ]
+      }
+    ]
+  }
+}

@@ -47,6 +47,7 @@ def build(geo, lat, lon, a, named, order, locked):
     cmode, amode = a["cmode"].tolist(), a["amode"].tolist()
     far_city = far_city.tolist()
     city_km = a.get("city_km", np.full(n, np.inf)).tolist()
+    tz_zone, tz_source = (a[k].tolist() if k in a else [None] * n for k in ("tz_zone", "tz_source"))
     airport, airport_km = airport.tolist(), a.get("airport_km", np.full(n, np.inf)).tolist()
     air_deg, air_word = air_deg.tolist(), air_word.tolist()
     water, water_km = a["water"].tolist(), a["water_km"].tolist()
@@ -81,11 +82,12 @@ def build(geo, lat, lon, a, named, order, locked):
             disputed = admin.disputed(a, i, locked)
             if city_place is not None:
                 sources["city"] = sources["locality"] = src_city
-            tz = tz_l[i]
-            if tz:
+            if tz_zone[i] is not None:  # the timezones polygons (_timezones)
+                tz = tz_zone[i]
+                sources["tz"] = tz_source[i]
+            elif tz_l[i]:
+                tz = tz_l[i]
                 sources["tz"] = src_tz
-            else:
-                tz = None
         elif water[i] >= 0:
             w = view_rows[water[i]]
             water_near = Nearby(

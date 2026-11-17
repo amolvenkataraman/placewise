@@ -4,7 +4,8 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 
 1. country and admin1 (_admin), with the worldview order applied;
 2. country packs' boundaries: admin1 corrected by their states, provinces or PIN areas (naming);
-3. GeoNames cities: the provisional city score, time zone, notable cities (_cities);
+3. time zones from the packs' timezones polygons (_timezones); GeoNames cities: the provisional
+   city score, the nearest-city time zone where no polygon answered, notable cities (_cities);
 4. country packs' names: sublocality, locality, city, borough, admin2, postal, regions (naming);
 5. airport, and the nearest country far offshore (_nearby);
 6. the sea or lake a point is on, and the water beside it, when a water pack is open (_water);
@@ -30,6 +31,7 @@ from . import _nearby, _results
 from ._admin import Admin
 from ._cities import Cities
 from ._layers import Layers
+from ._timezones import Timezones
 from ._water import Water
 from .naming import Naming
 
@@ -68,6 +70,12 @@ class Geocoder:
     @cached_property
     def cities(self):
         return Cities(self.layers, self.admin) if self.layers.has(const.CITIES) else None
+
+    @cached_property
+    def timezones(self):
+        """The packs' timezones layers, or None when no pack has one."""
+        found = Timezones(self.layers, self.admin)
+        return found if found else None
 
     @cached_property
     def water(self):
@@ -116,6 +124,8 @@ class Geocoder:
         named = {}
         naming = self.naming
         work = naming.boundaries(a, lat, lon) if naming else ()
+        if self.timezones is not None:
+            self.timezones.answer(a, lat, lon)
         if self.cities is not None:
             k_notable = max(const.NOTABLE_CANDIDATES, self.settings.near.max_near + 1)
             self.cities.answer(a, lat, lon, near, self._near_km(PlaceKind.LOCALITY), k_notable)

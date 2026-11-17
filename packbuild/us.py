@@ -1,7 +1,9 @@
 """The US pack: states, counties, places (incorporated places and CDPs), metro/micro areas (cbsa),
 combined statistical areas (csa) and ZIP Code Tabulation Areas (zcta), all from the US Census
 Bureau (public domain) with GeoNames postal names filling ZIP Codes the Census files lack (CC BY
-4.0), and the curated regions (Bay Area ...) as unions of counties.
+4.0), the curated regions (Bay Area ...) as unions of counties, and time-zone polygons by county
+(datasets/timezones/usa.json, with the Navajo Nation from the Census AIANNH areas:
+packbuild.timezones).
 
     uv run python -m packbuild.us --version 2026.11
 
@@ -20,7 +22,7 @@ import datetime as dt
 import logging
 from pathlib import Path
 
-from . import regions_layer
+from . import regions_layer, timezones
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .sources import url, uscensus
@@ -28,7 +30,7 @@ from .sources.usa import acs, postal, principal
 
 log = logging.getLogger(__name__)
 
-SHAPEFILES = ("state", "county", "place", "cbsa", "csa", "zcta")
+SHAPEFILES = ("state", "county", "place", "cbsa", "csa", "zcta", "aiannh")
 TEXT = ("gazetteer_place", "gazetteer_zcta", "population", "delineation")
 DEPTH = ("acs_population", "principal_cities", "zip_cities", "zcta_place")
 DOWNLOADS = (*SHAPEFILES, *TEXT, *DEPTH)
@@ -39,7 +41,8 @@ POPULATION_NULL = uscensus.POPULATION_NULL
 
 def build_layers(cache_dir, refresh=False, regions=None):
     """The US layers, fetching (or reusing) the source files in `cache_dir`: the six Census layers,
-    then `regions` (curated regions as unions of counties; `regions` None reads datasets/regions)."""
+    then `regions` (curated regions as unions of counties; `regions` None reads datasets/regions) and
+    `timezones` (datasets/timezones/usa.json)."""
 
     def get(name):
         return fetch(url(uscensus.SOURCE, name), cache_dir, refresh=refresh)
@@ -87,7 +90,24 @@ def build_layers(cache_dir, refresh=False, regions=None):
     counties = next(layer for layer in layers if layer.name == "counties")
     curated = regions_layer.for_country(regions, "US")
     layers.append(regions_layer.from_features(curated, regions_layer.by_id(counties), counties.sources))
+    layers.append(timezones_layer(layers, shapefile("aiannh")))
     return layers
+
+
+def timezones_layer(layers, aiannh_shp):
+    """The `timezones` layer: usa.json's states and counties, its Census AIANNH areas read from
+    `aiannh_shp` by AIANNHCE code."""
+    doc = timezones.load("usa")
+    codes = timezones.aiannh_codes(doc)
+    areas = (
+        {f.properties.get("AIANNHCE"): f for f in uscensus.read_census_shapefile(aiannh_shp)} if codes else {}
+    )
+    shapes = {sid: areas[code] for sid, code in codes.items() if code in areas}
+    states, counties = (next(layer for layer in layers if layer.name == n) for n in ("states", "counties"))
+    state_of = dict(zip(states.columns["statefp"], states.columns["id"], strict=True))
+    return timezones.country_layer(
+        doc, states, [counties], lambda pid, row: state_of.get(row["statefp"]), shapes, (uscensus.SOURCE,)
+    )
 
 
 def merged_population(estimates, estimates_label, survey, survey_label):
