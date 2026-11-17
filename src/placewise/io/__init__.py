@@ -1,4 +1,5 @@
-"""File formats in and out: polygons (GeoJSON, shapefiles) and tracks (GPX, FIT, TCX, KML, GeoJSON, NMEA, CSV).
+"""File formats in and out: polygons (GeoJSON, shapefiles) and tracks (GPX, FIT, TCX, KML, GeoJSON,
+NMEA, CSV).
 
 `read_track` detects the format from the content and dispatches to the right reader."""
 
