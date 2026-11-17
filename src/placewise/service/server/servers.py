@@ -134,11 +134,14 @@ class _App:
         return out
 
     def version_info(self):
+        worldview = self.worldview_settings().worldview
         return {
             "placewise": __version__,
             "api": const.API_VERSION,
             "data_version": self.geocoder.data_version,
             "max_batch": self.settings.server.max_batch,
+            # the lock is described here, once; answers only flag that it applied
+            "worldview": {"order": list(worldview.order), "locked": bool(worldview.lock)},
         }
 
     def attribution(self, fmt):

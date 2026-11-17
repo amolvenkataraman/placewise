@@ -7,7 +7,7 @@ import pytest
 from server_kit import CN_TOWER, DATA_VERSION, EIFFEL, OPERA_HOUSE, FakeGeocoder, expected
 
 from placewise import attribution
-from placewise.model import Result, ServerSettings, Settings
+from placewise.model import Result, ServerSettings, Settings, WorldviewSettings
 from placewise.service import (
     AuthenticationError,
     BadRequestError,
@@ -35,9 +35,17 @@ def test_lookup_round_trip(serve):
 
 def test_lookup_with_worldview(serve, fake):
     client = Client(url(serve()))
-    assert client.lookup(*EIFFEL, worldview=("UN",)) == expected(*EIFFEL, ("UN",))
-    assert client.lookup(*EIFFEL, worldview="IN,de_facto").worldview == ("IN", "de_facto")
+    assert client.lookup(*EIFFEL, worldview=("UN",)) == expected(*EIFFEL)
+    assert fake.calls[-1][2] == ("UN",)
+    assert client.lookup(*EIFFEL, worldview="IN,de_facto") == expected(*EIFFEL)
     assert fake.calls[-1][2] == ("IN", "de_facto")
+
+
+def test_lookup_reads_a_locked_servers_envelope(serve):
+    """A locked server says so once per response, beside the results; the Results are unchanged."""
+    locked = Settings(worldview=WorldviewSettings(order=("de_facto",), lock=True))
+    client = Client(url(serve(settings=locked)))
+    assert client.lookup_many([CN_TOWER[0]], [CN_TOWER[1]], worldview="IN") == [expected(*CN_TOWER)]
 
 
 def test_lookup_many_round_trip_accepts_numpy(serve):

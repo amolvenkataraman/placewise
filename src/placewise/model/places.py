@@ -157,7 +157,11 @@ class Entity(Model):
 
 @dataclass(frozen=True, slots=True)
 class Result(Model):
-    """What `lookup` returns for a point. `sources` maps each field to the layer or rule that set it."""
+    """What `lookup` returns for a point. `sources` maps each field to the layer or rule that set it.
+
+    Three names per point (docs/naming.md): `sublocality` (what a local adds: Mission District),
+    `locality` (the municipality, corrected for how people talk) and `city` (what you'd tell someone
+    far away). The worldview applied shows in `disputed` where it matters, not on every answer."""
 
     lat: float
     lon: float
@@ -169,6 +173,7 @@ class Result(Model):
     locality: Place | None = None
     sublocality: Place | None = None
     borough: Place | None = None
+    postal: Place | None = None  # ZIP Code area (ZCTA), forward sortation area, PIN code area
     tz: str | None = None
     regions: tuple[Place, ...] = ()  # smallest first
     within: tuple[Place, ...] = ()  # parks, campuses ... most significant first
@@ -179,8 +184,6 @@ class Result(Model):
     relative: Relative | None = None
     sources: dict[str, str] = field(default_factory=dict)
     data_version: str | None = None
-    worldview: tuple[str, ...] = ()
-    worldview_locked: bool = False
 
     def __post_init__(self):
         Point(self.lat, self.lon)  # validates

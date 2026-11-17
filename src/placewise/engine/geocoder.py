@@ -515,7 +515,7 @@ class Geocoder:
                 Result(
                     lat=lats[i], lon=lons[i], label=label, country=country, admin1=admin1, city=city_place,
                     locality=city_place, tz=tz, near=near, airport=air, water=water_near, disputed=disputed,
-                    sources=sources, data_version=self.data_version, worldview=order, worldview_locked=locked,
+                    sources=sources, data_version=self.data_version,
                 )
             )  # fmt: skip
         return results

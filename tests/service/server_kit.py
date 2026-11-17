@@ -50,7 +50,7 @@ EIFFEL = LANDMARKS["eiffel"][:2]
 OPERA_HOUSE = LANDMARKS["opera_house"][:2]
 
 
-def _result(lat, lon, worldview, locked):
+def _result(lat, lon):
     best = min(LANDMARKS.values(), key=lambda m: math.hypot(m[0] - lat, m[1] - lon))
     _, _, label, city, admin1, country, iso2, tz = best
     key = iso2.lower()
@@ -64,8 +64,6 @@ def _result(lat, lon, worldview, locked):
         tz=tz,
         sources={"city": "test"},
         data_version=DATA_VERSION,
-        worldview=tuple(worldview) if worldview else ("de_facto",),
-        worldview_locked=locked,
     )
 
 
@@ -91,22 +89,19 @@ class FakeGeocoder:
         self._record("lookup", 1, worldview)
         if self.fail:
             raise RuntimeError("secret internal detail /srv/placewise/packs")
-        return _result(float(lat), float(lon), worldview, self.settings.worldview.lock)
+        return _result(float(lat), float(lon))
 
     def lookup_many(self, lats, lons, *, worldview=None):
         lats, lons = list(lats), list(lons)
         self._record("lookup_many", len(lats), worldview)
         if self.fail:
             raise RuntimeError("secret internal detail /srv/placewise/packs")
-        return [
-            _result(float(a), float(b), worldview, self.settings.worldview.lock)
-            for a, b in zip(lats, lons, strict=True)
-        ]
+        return [_result(float(a), float(b)) for a, b in zip(lats, lons, strict=True)]
 
 
-def expected(lat, lon, worldview=None, locked=False):
+def expected(lat, lon):
     """What FakeGeocoder returns for a point, to compare round trips against."""
-    return _result(float(lat), float(lon), worldview, locked)
+    return _result(float(lat), float(lon))
 
 
 class FakeClock:

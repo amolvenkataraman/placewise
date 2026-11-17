@@ -13,9 +13,11 @@ coordinate-free logs. This page covers hosting it for other people.
 | `POST /v1/lookup` `{"points": [[lat, lon], ...], "worldview": ["UN"]}` | `{"results": [Result, ...]}` |
 | `GET /v1/health` | `{"status", "data_version", "uptime_s"}` (and `cache` for the service) |
 | `GET /v1/attribution` / `?format=json` | the attribution markdown / the source registry |
-| `GET /v1/version` | `{"placewise", "api", "data_version", "max_batch"}` |
+| `GET /v1/version` | `{"placewise", "api", "data_version", "max_batch", "worldview": {"order", "locked"}}` |
 
-A `Result` is exactly `Result.to_dict()`. Errors are `{"error": {"code": ..., "message": ...}}`:
+A `Result` is exactly `Result.to_dict()`. When the operator locked the worldview, each response
+also says `"worldview_locked": true` once (beside a single Result's fields, or beside `results`).
+Errors are `{"error": {"code": ..., "message": ...}}`:
 
 | Status | `code` | When |
 |---|---|---|
@@ -179,7 +181,7 @@ max_batch = 10000
 cors_origins = ["https://app.example.org"]   # browsers on other origins get 403; "*" only if you list it
 
 [worldview]
-lock = true                # requests can't change the worldview; answers say worldview_locked
+lock = true                # requests can't change the worldview; each response says worldview_locked once
 conflict = "ignore"        # or "reject": a request for another worldview gets 403 worldview_locked
 ```
 
