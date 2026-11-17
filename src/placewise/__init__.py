@@ -7,7 +7,7 @@
 The headline names load on first use, so `import placewise` stays cheap for toolkit-only users.
 """
 
-__version__ = "0.0.1"
+__version__ = "0.1.0a1"
 
 # name -> (module, attribute)
 _LAZY = {

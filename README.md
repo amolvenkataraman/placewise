@@ -1,19 +1,19 @@
 <!-- header:start -->
 <div align="center">
 
-<img alt="placewise: Offline geocoding that names places the way people do, plus a geo toolkit. No API bills." src=".github/assets/banner.svg" width="100%">
+<img alt="placewise: Offline geocoding that names places the way people do, plus a geo toolkit. No API bills." src="https://raw.githubusercontent.com/amolvenkataraman/placewise/master/.github/assets/banner.svg" width="100%">
 
 ![python: 3.10+](https://img.shields.io/badge/python-3.10%2B-0f6f68?labelColor=15181c&color=0f6f68)
-[![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-0f6f68?labelColor=15181c&color=0f6f68)](LICENSE)
+[![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-0f6f68?labelColor=15181c&color=0f6f68)](https://github.com/amolvenkataraman/placewise/blob/master/LICENSE)
 [![data: placewise-data](https://img.shields.io/badge/data-placewise--data-0f6f68?labelColor=15181c&color=0f6f68)](https://github.com/amolvenkataraman/placewise-data)
 
 [Why](#why) · [Quick start](#quick-start) · [What it does](#what-it-does) · [Data](#data) · [Status](#status)
 
 </div>
 
-<a href="https://haiscale.amolven.com/M2/"><img alt="HAI Scale M2, Mixed, even split. Placewise's design is mine: the scope, the naming rules, the data and licence choices, the worldview policy and the code structure. AI coding agents wrote much of the code and docs to that design; I steered, reviewed and tested the work. Provided as is and where is, with no warranty." src=".github/assets/hai.svg" width="100%"></a>
+<a href="https://haiscale.amolven.com/M2/"><img alt="HAI Scale M2, Mixed, even split. Placewise's design is mine: the scope, the naming rules, the data and licence choices, the worldview policy and the code structure. AI coding agents wrote much of the code and docs to that design; I steered, reviewed and tested the work. Provided as is and where is, with no warranty." src="https://raw.githubusercontent.com/amolvenkataraman/placewise/master/.github/assets/hai.svg" width="100%"></a>
 
-<sub>Not an official source of place names or boundaries. Full terms: [DISCLAIMER.md](DISCLAIMER.md)</sub>
+<sub>Not an official source of place names or boundaries. Full terms: [DISCLAIMER.md](https://github.com/amolvenkataraman/placewise/blob/master/DISCLAIMER.md)</sub>
 <!-- header:end -->
 
 **TL;DR:** the free way to turn a GPS point into a place name is "find the nearest big city within
@@ -42,9 +42,11 @@ placewise is the third option: the answer a person would give, computed on your 
 > **Doesn't work yet:** forward search (`placewise.find("Yosemite")`), notable places and
 > universities, India state/district/city outlines (India uses PIN-code areas for now), UK,
 > Europe, Australia and most other countries beyond the world baseline, elevation, roads and
-> trails, the `reverse`/`find`/`explain` CLI commands, Docker. **The first data release isn't
-> published yet**, so `placewise data install` needs a local build of the packs
-> (`packbuild/README.md`) until it is. Not on PyPI yet.
+> trails, the `reverse`/`find`/`explain` CLI commands, Docker. Expect slow first lookups (indexes
+> are built on first use) and roughly 25–50k points/s after that.
+>
+> **Install:** `pip install --pre placewise` (alpha), then `placewise data install world` (and
+> `usa`, `can`, `ind`, `world-water`, `usa-parks` ... as needed; `placewise data list` shows them all).
 
 ## Why
 
