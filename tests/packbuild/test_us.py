@@ -5,12 +5,22 @@ import pytest
 import us_depth_fixtures
 import us_fixtures as fx
 from regions_kit import US_REGIONS, use_regions
+from timezones_kit import use_timezones
 
 from packbuild import us
 from packbuild.sources import SOURCES, url
 
-LAYERS = ["states", "counties", "places", "cbsa", "csa", "zcta", "regions"]
-COUNTS = {"states": 3, "counties": 5, "places": 6, "cbsa": 4, "csa": 3, "zcta": 3, "regions": 2}
+LAYERS = ["states", "counties", "places", "cbsa", "csa", "zcta", "regions", "timezones"]
+COUNTS = {
+    "states": 3,
+    "counties": 5,
+    "places": 6,
+    "cbsa": 4,
+    "csa": 3,
+    "zcta": 3,
+    "regions": 2,
+    "timezones": 5,
+}
 
 
 def _zip_shapefile(dest, shp):
@@ -52,6 +62,7 @@ def offline(tmp_path, monkeypatch):
 
     monkeypatch.setattr(us, "fetch", fake_fetch)
     use_regions(monkeypatch, US_REGIONS)
+    use_timezones(monkeypatch)
     return requested
 
 
@@ -60,7 +71,7 @@ def test_every_download_is_in_the_registry():
     assert SOURCES["uscensus"].licence == "LicenseRef-public-domain"
 
 
-def test_build_us_fetches_every_registry_url_and_hands_seven_layers_to_the_writer(
+def test_build_us_fetches_every_registry_url_and_hands_eight_layers_to_the_writer(
     tmp_path, offline, monkeypatch
 ):
     calls = []
@@ -78,7 +89,11 @@ def test_build_us_fetches_every_registry_url_and_hands_seven_layers_to_the_write
     assert (out_dir, name, version) == (tmp_path / "out", "usa", "2026.11")
     assert [layer.name for layer in layers] == LAYERS
     assert {layer.name: len(layer.columns["id"]) for layer in layers} == COUNTS
-    expected = {"regions": ("placewise-regions", "uscensus"), "zcta": ("uscensus", "geonames")}
+    expected = {
+        "regions": ("placewise-regions", "uscensus"),
+        "zcta": ("uscensus", "geonames"),
+        "timezones": ("placewise-timezones", "uscensus"),
+    }
     for layer in layers:
         assert layer.sources == expected.get(layer.name, ("uscensus",))
         assert all(len(column) == COUNTS[layer.name] for column in layer.columns.values())
@@ -92,7 +107,7 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     pack = open_pack(path, verify=True)
     assert [layer.name for layer in pack] == LAYERS
     assert {layer.name: len(layer) for layer in pack} == COUNTS
-    assert set(pack.sources) == {"uscensus", "geonames", "placewise-regions"}
+    assert set(pack.sources) == {"uscensus", "geonames", "placewise-regions", "placewise-timezones"}
 
     def at(layer, lat, lon):
         i = pack[layer].query(lat, lon)
@@ -134,6 +149,14 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     assert at("regions", 36.1147, -115.1728)["id"] == "region:test-vegas"
     assert at("regions", 37.7456, -119.5936) is None  # Mariposa is in no region
     assert regions.column("area_km2")[0] < regions.column("area_km2")[1]  # smallest first
+
+    # time zones: the AIANNH area first, then the split county, then the states
+    assert at("timezones", 36.6, -114.6)["id"] == "tz:test-reservation"
+    assert at("timezones", 36.6, -114.6)["zone"] == "America/Denver"
+    washoe = at("timezones", 39.5296, -119.8138)
+    assert (washoe["id"], washoe["zones"]) == ("tz:census:32031", "America/Los_Angeles|America/Denver")
+    assert at("timezones", 36.1147, -115.1728)["id"] == "tz:iso:US-NV"
+    assert at("timezones", *park)["zone"] == "America/Los_Angeles"
 
 
 def test_a_region_member_missing_from_the_counties_fails_the_build(tmp_path, offline, monkeypatch):

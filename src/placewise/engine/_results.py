@@ -42,6 +42,7 @@ def build(geo, lat, lon, a, named, order, locked):
     city, far_city = city.tolist(), far_city.tolist()
     city_km = a.get("city_km", np.full(n, np.inf)).tolist()
     tz_row = a.get("tz", minus).tolist()
+    tz_zone, tz_source = (a[k].tolist() if k in a else [None] * n for k in ("tz_zone", "tz_source"))
     airport, airport_km = airport.tolist(), a.get("airport_km", np.full(n, np.inf)).tolist()
     air_deg, air_word = air_deg.tolist(), air_word.tolist()
     water, water_km = a["water"].tolist(), a["water_km"].tolist()
@@ -76,7 +77,10 @@ def build(geo, lat, lon, a, named, order, locked):
                 city_place = locality = city_places.get(city[i]) or place(const.CITIES, city[i])
                 sources["city"] = sources["locality"] = src[const.CITIES, const.SCORE]
             t = tz_row[i]
-            if t >= 0 and tz_col[t]:
+            if tz_zone[i] is not None:  # the timezones polygons (_timezones)
+                tz = tz_zone[i]
+                sources["tz"] = tz_source[i]
+            elif t >= 0 and tz_col[t]:
                 tz = tz_col[t]
                 sources["tz"] = src[const.CITIES, const.NEAREST]
         elif water[i] >= 0:

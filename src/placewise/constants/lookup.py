@@ -7,6 +7,7 @@ COUNTRIES = "countries"
 ADMIN1 = "admin1"
 CITIES = "cities"
 AIRPORTS = "airports"
+TIMEZONES = "timezones"  # time-zone polygons, in the world pack and country packs (packbuild/timezones.py)
 DEFAULT_PACK = "world"  # what Geocoder() opens through the store when no packs are given
 
 # rule names in Result.sources ("world/countries:offshore")
@@ -14,6 +15,8 @@ POLYGON = "polygon"  # the point is inside the feature
 OFFSHORE = "offshore"  # outside every feature of the layer, within TERRITORIAL_KM of this one
 NEAREST = "nearest"  # inside the country, outside its admin1 polygons (sliver between the layers)
 SCORE = "score"  # the provisional city score below
+SPLIT = "split"  # a time-zone unit split along a line no pack draws: its nearest town's zone decided
+WORLDVIEW = "worldview"  # the zone of the country the worldview reports, not the administering one's
 
 # 12 nautical miles, the territorial sea (UNCLOS art. 3). Natural Earth's 1:10m coastline misses
 # some coastal points (piers, harbours, whole city centres like Sevastopol's) by hundreds of
@@ -45,8 +48,9 @@ NOTABLE_CANDIDATES = 8  # per point; MAX_NEAR (5) plus the chosen city plus slac
 # point is AT the airport, otherwise NEAR it (up to NearSettings.airport)
 AIRPORT_AT_KM = 2.0
 
-# the nearest city of the same country gives the time zone (a documented approximation until zone
-# polygons exist); searched this far, which covers the emptiest inhabited land
+# where no timezones polygon answers, the nearest city of the same country gives the time zone; and in
+# a split time-zone unit the nearest city inside it decides between its zones. Both search this
+# far, which covers the emptiest inhabited land
 TZ_SEARCH_KM = 3_000.0
 # cell size (degrees) of the per-country city grids that search runs on. Only points with no
 # same-country city within CITY_RADIUS_KM get there, so they are far from towns: coarse cells

@@ -4,8 +4,9 @@
   for a city in another admin1 and never a city of another country (a disputed area's claimants
   all count as its country). Country packs name the locality and city by boundaries instead where
   they can (placewise.engine.naming); this score is the fallback and the rest of the world's answer.
-- tz: the zone of the nearest city of the same country. An approximation: it can be wrong in sparse
-  areas crossed by a zone line, until zone polygons exist.
+- tz: where no timezones polygon answered (placewise.engine._timezones, a["tz_zone"]), the zone of
+  the nearest city of the same country. An approximation: it can be wrong in sparse areas crossed
+  by a zone line.
 - notable: cities of NOTABLE_POPULATION+ near each point, for Result.near.
 """
 
@@ -103,8 +104,11 @@ class Cities:
             a["city"][pts], a["city_km"][pts] = self.choose(idx, km, radius, allowed, admin1)
             if restricted:
                 a["local"][pts], a["local_km"][pts] = local, local_km
-                if c["tz"] is not None:
-                    a["tz"][pts] = self._tz_city(plat, plon, local, local_km, allowed)
+                need = _needs_tz(a, pts)
+                if c["tz"] is not None and need.any():
+                    a["tz"][pts[need]] = self._tz_city(
+                        plat[need], plon[need], local[need], local_km[need], allowed[need]
+                    )
         if not near:
             a["notable"][:] = -1
 
@@ -159,6 +163,12 @@ class Cities:
         rows = np.arange(len(idx))
         found = ok[rows, first]
         return np.where(found, safe[rows, first], -1), np.where(found, km[rows, first], np.inf)
+
+
+def _needs_tz(a, pts):
+    """Which of the points no timezones polygon gave a zone (all of them without the layer)."""
+    zone = a.get("tz_zone")
+    return np.ones(len(pts), dtype=bool) if zone is None else zone[pts] == None  # noqa: E711
 
 
 def _country_ok(codes, allowed):
