@@ -78,7 +78,7 @@ be opened with `numpy.load(path, mmap_mode="r")` and costs nothing until touched
   (`"geonames:6167865"`, `"wikidata:Q16"`, `"iso:CA"`).
 - Field types: `str`, `i1 i2 i4 i8`, `u1 u2 u4`, `f4 f8`, `bool`. Integer fields may name a `null`
   sentinel; float nulls are NaN; a `str` null is the empty string.
-- `coords` is `e7` (int32 degrees × 10⁷, ~1 cm, the same as Atlas) for every coordinate array,
+- `coords` is `e7` (int32 degrees × 10⁷, ~1 cm, as in Google location history exports) for every coordinate array,
   rounded half to even.
 
 ## Columns
