@@ -48,22 +48,26 @@ def read_csv_track(source, columns=None, time_format=None):
     index = _column_index(header, columns)
     # with ";" as the separator a "," is free to be the decimal mark, as European tools write it
     decimal_comma = delimiter != ","
-    points = new_points(OPTIONAL_COLUMNS)
+    # a column the file lacks would be all NaN, which build_track leaves out anyway
+    names = [name for name in OPTIONAL_COLUMNS if name in index]
+    points = new_points(names)
+    present = [(points[name], index[name]) for name in names]
+    lat_i, lon_i, time_i, segment_i = index["lat"], index["lon"], index.get("time"), index.get("segment")
     segment_ids, skipped = [], 0
     for row in reader:
         if not any(cell.strip() for cell in row):
             continue
-        lat, lon = _cell(row, index["lat"], decimal_comma), _cell(row, index["lon"], decimal_comma)
+        lat, lon = _number(row, lat_i, decimal_comma), _number(row, lon_i, decimal_comma)
         if not (math.isfinite(lat) and math.isfinite(lon)):
             skipped += 1
             continue
         points["lat"].append(lat)
         points["lon"].append(lon)
-        time_text = _raw(row, index.get("time"))
+        time_text = _raw(row, time_i)
         points["time"].append(_parse_time(time_text, time_format) if time_text else math.nan)
-        for name in OPTIONAL_COLUMNS:
-            points[name].append(_cell(row, index.get(name), decimal_comma))
-        segment_ids.append(_raw(row, index.get("segment")))
+        for values, i in present:
+            values.append(_number(row, i, decimal_comma))
+        segment_ids.append(_raw(row, segment_i))
     warn_skipped(skipped, "row(s)", "no usable latitude / longitude", "CSV")
     segments = [i for i, s in enumerate(segment_ids) if i == 0 or s != segment_ids[i - 1]]
     return build_track(points, segments, TrackMeta(source=source_name(source, "csv")))
@@ -103,6 +107,14 @@ def _raw(row, i):
     if i is None or i >= len(row):
         return None
     return row[i].strip() or None
+
+
+def _number(row, i, decimal_comma):
+    """_cell, trying the cell as a plain number first (float() strips whitespace as _raw does)."""
+    try:
+        return float(row[i])
+    except (ValueError, IndexError):
+        return _cell(row, i, decimal_comma)
 
 
 def _cell(row, i, decimal_comma):

@@ -1,6 +1,5 @@
 """Shared pieces: key checks, keyed pseudo-random numbers, along-path distances and point selection."""
 
-import hashlib
 import hmac
 import struct
 
@@ -12,6 +11,8 @@ from placewise.tracks import Track
 
 _DOMAIN = b"placewise.privacy.v1/"
 _TWO_53 = float(2**53)
+_PER_DIGEST = 4  # 53-bit numbers taken from one SHA-256 digest: one per 64-bit word
+_FOUR_WORDS = struct.Struct(">4Q")
 
 
 def check_key(key):
@@ -25,11 +26,34 @@ def check_key(key):
 def keyed_uniforms(key, purpose, *parts, n=1):
     """n reproducible numbers in [0, 1) from HMAC-SHA256(key, purpose + parts). Each purpose has its
     own domain, so a value leaked by one tool says nothing about another's."""
-    message = b"\x00".join([_DOMAIN + purpose.encode(), *(_encode(p) for p in parts)])
+    return _uniforms(key, _message(purpose, parts), n)
+
+
+def keyed_uniforms_each(key, purpose, *parts, rows, n=1):
+    """keyed_uniforms(key, purpose, *parts, *row, n=n) for each row of ints in `rows`, as one list
+    per row; the shared message prefix is encoded once."""
+    prefix = _message(purpose, parts)
+    if n > _PER_DIGEST:
+        return [_uniforms(key, prefix + _int_parts(row), n) for row in rows]
+    first = struct.pack(">I", 0)  # one digest holds them all: counter 0 only
+    unpack, digest = _FOUR_WORDS.unpack, hmac.digest
+    words = (unpack(digest(key, prefix + _int_parts(row) + first, "sha256")) for row in rows)
+    return [[(word >> 11) / _TWO_53 for word in four][:n] for four in words]
+
+
+def _int_parts(row):
+    return b"".join(b"\x00" + int(v).to_bytes(16, "big", signed=True) for v in row)
+
+
+def _message(purpose, parts):
+    return b"\x00".join([_DOMAIN + purpose.encode(), *(_encode(p) for p in parts)])
+
+
+def _uniforms(key, message, n):
     out = []
     counter = 0
     while len(out) < n:
-        digest = hmac.new(key, message + struct.pack(">I", counter), hashlib.sha256).digest()
+        digest = hmac.digest(key, message + struct.pack(">I", counter), "sha256")
         # 53 bits per number: exactly what a float64 mantissa can hold, so [0, 1) stays uniform
         out += [(int.from_bytes(digest[i : i + 8], "big") >> 11) / _TWO_53 for i in range(0, 32, 8)]
         counter += 1

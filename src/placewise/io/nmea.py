@@ -9,7 +9,9 @@ date on. Sentences failing their checksum are skipped and counted.
 import datetime as dt
 import math
 import warnings
-from functools import reduce
+from functools import lru_cache, reduce
+
+import numpy as np
 
 from placewise.constants import nmea
 from placewise.constants.speed import METRES_PER_SECOND
@@ -64,15 +66,9 @@ def read_nmea(source, date=None, uere_m=nmea.DEFAULT_UERE_M):
 
 
 def _epochs(text):
-    epochs, bad = [], 0
-    for line in text.splitlines():
-        start = line.find("$")  # loggers often put their own timestamp in front
-        if start < 0:
-            continue
-        fields = _checked_fields(line[start:].strip())
-        if fields is None:
-            bad += 1
-            continue
+    sentences, bad = _checked_sentences(text.splitlines())
+    epochs = []
+    for fields in sentences:
         talker, kind = fields[0][:2], fields[0][2:]
         if talker not in nmea.TALKER_IDS or kind not in nmea.SENTENCES:
             continue
@@ -87,17 +83,42 @@ def _epochs(text):
     return epochs, bad
 
 
-def _checked_fields(sentence):
-    body, star, checksum = sentence[1:].partition("*")
-    if not star or len(checksum) < 2:
-        return None
-    try:
-        expected = int(checksum[:2], 16)
-    except ValueError:
-        return None
-    if reduce(lambda acc, ch: acc ^ ord(ch), body, 0) != expected:
-        return None
-    return body.split(",")
+def _checked_sentences(lines):
+    """(fields of each sentence passing its checksum, in order; count of those failing it). The
+    XOR checksums of all sentences are taken at once, over the bytes of every body joined."""
+    bodies, expected, bad = [], [], 0
+    for line in lines:
+        start = line.find("$")  # loggers often put their own timestamp in front
+        if start < 0:
+            continue
+        body, star, checksum = line[start:].strip()[1:].partition("*")
+        if not star or len(checksum) < 2:
+            bad += 1
+            continue
+        try:
+            expected.append(int(checksum[:2], 16))
+        except ValueError:
+            bad += 1
+            continue
+        bodies.append(body)
+    sums = _xor_sums(bodies)
+    sentences = [b.split(",") for b, want, got in zip(bodies, expected, sums, strict=True) if want == got]
+    return sentences, bad + len(bodies) - len(sentences)
+
+
+def _xor_sums(bodies):
+    """XOR of the character codes of each string."""
+    joined = "".join(bodies)
+    if not joined.isascii():  # codes past a byte: one string at a time
+        return [reduce(lambda acc, ch: acc ^ ord(ch), body, 0) for body in bodies]
+    lengths = np.array([len(b) for b in bodies], dtype=np.intp)
+    sums = np.zeros(len(bodies), dtype=np.uint8)
+    filled = lengths > 0
+    if filled.any():
+        data = np.frombuffer(joined.encode("ascii"), dtype=np.uint8)
+        starts = (np.cumsum(lengths) - lengths)[filled]
+        sums[filled] = np.bitwise_xor.reduceat(data, starts)
+    return sums.tolist()
 
 
 def _gga(f):
@@ -119,10 +140,16 @@ def _rmc(f):
     if f[7]:
         record["course"] = float(f[7])
     if f[8]:  # the receiver clock can know the date before there is a fix, so keep it either way
-        day, month, year = int(f[8][0:2]), int(f[8][2:4]), int(f[8][4:6])
-        year += 1900 if year >= nmea.CENTURY_PIVOT else 2000
-        record["date"] = dt.date(year, month, day).toordinal()
+        record["date"] = _date_ordinal(f[8])
     return record
+
+
+@lru_cache(maxsize=1024)
+def _date_ordinal(text):
+    """The date ordinal of an RMC ddmmyy date (a log has a few distinct ones)."""
+    day, month, year = int(text[0:2]), int(text[2:4]), int(text[4:6])
+    year += 1900 if year >= nmea.CENTURY_PIVOT else 2000
+    return dt.date(year, month, day).toordinal()
 
 
 def _gll(f):
