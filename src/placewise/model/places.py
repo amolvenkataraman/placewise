@@ -3,6 +3,10 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
+import numpy as np
+
+from placewise.geo.distances import haversine
+
 from ._base import Model, set_field
 from .geometry import BBox, Outline, Point
 
@@ -141,6 +145,14 @@ class Entity(Model):
     def __post_init__(self):
         if self.radius_km < 0:
             raise ValueError("radius can't be negative")
+
+    def contains(self, lat, lon):
+        """Which points lie in this entity: inside its outline when it has one, otherwise within
+        radius_km of its point (so points still work for things known only as a location)."""
+        if self.outline is not None:
+            return self.outline.contains(lat, lon)
+        inside = np.asarray(haversine(self.point.lat, self.point.lon, lat, lon)) <= self.radius_km
+        return bool(inside) if inside.ndim == 0 else inside
 
 
 @dataclass(frozen=True, slots=True)

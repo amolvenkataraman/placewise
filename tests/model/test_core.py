@@ -4,6 +4,7 @@ server and caches depend on."""
 import dataclasses
 import json
 
+import numpy as np
 import pytest
 
 from placewise.model import (
@@ -128,3 +129,14 @@ def test_feature_contains_bbox_and_round_trip():
     assert f.contains(0.5, 0.5) and f.contains(5.5, 5.5) and not f.contains(3, 3)
     assert f.bbox == BBox(0, 0, 6, 6)
     assert Feature.from_dict(f.to_dict()) == f
+
+
+def test_entity_contains_uses_the_outline_or_falls_back_to_the_radius():
+    park = Place("wikidata:Q180402", "Yosemite National Park", PlaceKind.PARK)
+    square = Outline((((37.0, -120.0), (37.0, -119.0), (38.0, -119.0), (38.0, -120.0)),))
+    with_outline = Entity(park, point=Point(37.5, -119.5), bbox=square.bbox, radius_km=80.0, outline=square)
+    assert with_outline.contains(37.2, -119.2) and not with_outline.contains(38.5, -119.5)
+    # no outline: a circle of radius_km around the point (1° of latitude is ~111.2 km)
+    circle = Entity(park, point=Point(0.0, -20.0), bbox=BBox(-1, -21, 1, -19), radius_km=100.0)
+    assert circle.contains(0.8, -20.0) and not circle.contains(1.0, -20.0)
+    assert list(circle.contains(np.array([0.0, 2.0]), np.array([-20.0, -20.0]))) == [True, False]
