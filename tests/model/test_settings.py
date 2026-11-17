@@ -147,3 +147,9 @@ def test_app_place_and_presence_days():
     assert days.evidence("CA", dt.date(2026, 6, 14)).last_fix == t + dt.timedelta(hours=9)
     assert days.evidence("CA", dt.date(2026, 6, 15)) is None
     assert PresenceDays.from_dict(days.to_dict()) == days
+
+
+def test_data_settings_index_url():
+    assert Settings().data.index_url is None
+    s = Settings.from_dict({"data": {"index_url": "https://mirror.example/placewise/index.json"}})
+    assert s.data.index_url == "https://mirror.example/placewise/index.json"

@@ -84,6 +84,7 @@ class DataSettings(Model):
     pin: str | None = None  # hold a data version, e.g. "2026.11"
     mirrors: tuple[str, ...] = ()
     data_dir: str | None = None
+    index_url: str | None = None  # where index.json lives; None means the published default
 
     def __post_init__(self):
         _check_choice("data.auto_update", self.auto_update, {"never", "weekly"})
