@@ -1,0 +1,22 @@
+{
+  "purpose": "airports",
+  "description": "Airports with IATA/ICAO codes.",
+  "regions": {
+    "world": [
+      {
+        "id": "ourairports",
+        "name": "OurAirports",
+        "url": "https://ourairports.com/data/",
+        "licence": "LicenseRef-public-domain",
+        "credit": "OurAirports (ourairports.com), public domain",
+        "used_in": [
+          "world/airports"
+        ],
+        "downloads": {
+          "airports": "https://davidmegginson.github.io/ourairports-data/airports.csv"
+        },
+        "notes": "Released into the public domain by the maintainers. The world pack keeps large and medium airports plus small ones with scheduled service."
+      }
+    ]
+  }
+}

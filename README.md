@@ -73,9 +73,10 @@ placewise data update                 # newer versions (never automatic, never d
 placewise attribution                 # the sources, licences and credit lines to show
 ```
 
-Packs are memory-mapped and checksummed (format: `docs/pack-format.md`). Every source is one JSON
-file in `src/placewise/sources/`, and `ATTRIBUTION.md` is generated from them, so an app that
-ships placewise data can link to that one file.
+Packs are memory-mapped and checksummed (format: `docs/pack-format.md`). Data sources are listed in
+`src/placewise/sources/`, one JSON file per purpose (boundaries, places, regions, postal codes,
+airports ...) giving the sources used in each region, and `ATTRIBUTION.md` is generated from them,
+so an app that ships placewise data can link to that one file.
 
 ## Conventions
 

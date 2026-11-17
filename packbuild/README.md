@@ -147,3 +147,56 @@ islets) are dropped, but a feature never loses its last ring.
   differ from Canada Post's delivery areas (the CN Tower is in census FSA M5J although its postal
   code is M5V). Full six-character postal codes and their coordinates are Canada Post data and are
   not open data in Canada; placewise uses no postal-code-to-coordinate dataset.
+
+## India pack
+
+```
+uv run python -m packbuild.india --version 2026.11     # writes .cache/packbuild/out/in-2026.11/
+uv run python -m packbuild.india --version 2026.11 \
+    --pincode-boundaries All_India_pincode_Boundary-19312.geojson --pincode-directory pincode.csv
+```
+
+| Layer | Kind | Source | Licence |
+|---|---|---|---|
+| `pincodes` | polygon | All India Pincode Boundary (Department of Posts, 2025), district and state joined from the directory | GODL-India |
+| `post_offices` | point | All India Pincode Directory (Department of Posts): offices with usable coordinates | GODL-India |
+
+Registry: `indiapost-pincode-boundary`, `indiapost-pincode-directory`. Ids: `pin:560001`;
+`indiapost:<pincode>:<office name>` (`#2`, `#3`, ... when a name repeats under one PIN code).
+`state_code` is ISO 3166-2 after the 2023 change (`IN-TS`, `IN-OD`, `IN-CG`, `IN-UK`), so it
+matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case as published.
+
+- **Downloads.** data.gov.in refused or blocked scripted requests in November 2026 (Akamai
+  "503"/connection refused) and the boundary resource was reported returning 404 in May 2026; the
+  directory's API needs a free key; AIKosh's copies go through a click-through. So each registry
+  file names a mirror: the boundary GeoJSON pinned to a commit of a GitHub repository (the same
+  bytes, git blob `6a73f2df`, are in three unrelated repositories) and the directory CSV as taken
+  from data.gov.in in May 2024. GODL allows that redistribution. A file downloaded by hand from
+  data.gov.in replaces its mirror (`--pincode-boundaries`, `--pincode-directory`; the directory's
+  API export with lower-case headers reads the same).
+- **Join.** A PIN area's `district`/`state` is the one most of its offices are filed under (ties:
+  head office, then sub, then branch office, then by name). PIN areas cross district lines, so it
+  is the postal answer, not an administrative one.
+- **Coordinates.** Directory coordinates are kept only when both are plain numbers inside a box
+  round India (6-38 N, 68-98 E); "NA", the 1/1 placeholder and values with stray characters (a
+  trailing "-") are dropped, not repaired. GeoJSON whose `crs` is not WGS84 is refused.
+- **Disputed areas.** PIN areas are delivery zones as published by the Department of Posts (a
+  Government of India body), not administrative boundaries; the pack carries them unchanged.
+  Whether any extend into areas whose status is disputed has not been checked yet (do it on the
+  first real build).
+
+**Not here:**
+
+- *State and district polygons.* No source passed the licence gate. The Survey of India's
+  Administrative Boundary Database is free but needs an account and an order, and its portal
+  allows boundary files for consultative, research and education use. The National Water Data
+  Portal republishes it without an account (`packbuild/sources/nwdp.py` reads its attribute
+  schema, LGD codes included), but under "Other (Open)" with a copyright policy that excludes
+  third-party material, and its SHP and GeoJSON are projected (EPSG:7755, refused; its KMZ is
+  WGS84). geoBoundaries' India ADM1 is CC BY 2.5 India (not an accepted licence) and ADM2 is
+  ODbL (share-alike pack only); LGD/Bharatmaps and Bhuvan layers carry no licence; GADM is denied.
+  `--states`/`--districts` are refused until `boundaries.json` lists an `nwdp-soi-boundaries` entry for `in`.
+  Survey of India boundaries show India's official view, including areas India claims that other
+  countries administer; Natural Earth's world admin1 is de facto.
+- *Census 2011 towns.* The Town Directory has no coordinates; GeoNames in the world pack covers
+  towns.
