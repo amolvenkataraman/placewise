@@ -237,7 +237,158 @@ def _cmd_attribution(args):
         sys.stdout.write(attribution.render_markdown())
 
 
-_COMMANDS = (_add_data, _add_attribution)
+# -- placewise serve / placewise server keys ... --------------------------------------------------
+
+
+def _port(text):
+    try:
+        port = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a port number: {text!r}") from None
+    if not 0 <= port <= 65535:
+        raise argparse.ArgumentTypeError("port must be 0-65535")
+    return port
+
+
+def _count(text):
+    try:
+        value = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a whole number: {text!r}") from None
+    if value < 0:
+        raise argparse.ArgumentTypeError("can't be negative")
+    return value
+
+
+def _add_serve(commands):
+    from placewise.constants import server as server_const
+
+    sub = _subparser(commands, "serve", "run the local service / web server (HTTP JSON API)")
+    sub.add_argument("--host", help="address to listen on (default 127.0.0.1; others require API keys)")
+    sub.add_argument("--port", type=_port, help="TCP port (default 8770)")
+    sub.add_argument("--socket", metavar="PATH", help="listen on a Unix socket instead of TCP (POSIX)")
+    sub.add_argument(
+        "--cache-size",
+        type=_count,
+        default=server_const.DEFAULT_CACHE_SIZE,
+        help=f"results cached in RAM (default {server_const.DEFAULT_CACHE_SIZE}; 0 disables)",
+    )
+    sub.add_argument("--keys-file", metavar="PATH", help="API keys file (default: per-user config dir)")
+    sub.add_argument(
+        "--cors-origin",
+        action="append",
+        metavar="ORIGIN",
+        help="a browser origin allowed to call the API, e.g. https://app.example (repeatable)",
+    )
+    sub.add_argument(
+        "--require-keys",
+        action="store_const",
+        const=True,
+        default=None,
+        help="require API keys even on loopback (behind a reverse proxy on this machine)",
+    )
+    sub.set_defaults(handler=_cmd_serve)
+
+
+def _cmd_serve(args):
+    from placewise import service
+    from placewise.config import load_settings
+
+    # placewise.toml and PLACEWISE_* first (worldview lock, CORS, log_coordinates ...); options win
+    server, data = {}, {}
+    if args.host is not None:
+        server["host"] = args.host
+    if args.port:  # 0 (any free port) isn't a valid server.port setting, so it goes direct
+        server["port"] = args.port
+    if args.cors_origin:
+        server["cors_origins"] = tuple(args.cors_origin)
+    if args.data_dir is not None:
+        data["data_dir"] = args.data_dir
+    if args.index_url is not None:
+        data["index_url"] = args.index_url
+    if args.offline:
+        data["offline"] = True
+    settings = load_settings(server=server, data=data)
+    extra = {"port": 0} if args.port == 0 else {}
+    service.serve(
+        settings=settings,
+        cache_size=args.cache_size,
+        socket_path=args.socket,
+        keys_file=args.keys_file,
+        require_keys=args.require_keys,
+        **extra,
+    )
+
+
+def _add_server(commands):
+    from placewise.constants import server as server_const
+
+    server = _subparser(commands, "server", "manage the web server's API keys")
+    actions = server.add_subparsers(title="server commands", metavar="<action>")
+    keys = _subparser(actions, "keys", "add, list and revoke API keys")
+    key_actions = keys.add_subparsers(title="keys commands", metavar="<action>")
+
+    add = _subparser(key_actions, "add", "create a key; it is printed this once and never stored")
+    add.add_argument("--label", default="", help="what the key is for, e.g. 'photo app'")
+    add.add_argument(
+        "--rate-limit",
+        type=_count,
+        default=server_const.DEFAULT_KEY_RATE_PER_MIN,
+        help=f"requests per minute (default {server_const.DEFAULT_KEY_RATE_PER_MIN}; 0 = unlimited)",
+    )
+    add.set_defaults(handler=_cmd_keys_add)
+
+    listing = _subparser(key_actions, "list", "the keys (ids, labels, limits; never the keys themselves)")
+    listing.add_argument("--json", action="store_true", help="as JSON")
+    listing.set_defaults(handler=_cmd_keys_list)
+
+    revoke = _subparser(key_actions, "revoke", "delete a key; a running server notices at once")
+    revoke.add_argument("id", help="the key id from `placewise server keys list`")
+    revoke.set_defaults(handler=_cmd_keys_revoke)
+
+    for sub in (add, listing, revoke):
+        sub.add_argument("--keys-file", metavar="PATH", help="API keys file (default: per-user config dir)")
+
+
+def _keystore(args):
+    from placewise.server import KeyStore
+
+    return KeyStore(args.keys_file)
+
+
+def _cmd_keys_add(args):
+    store = _keystore(args)
+    record, token = store.add(label=args.label, rate_limit=args.rate_limit)
+    print(token)
+    print(
+        f"added key {record.id} to {store.path}; this is the only time it is shown, so store it now.\n"
+        f"clients send it as: Authorization: Bearer <key>",
+        file=sys.stderr,
+    )
+
+
+def _cmd_keys_list(args):
+    store = _keystore(args)
+    keys = [k.public() for k in store.list()]
+    if args.json:
+        print(json.dumps(keys, indent=2, ensure_ascii=False))
+        return
+    if not keys:
+        print(f"no keys in {store.path}")
+        return
+    rows = [("ID", "LABEL", "CREATED", "PER MINUTE")]
+    rows += [(k["id"], k["label"] or "-", k["created"], str(k["rate_limit"] or "unlimited")) for k in keys]
+    widths = [max(len(r[i]) for r in rows) for i in range(4)]
+    for row in rows:
+        print("  ".join(cell.ljust(w) for cell, w in zip(row, widths, strict=True)).rstrip())
+
+
+def _cmd_keys_revoke(args):
+    _keystore(args).revoke(args.id)
+    print(f"revoked key {args.id}")
+
+
+_COMMANDS = (_add_data, _add_attribution, _add_serve, _add_server)
 
 
 if __name__ == "__main__":
