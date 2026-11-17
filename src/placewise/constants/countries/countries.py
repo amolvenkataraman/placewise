@@ -1,0 +1,301 @@
+"""Countries and territories: ISO 3166-1 alpha-2, alpha-3 and numeric codes with English names.
+
+Sources:
+- Codes and ISO short names: ISO 3166-1, https://www.iso.org/iso-3166-country-codes.html, as
+  mirrored by Debian's iso-codes package (Salsa: https://salsa.debian.org/iso-codes-team/iso-codes),
+  with ISO's 2022 change of Turkey's short name to Türkiye. All 249 assigned codes are here.
+- Aliases: the ISO short and formal names where they differ from `name`, plus the common English
+  forms location strings use (USA, U.S., America, UK, Britain, UAE, Holland, South Korea ...).
+
+`name` is the English short name in natural order: ISO's inverted or formal forms ("Korea,
+Republic of", "Russian Federation", "Viet Nam") become the names people write ("South Korea",
+"Russia", "Vietnam") and stay as aliases. England, Scotland, Wales and Northern
+Ireland are the United Kingdom's subdivisions (countries.gb), not aliases here.
+"""
+
+from dataclasses import dataclass
+
+from .._keys import key
+
+
+@dataclass(frozen=True, slots=True)
+class Country:
+    alpha2: str
+    alpha3: str
+    numeric: str  # three digits, zero padded
+    name: str
+    aliases: tuple[str, ...] = ()
+
+
+# One row per country; long alias lists run past the line limit on purpose.
+# fmt: off
+COUNTRIES = (
+    Country("AD", "AND", "020", "Andorra", ('Principality of Andorra',)),
+    Country("AE", "ARE", "784", "United Arab Emirates", ('UAE', 'U.A.E.', 'Emirates')),
+    Country("AF", "AFG", "004", "Afghanistan", ('Islamic Republic of Afghanistan',)),
+    Country("AG", "ATG", "028", "Antigua and Barbuda", ()),
+    Country("AI", "AIA", "660", "Anguilla", ()),
+    Country("AL", "ALB", "008", "Albania", ('Republic of Albania',)),
+    Country("AM", "ARM", "051", "Armenia", ('Republic of Armenia',)),
+    Country("AO", "AGO", "024", "Angola", ('Republic of Angola',)),
+    Country("AQ", "ATA", "010", "Antarctica", ()),
+    Country("AR", "ARG", "032", "Argentina", ('Argentine Republic',)),
+    Country("AS", "ASM", "016", "American Samoa", ()),
+    Country("AT", "AUT", "040", "Austria", ('Republic of Austria',)),
+    Country("AU", "AUS", "036", "Australia", ()),
+    Country("AW", "ABW", "533", "Aruba", ()),
+    Country("AX", "ALA", "248", "Åland Islands", ()),
+    Country("AZ", "AZE", "031", "Azerbaijan", ('Republic of Azerbaijan',)),
+    Country("BA", "BIH", "070", "Bosnia and Herzegovina", ('Republic of Bosnia and Herzegovina',)),
+    Country("BB", "BRB", "052", "Barbados", ()),
+    Country("BD", "BGD", "050", "Bangladesh", ("People's Republic of Bangladesh",)),
+    Country("BE", "BEL", "056", "Belgium", ('Kingdom of Belgium',)),
+    Country("BF", "BFA", "854", "Burkina Faso", ()),
+    Country("BG", "BGR", "100", "Bulgaria", ('Republic of Bulgaria',)),
+    Country("BH", "BHR", "048", "Bahrain", ('Kingdom of Bahrain',)),
+    Country("BI", "BDI", "108", "Burundi", ('Republic of Burundi',)),
+    Country("BJ", "BEN", "204", "Benin", ('Republic of Benin',)),
+    Country("BL", "BLM", "652", "Saint Barthélemy", ()),
+    Country("BM", "BMU", "060", "Bermuda", ()),
+    Country("BN", "BRN", "096", "Brunei", ('Brunei Darussalam',)),
+    Country("BO", "BOL", "068", "Bolivia", ('Bolivia, Plurinational State of', 'Plurinational State of Bolivia')),  # noqa: E501
+    Country("BQ", "BES", "535", "Bonaire, Sint Eustatius and Saba", ()),
+    Country("BR", "BRA", "076", "Brazil", ('Federative Republic of Brazil',)),
+    Country("BS", "BHS", "044", "Bahamas", ('Commonwealth of the Bahamas', 'The Bahamas')),
+    Country("BT", "BTN", "064", "Bhutan", ('Kingdom of Bhutan',)),
+    Country("BV", "BVT", "074", "Bouvet Island", ()),
+    Country("BW", "BWA", "072", "Botswana", ('Republic of Botswana',)),
+    Country("BY", "BLR", "112", "Belarus", ('Republic of Belarus',)),
+    Country("BZ", "BLZ", "084", "Belize", ()),
+    Country("CA", "CAN", "124", "Canada", ()),
+    Country("CC", "CCK", "166", "Cocos (Keeling) Islands", ()),
+    Country("CD", "COD", "180", "Democratic Republic of the Congo", ('Congo, The Democratic Republic of the', 'DRC', 'DR Congo', 'Congo-Kinshasa')),  # noqa: E501
+    Country("CF", "CAF", "140", "Central African Republic", ()),
+    Country("CG", "COG", "178", "Republic of the Congo", ('Congo', 'Congo-Brazzaville')),
+    Country("CH", "CHE", "756", "Switzerland", ('Swiss Confederation',)),
+    Country("CI", "CIV", "384", "Côte d'Ivoire", ("Republic of Côte d'Ivoire", 'Ivory Coast')),
+    Country("CK", "COK", "184", "Cook Islands", ()),
+    Country("CL", "CHL", "152", "Chile", ('Republic of Chile',)),
+    Country("CM", "CMR", "120", "Cameroon", ('Republic of Cameroon',)),
+    Country("CN", "CHN", "156", "China", ("People's Republic of China", 'PRC', 'Mainland China')),
+    Country("CO", "COL", "170", "Colombia", ('Republic of Colombia',)),
+    Country("CR", "CRI", "188", "Costa Rica", ('Republic of Costa Rica',)),
+    Country("CU", "CUB", "192", "Cuba", ('Republic of Cuba',)),
+    Country("CV", "CPV", "132", "Cabo Verde", ('Republic of Cabo Verde', 'Cape Verde')),
+    Country("CW", "CUW", "531", "Curaçao", ()),
+    Country("CX", "CXR", "162", "Christmas Island", ()),
+    Country("CY", "CYP", "196", "Cyprus", ('Republic of Cyprus',)),
+    Country("CZ", "CZE", "203", "Czechia", ('Czech Republic',)),
+    Country("DE", "DEU", "276", "Germany", ('Federal Republic of Germany',)),
+    Country("DJ", "DJI", "262", "Djibouti", ('Republic of Djibouti',)),
+    Country("DK", "DNK", "208", "Denmark", ('Kingdom of Denmark',)),
+    Country("DM", "DMA", "212", "Dominica", ('Commonwealth of Dominica',)),
+    Country("DO", "DOM", "214", "Dominican Republic", ()),
+    Country("DZ", "DZA", "012", "Algeria", ("People's Democratic Republic of Algeria",)),
+    Country("EC", "ECU", "218", "Ecuador", ('Republic of Ecuador',)),
+    Country("EE", "EST", "233", "Estonia", ('Republic of Estonia',)),
+    Country("EG", "EGY", "818", "Egypt", ('Arab Republic of Egypt',)),
+    Country("EH", "ESH", "732", "Western Sahara", ()),
+    Country("ER", "ERI", "232", "Eritrea", ('the State of Eritrea',)),
+    Country("ES", "ESP", "724", "Spain", ('Kingdom of Spain',)),
+    Country("ET", "ETH", "231", "Ethiopia", ('Federal Democratic Republic of Ethiopia',)),
+    Country("FI", "FIN", "246", "Finland", ('Republic of Finland',)),
+    Country("FJ", "FJI", "242", "Fiji", ('Republic of Fiji',)),
+    Country("FK", "FLK", "238", "Falkland Islands", ('Falkland Islands (Malvinas)',)),
+    Country("FM", "FSM", "583", "Micronesia", ('Micronesia, Federated States of', 'Federated States of Micronesia')),  # noqa: E501
+    Country("FO", "FRO", "234", "Faroe Islands", ()),
+    Country("FR", "FRA", "250", "France", ('French Republic',)),
+    Country("GA", "GAB", "266", "Gabon", ('Gabonese Republic',)),
+    Country("GB", "GBR", "826", "United Kingdom", ('United Kingdom of Great Britain and Northern Ireland', 'UK', 'U.K.', 'Britain', 'Great Britain')),  # noqa: E501
+    Country("GD", "GRD", "308", "Grenada", ()),
+    Country("GE", "GEO", "268", "Georgia", ()),
+    Country("GF", "GUF", "254", "French Guiana", ()),
+    Country("GG", "GGY", "831", "Guernsey", ()),
+    Country("GH", "GHA", "288", "Ghana", ('Republic of Ghana',)),
+    Country("GI", "GIB", "292", "Gibraltar", ()),
+    Country("GL", "GRL", "304", "Greenland", ()),
+    Country("GM", "GMB", "270", "Gambia", ('Republic of the Gambia', 'The Gambia')),
+    Country("GN", "GIN", "324", "Guinea", ('Republic of Guinea',)),
+    Country("GP", "GLP", "312", "Guadeloupe", ()),
+    Country("GQ", "GNQ", "226", "Equatorial Guinea", ('Republic of Equatorial Guinea',)),
+    Country("GR", "GRC", "300", "Greece", ('Hellenic Republic',)),
+    Country("GS", "SGS", "239", "South Georgia and the South Sandwich Islands", ()),
+    Country("GT", "GTM", "320", "Guatemala", ('Republic of Guatemala',)),
+    Country("GU", "GUM", "316", "Guam", ()),
+    Country("GW", "GNB", "624", "Guinea-Bissau", ('Republic of Guinea-Bissau',)),
+    Country("GY", "GUY", "328", "Guyana", ('Republic of Guyana',)),
+    Country("HK", "HKG", "344", "Hong Kong", ('Hong Kong Special Administrative Region of China', 'Hong Kong SAR', 'Hong Kong SAR China')),  # noqa: E501
+    Country("HM", "HMD", "334", "Heard Island and McDonald Islands", ()),
+    Country("HN", "HND", "340", "Honduras", ('Republic of Honduras',)),
+    Country("HR", "HRV", "191", "Croatia", ('Republic of Croatia',)),
+    Country("HT", "HTI", "332", "Haiti", ('Republic of Haiti',)),
+    Country("HU", "HUN", "348", "Hungary", ()),
+    Country("ID", "IDN", "360", "Indonesia", ('Republic of Indonesia',)),
+    Country("IE", "IRL", "372", "Ireland", ()),
+    Country("IL", "ISR", "376", "Israel", ('State of Israel',)),
+    Country("IM", "IMN", "833", "Isle of Man", ()),
+    Country("IN", "IND", "356", "India", ('Republic of India',)),
+    Country("IO", "IOT", "086", "British Indian Ocean Territory", ()),
+    Country("IQ", "IRQ", "368", "Iraq", ('Republic of Iraq',)),
+    Country("IR", "IRN", "364", "Iran", ('Iran, Islamic Republic of', 'Islamic Republic of Iran')),
+    Country("IS", "ISL", "352", "Iceland", ('Republic of Iceland',)),
+    Country("IT", "ITA", "380", "Italy", ('Italian Republic',)),
+    Country("JE", "JEY", "832", "Jersey", ()),
+    Country("JM", "JAM", "388", "Jamaica", ()),
+    Country("JO", "JOR", "400", "Jordan", ('Hashemite Kingdom of Jordan',)),
+    Country("JP", "JPN", "392", "Japan", ()),
+    Country("KE", "KEN", "404", "Kenya", ('Republic of Kenya',)),
+    Country("KG", "KGZ", "417", "Kyrgyzstan", ('Kyrgyz Republic',)),
+    Country("KH", "KHM", "116", "Cambodia", ('Kingdom of Cambodia',)),
+    Country("KI", "KIR", "296", "Kiribati", ('Republic of Kiribati',)),
+    Country("KM", "COM", "174", "Comoros", ('Union of the Comoros',)),
+    Country("KN", "KNA", "659", "Saint Kitts and Nevis", ()),
+    Country("KP", "PRK", "408", "North Korea", ("Korea, Democratic People's Republic of", "Democratic People's Republic of Korea")),  # noqa: E501
+    Country("KR", "KOR", "410", "South Korea", ('Korea, Republic of', 'Korea', 'Republic of Korea')),
+    Country("KW", "KWT", "414", "Kuwait", ('State of Kuwait',)),
+    Country("KY", "CYM", "136", "Cayman Islands", ()),
+    Country("KZ", "KAZ", "398", "Kazakhstan", ('Republic of Kazakhstan',)),
+    Country("LA", "LAO", "418", "Laos", ("Lao People's Democratic Republic",)),
+    Country("LB", "LBN", "422", "Lebanon", ('Lebanese Republic',)),
+    Country("LC", "LCA", "662", "Saint Lucia", ()),
+    Country("LI", "LIE", "438", "Liechtenstein", ('Principality of Liechtenstein',)),
+    Country("LK", "LKA", "144", "Sri Lanka", ('Democratic Socialist Republic of Sri Lanka',)),
+    Country("LR", "LBR", "430", "Liberia", ('Republic of Liberia',)),
+    Country("LS", "LSO", "426", "Lesotho", ('Kingdom of Lesotho',)),
+    Country("LT", "LTU", "440", "Lithuania", ('Republic of Lithuania',)),
+    Country("LU", "LUX", "442", "Luxembourg", ('Grand Duchy of Luxembourg',)),
+    Country("LV", "LVA", "428", "Latvia", ('Republic of Latvia',)),
+    Country("LY", "LBY", "434", "Libya", ()),
+    Country("MA", "MAR", "504", "Morocco", ('Kingdom of Morocco',)),
+    Country("MC", "MCO", "492", "Monaco", ('Principality of Monaco',)),
+    Country("MD", "MDA", "498", "Moldova", ('Moldova, Republic of', 'Republic of Moldova')),
+    Country("ME", "MNE", "499", "Montenegro", ()),
+    Country("MF", "MAF", "663", "Saint Martin", ('Saint Martin (French part)',)),
+    Country("MG", "MDG", "450", "Madagascar", ('Republic of Madagascar',)),
+    Country("MH", "MHL", "584", "Marshall Islands", ('Republic of the Marshall Islands',)),
+    Country("MK", "MKD", "807", "North Macedonia", ('Republic of North Macedonia', 'Macedonia')),
+    Country("ML", "MLI", "466", "Mali", ('Republic of Mali',)),
+    Country("MM", "MMR", "104", "Myanmar", ('Republic of Myanmar', 'Burma')),
+    Country("MN", "MNG", "496", "Mongolia", ()),
+    Country("MO", "MAC", "446", "Macao", ('Macao Special Administrative Region of China', 'Macau', 'Macao SAR')),  # noqa: E501
+    Country("MP", "MNP", "580", "Northern Mariana Islands", ('Commonwealth of the Northern Mariana Islands',)),  # noqa: E501
+    Country("MQ", "MTQ", "474", "Martinique", ()),
+    Country("MR", "MRT", "478", "Mauritania", ('Islamic Republic of Mauritania',)),
+    Country("MS", "MSR", "500", "Montserrat", ()),
+    Country("MT", "MLT", "470", "Malta", ('Republic of Malta',)),
+    Country("MU", "MUS", "480", "Mauritius", ('Republic of Mauritius',)),
+    Country("MV", "MDV", "462", "Maldives", ('Republic of Maldives',)),
+    Country("MW", "MWI", "454", "Malawi", ('Republic of Malawi',)),
+    Country("MX", "MEX", "484", "Mexico", ('United Mexican States',)),
+    Country("MY", "MYS", "458", "Malaysia", ()),
+    Country("MZ", "MOZ", "508", "Mozambique", ('Republic of Mozambique',)),
+    Country("NA", "NAM", "516", "Namibia", ('Republic of Namibia',)),
+    Country("NC", "NCL", "540", "New Caledonia", ()),
+    Country("NE", "NER", "562", "Niger", ('Republic of the Niger',)),
+    Country("NF", "NFK", "574", "Norfolk Island", ()),
+    Country("NG", "NGA", "566", "Nigeria", ('Federal Republic of Nigeria',)),
+    Country("NI", "NIC", "558", "Nicaragua", ('Republic of Nicaragua',)),
+    Country("NL", "NLD", "528", "Netherlands", ('Kingdom of the Netherlands', 'Holland', 'The Netherlands')),
+    Country("NO", "NOR", "578", "Norway", ('Kingdom of Norway',)),
+    Country("NP", "NPL", "524", "Nepal", ('Federal Democratic Republic of Nepal',)),
+    Country("NR", "NRU", "520", "Nauru", ('Republic of Nauru',)),
+    Country("NU", "NIU", "570", "Niue", ()),
+    Country("NZ", "NZL", "554", "New Zealand", ()),
+    Country("OM", "OMN", "512", "Oman", ('Sultanate of Oman',)),
+    Country("PA", "PAN", "591", "Panama", ('Republic of Panama',)),
+    Country("PE", "PER", "604", "Peru", ('Republic of Peru',)),
+    Country("PF", "PYF", "258", "French Polynesia", ()),
+    Country("PG", "PNG", "598", "Papua New Guinea", ('Independent State of Papua New Guinea',)),
+    Country("PH", "PHL", "608", "Philippines", ('Republic of the Philippines', 'The Philippines')),
+    Country("PK", "PAK", "586", "Pakistan", ('Islamic Republic of Pakistan',)),
+    Country("PL", "POL", "616", "Poland", ('Republic of Poland',)),
+    Country("PM", "SPM", "666", "Saint Pierre and Miquelon", ()),
+    Country("PN", "PCN", "612", "Pitcairn", ()),
+    Country("PR", "PRI", "630", "Puerto Rico", ()),
+    Country("PS", "PSE", "275", "Palestine", ('Palestine, State of', 'the State of Palestine')),
+    Country("PT", "PRT", "620", "Portugal", ('Portuguese Republic',)),
+    Country("PW", "PLW", "585", "Palau", ('Republic of Palau',)),
+    Country("PY", "PRY", "600", "Paraguay", ('Republic of Paraguay',)),
+    Country("QA", "QAT", "634", "Qatar", ('State of Qatar',)),
+    Country("RE", "REU", "638", "Réunion", ()),
+    Country("RO", "ROU", "642", "Romania", ()),
+    Country("RS", "SRB", "688", "Serbia", ('Republic of Serbia',)),
+    Country("RU", "RUS", "643", "Russia", ('Russian Federation',)),
+    Country("RW", "RWA", "646", "Rwanda", ('Rwandese Republic',)),
+    Country("SA", "SAU", "682", "Saudi Arabia", ('Kingdom of Saudi Arabia', 'KSA')),
+    Country("SB", "SLB", "090", "Solomon Islands", ()),
+    Country("SC", "SYC", "690", "Seychelles", ('Republic of Seychelles',)),
+    Country("SD", "SDN", "729", "Sudan", ('Republic of the Sudan',)),
+    Country("SE", "SWE", "752", "Sweden", ('Kingdom of Sweden',)),
+    Country("SG", "SGP", "702", "Singapore", ('Republic of Singapore',)),
+    Country("SH", "SHN", "654", "Saint Helena, Ascension and Tristan da Cunha", ()),
+    Country("SI", "SVN", "705", "Slovenia", ('Republic of Slovenia',)),
+    Country("SJ", "SJM", "744", "Svalbard and Jan Mayen", ()),
+    Country("SK", "SVK", "703", "Slovakia", ('Slovak Republic',)),
+    Country("SL", "SLE", "694", "Sierra Leone", ('Republic of Sierra Leone',)),
+    Country("SM", "SMR", "674", "San Marino", ('Republic of San Marino',)),
+    Country("SN", "SEN", "686", "Senegal", ('Republic of Senegal',)),
+    Country("SO", "SOM", "706", "Somalia", ('Federal Republic of Somalia',)),
+    Country("SR", "SUR", "740", "Suriname", ('Republic of Suriname',)),
+    Country("SS", "SSD", "728", "South Sudan", ('Republic of South Sudan',)),
+    Country("ST", "STP", "678", "Sao Tome and Principe", ('Democratic Republic of Sao Tome and Principe',)),
+    Country("SV", "SLV", "222", "El Salvador", ('Republic of El Salvador',)),
+    Country("SX", "SXM", "534", "Sint Maarten", ('Sint Maarten (Dutch part)',)),
+    Country("SY", "SYR", "760", "Syria", ('Syrian Arab Republic',)),
+    Country("SZ", "SWZ", "748", "Eswatini", ('Kingdom of Eswatini', 'Swaziland')),
+    Country("TC", "TCA", "796", "Turks and Caicos Islands", ()),
+    Country("TD", "TCD", "148", "Chad", ('Republic of Chad',)),
+    Country("TF", "ATF", "260", "French Southern Territories", ()),
+    Country("TG", "TGO", "768", "Togo", ('Togolese Republic',)),
+    Country("TH", "THA", "764", "Thailand", ('Kingdom of Thailand',)),
+    Country("TJ", "TJK", "762", "Tajikistan", ('Republic of Tajikistan',)),
+    Country("TK", "TKL", "772", "Tokelau", ()),
+    Country("TL", "TLS", "626", "Timor-Leste", ('Democratic Republic of Timor-Leste', 'East Timor')),
+    Country("TM", "TKM", "795", "Turkmenistan", ()),
+    Country("TN", "TUN", "788", "Tunisia", ('Republic of Tunisia',)),
+    Country("TO", "TON", "776", "Tonga", ('Kingdom of Tonga',)),
+    Country("TR", "TUR", "792", "Türkiye", ('Turkey', 'Republic of Turkey', 'Republic of Türkiye')),
+    Country("TT", "TTO", "780", "Trinidad and Tobago", ('Republic of Trinidad and Tobago',)),
+    Country("TV", "TUV", "798", "Tuvalu", ()),
+    Country("TW", "TWN", "158", "Taiwan", ('Taiwan, Province of China',)),
+    Country("TZ", "TZA", "834", "Tanzania", ('Tanzania, United Republic of', 'United Republic of Tanzania')),
+    Country("UA", "UKR", "804", "Ukraine", ()),
+    Country("UG", "UGA", "800", "Uganda", ('Republic of Uganda',)),
+    Country("UM", "UMI", "581", "United States Minor Outlying Islands", ()),
+    Country("US", "USA", "840", "United States", ('United States of America', 'USA', 'U.S.', 'U.S.A.', 'America', 'US of A')),  # noqa: E501
+    Country("UY", "URY", "858", "Uruguay", ('Eastern Republic of Uruguay',)),
+    Country("UZ", "UZB", "860", "Uzbekistan", ('Republic of Uzbekistan',)),
+    Country("VA", "VAT", "336", "Vatican City", ('Holy See (Vatican City State)', 'Vatican', 'Holy See')),
+    Country("VC", "VCT", "670", "Saint Vincent and the Grenadines", ()),
+    Country("VE", "VEN", "862", "Venezuela", ('Venezuela, Bolivarian Republic of', 'Bolivarian Republic of Venezuela')),  # noqa: E501
+    Country("VG", "VGB", "092", "British Virgin Islands", ('Virgin Islands, British', 'BVI')),
+    Country("VI", "VIR", "850", "U.S. Virgin Islands", ('Virgin Islands, U.S.', 'Virgin Islands of the United States', 'USVI', 'US Virgin Islands')),  # noqa: E501
+    Country("VN", "VNM", "704", "Vietnam", ('Viet Nam', 'Socialist Republic of Viet Nam')),
+    Country("VU", "VUT", "548", "Vanuatu", ('Republic of Vanuatu',)),
+    Country("WF", "WLF", "876", "Wallis and Futuna", ()),
+    Country("WS", "WSM", "882", "Samoa", ('Independent State of Samoa',)),
+    Country("YE", "YEM", "887", "Yemen", ('Republic of Yemen',)),
+    Country("YT", "MYT", "175", "Mayotte", ()),
+    Country("ZA", "ZAF", "710", "South Africa", ('Republic of South Africa',)),
+    Country("ZM", "ZMB", "894", "Zambia", ('Republic of Zambia',)),
+    Country("ZW", "ZWE", "716", "Zimbabwe", ('Republic of Zimbabwe',)),
+)
+# fmt: on
+
+BY_ALPHA2 = {c.alpha2: c for c in COUNTRIES}
+BY_ALPHA3 = {c.alpha3: c for c in COUNTRIES}
+BY_NUMERIC = {c.numeric: c for c in COUNTRIES}
+# every name and alias, normalised (see _keys.key), to alpha-2; codes themselves are not here
+BY_NAME = {key(n): c.alpha2 for c in COUNTRIES for n in (c.name, *c.aliases)}
+
+
+def lookup(text):
+    """Alpha-2 code for an alpha-2 or alpha-3 code, name or alias ("CA", "CAN", "Canada", "U.S."),
+    or None. Case doesn't matter here; the parser decides when a short code is really a code."""
+    k = key(text)
+    upper = k.upper().replace(" ", "")
+    if len(upper) == 2 and upper in BY_ALPHA2:
+        return upper
+    if len(upper) == 3 and upper in BY_ALPHA3:
+        return BY_ALPHA3[upper].alpha2
+    return BY_NAME.get(k)

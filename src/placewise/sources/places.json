@@ -10,7 +10,8 @@
         "licence": "CC-BY-4.0",
         "credit": "GeoNames (geonames.org), CC BY 4.0",
         "used_in": [
-          "world/cities"
+          "world/cities",
+          "package: constants/countries/<country>/cities.py (generated)"
         ],
         "downloads": {
           "cities": "https://download.geonames.org/export/dump/cities1000.zip",

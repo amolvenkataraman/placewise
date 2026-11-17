@@ -1,0 +1,506 @@
+{
+  "_comment": "Metro and vernacular regions of United States: a curated dataset. packbuild.regions turns it into src/placewise/constants/countries/regions.py (python -m packbuild.regions). Fields: id (stable, placewise:region/<slug>), short_name (what a parsed place's `region` holds), name, country (ISO 3166-1 alpha-2), admin1 (every subdivision the region reaches into, by its ISO 3166-2 suffix), aliases, members (municipality or county ids from the packs, such as census:<GEOID> or statcan:<CSDUID>; empty until verified against the pack data, never guessed), principal_cities (well-known member cities and their admin1, so a parsed city can be placed in the region offline), city_aliases (other names of member cities -> the name placewise prefers) and notes (why the region is drawn as it is).",
+  "regions": [
+    {
+      "id": "placewise:region/sf-bay-area",
+      "short_name": "Bay Area",
+      "name": "San Francisco Bay Area",
+      "country": "US",
+      "admin1": [
+        "CA"
+      ],
+      "aliases": [
+        "SF Bay Area",
+        "SFBA",
+        "San Francisco Bay Area",
+        "SF Bay",
+        "Silicon Valley",
+        "Bay Area Region"
+      ],
+      "members": [],
+      "principal_cities": {
+        "San Francisco": "CA",
+        "South San Francisco": "CA",
+        "Oakland": "CA",
+        "Berkeley": "CA",
+        "Emeryville": "CA",
+        "San Jose": "CA",
+        "Palo Alto": "CA",
+        "Mountain View": "CA",
+        "Sunnyvale": "CA",
+        "Santa Clara": "CA",
+        "Menlo Park": "CA",
+        "Redwood City": "CA",
+        "Cupertino": "CA",
+        "Fremont": "CA",
+        "San Mateo": "CA",
+        "Milpitas": "CA",
+        "Foster City": "CA",
+        "Burlingame": "CA",
+        "San Bruno": "CA",
+        "Hayward": "CA",
+        "Pleasanton": "CA",
+        "Walnut Creek": "CA",
+        "Los Gatos": "CA",
+        "Los Altos": "CA",
+        "San Carlos": "CA",
+        "Belmont": "CA",
+        "Campbell": "CA",
+        "Livermore": "CA",
+        "Daly City": "CA",
+        "San Rafael": "CA",
+        "San Ramon": "CA",
+        "San Leandro": "CA",
+        "Napa": "CA",
+        "Santa Rosa": "CA"
+      },
+      "city_aliases": {
+        "SF": "San Francisco",
+        "South SF": "South San Francisco",
+        "SFO": "San Francisco",
+        "SSF": "South San Francisco",
+        "SJ": "San Jose",
+        "SJC": "San Jose"
+      },
+      "notes": "The nine counties around San Francisco Bay; Silicon Valley, its southern part, is read as the Bay Area."
+    },
+    {
+      "id": "placewise:region/greater-los-angeles",
+      "short_name": "Greater Los Angeles",
+      "name": "Greater Los Angeles",
+      "country": "US",
+      "admin1": [
+        "CA"
+      ],
+      "aliases": [
+        "Greater LA",
+        "LA Metro",
+        "Los Angeles Metro",
+        "Los Angeles Area",
+        "LA Area",
+        "Los Angeles Metropolitan Area"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Los Angeles": "CA",
+        "Santa Monica": "CA",
+        "Pasadena": "CA",
+        "Burbank": "CA",
+        "Long Beach": "CA",
+        "Irvine": "CA",
+        "Anaheim": "CA",
+        "Santa Ana": "CA",
+        "Culver City": "CA",
+        "El Segundo": "CA",
+        "Torrance": "CA",
+        "Hawthorne": "CA",
+        "Costa Mesa": "CA",
+        "Newport Beach": "CA",
+        "Huntington Beach": "CA"
+      },
+      "city_aliases": {
+        "LA": "Los Angeles",
+        "LAX": "Los Angeles"
+      },
+      "notes": "The Los Angeles metro: Los Angeles and Orange counties, California."
+    },
+    {
+      "id": "placewise:region/new-york-metro",
+      "short_name": "NYC",
+      "name": "New York metropolitan area",
+      "country": "US",
+      "admin1": [
+        "NY",
+        "NJ",
+        "CT",
+        "PA"
+      ],
+      "aliases": [
+        "New York Metro",
+        "NYC Metro",
+        "NY Metro",
+        "New York Metropolitan Area",
+        "Greater New York",
+        "Tri-State Area",
+        "New York Area",
+        "NYC Area",
+        "New York City Metropolitan Area"
+      ],
+      "members": [],
+      "principal_cities": {
+        "New York City": "NY",
+        "Manhattan": "NY",
+        "Brooklyn": "NY",
+        "Queens": "NY",
+        "Bronx": "NY",
+        "Staten Island": "NY",
+        "Long Island City": "NY",
+        "White Plains": "NY",
+        "Yonkers": "NY",
+        "Jersey City": "NJ",
+        "Newark": "NJ",
+        "Hoboken": "NJ",
+        "Edison": "NJ",
+        "Morristown": "NJ",
+        "Stamford": "CT",
+        "Greenwich": "CT"
+      },
+      "city_aliases": {
+        "NYC": "New York City",
+        "New York City": "New York City",
+        "New York": "New York City",
+        "NY City": "New York City",
+        "NY": "New York City"
+      },
+      "notes": "Combined-statistical-area usage (the Tri-State Area): New York, northern New Jersey, southwestern Connecticut and Pike County, Pennsylvania."
+    },
+    {
+      "id": "placewise:region/greater-boston",
+      "short_name": "Greater Boston",
+      "name": "Greater Boston",
+      "country": "US",
+      "admin1": [
+        "MA",
+        "NH"
+      ],
+      "aliases": [
+        "Greater Boston Area",
+        "Boston Area",
+        "Boston Metro",
+        "Metro Boston",
+        "Boston Metropolitan Area"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Boston": "MA",
+        "Cambridge": "MA",
+        "Somerville": "MA",
+        "Waltham": "MA",
+        "Newton": "MA",
+        "Quincy": "MA",
+        "Burlington": "MA",
+        "Woburn": "MA",
+        "Needham": "MA",
+        "Wellesley": "MA",
+        "Framingham": "MA",
+        "Lowell": "MA",
+        "Brookline": "MA",
+        "Watertown": "MA",
+        "Lexington": "MA",
+        "Nashua": "NH"
+      },
+      "city_aliases": {
+        "BOS": "Boston"
+      },
+      "notes": "The Boston metro reaches into southern New Hampshire."
+    },
+    {
+      "id": "placewise:region/greater-seattle",
+      "short_name": "Greater Seattle",
+      "name": "Greater Seattle",
+      "country": "US",
+      "admin1": [
+        "WA"
+      ],
+      "aliases": [
+        "Greater Seattle Area",
+        "Seattle Area",
+        "Seattle Metro",
+        "Seattle Metropolitan Area",
+        "Puget Sound",
+        "Puget Sound Region"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Seattle": "WA",
+        "Bellevue": "WA",
+        "Redmond": "WA",
+        "Kirkland": "WA",
+        "Tacoma": "WA",
+        "Everett": "WA",
+        "Bothell": "WA",
+        "Renton": "WA",
+        "Issaquah": "WA",
+        "Kent": "WA",
+        "Sammamish": "WA",
+        "Lynnwood": "WA",
+        "Woodinville": "WA",
+        "Federal Way": "WA"
+      },
+      "city_aliases": {
+        "SEA": "Seattle"
+      },
+      "notes": "The Seattle metro around Puget Sound, Washington: King, Pierce and Snohomish counties."
+    },
+    {
+      "id": "placewise:region/dallas-fort-worth",
+      "short_name": "DFW",
+      "name": "Dallas-Fort Worth metroplex",
+      "country": "US",
+      "admin1": [
+        "TX"
+      ],
+      "aliases": [
+        "Dallas-Fort Worth",
+        "Dallas Fort Worth",
+        "Dallas/Fort Worth",
+        "Metroplex",
+        "DFW Metroplex",
+        "Dallas-Fort Worth Metroplex",
+        "DFW Area",
+        "Dallas Area"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Dallas": "TX",
+        "Fort Worth": "TX",
+        "Arlington": "TX",
+        "Plano": "TX",
+        "Irving": "TX",
+        "Frisco": "TX",
+        "Richardson": "TX",
+        "Garland": "TX",
+        "McKinney": "TX",
+        "Denton": "TX",
+        "Addison": "TX",
+        "Carrollton": "TX",
+        "Grapevine": "TX",
+        "Southlake": "TX",
+        "Allen": "TX",
+        "Lewisville": "TX",
+        "Coppell": "TX"
+      },
+      "notes": "The Dallas-Fort Worth metroplex, North Texas."
+    },
+    {
+      "id": "placewise:region/greater-houston",
+      "short_name": "Greater Houston",
+      "name": "Greater Houston",
+      "country": "US",
+      "admin1": [
+        "TX"
+      ],
+      "aliases": [
+        "Houston Area",
+        "Houston Metro",
+        "Houston Metropolitan Area"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Houston": "TX",
+        "The Woodlands": "TX",
+        "Sugar Land": "TX",
+        "Katy": "TX",
+        "Pearland": "TX"
+      },
+      "city_aliases": {
+        "HOU": "Houston"
+      },
+      "notes": "The Houston metro, Texas."
+    },
+    {
+      "id": "placewise:region/washington-metro",
+      "short_name": "DMV",
+      "name": "Washington metropolitan area",
+      "country": "US",
+      "admin1": [
+        "DC",
+        "MD",
+        "VA",
+        "WV"
+      ],
+      "aliases": [
+        "DC Metro",
+        "DC Metro Area",
+        "DC Area",
+        "Washington DC Metro",
+        "Washington DC Area",
+        "Washington Metropolitan Area",
+        "Greater Washington",
+        "Washington DC Metropolitan Area"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Washington": "DC",
+        "Arlington": "VA",
+        "Alexandria": "VA",
+        "Reston": "VA",
+        "Herndon": "VA",
+        "McLean": "VA",
+        "Tysons": "VA",
+        "Fairfax": "VA",
+        "Chantilly": "VA",
+        "Bethesda": "MD",
+        "Rockville": "MD",
+        "Silver Spring": "MD",
+        "Gaithersburg": "MD",
+        "College Park": "MD"
+      },
+      "city_aliases": {
+        "DC": "Washington"
+      },
+      "notes": "DC, Maryland and Virginia, as people say it; the metro also takes in Jefferson County, West Virginia."
+    },
+    {
+      "id": "placewise:region/greater-philadelphia",
+      "short_name": "Greater Philadelphia",
+      "name": "Greater Philadelphia",
+      "country": "US",
+      "admin1": [
+        "PA",
+        "NJ",
+        "DE",
+        "MD"
+      ],
+      "aliases": [
+        "Philadelphia Area",
+        "Philadelphia Metro",
+        "Philly Area",
+        "Delaware Valley"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Philadelphia": "PA",
+        "King of Prussia": "PA",
+        "Conshohocken": "PA",
+        "Camden": "NJ",
+        "Cherry Hill": "NJ",
+        "Wilmington": "DE"
+      },
+      "city_aliases": {
+        "Philly": "Philadelphia",
+        "PHL": "Philadelphia"
+      },
+      "notes": "The Philadelphia metro (the Delaware Valley) takes in parts of New Jersey, Delaware and Maryland."
+    },
+    {
+      "id": "placewise:region/chicagoland",
+      "short_name": "Chicagoland",
+      "name": "Chicago metropolitan area",
+      "country": "US",
+      "admin1": [
+        "IL",
+        "IN",
+        "WI"
+      ],
+      "aliases": [
+        "Chicago Area",
+        "Greater Chicago",
+        "Chicago Metro",
+        "Chicago Metro Area",
+        "Chicago Metropolitan Area"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Chicago": "IL",
+        "Evanston": "IL",
+        "Naperville": "IL",
+        "Schaumburg": "IL",
+        "Oak Brook": "IL",
+        "Skokie": "IL",
+        "Deerfield": "IL",
+        "Northbrook": "IL",
+        "Gary": "IN",
+        "Hammond": "IN",
+        "Kenosha": "WI"
+      },
+      "city_aliases": {
+        "CHI": "Chicago"
+      },
+      "notes": "The Chicago metro takes in northwest Indiana and Kenosha County, Wisconsin."
+    },
+    {
+      "id": "placewise:region/metro-atlanta",
+      "short_name": "Metro Atlanta",
+      "name": "Metro Atlanta",
+      "country": "US",
+      "admin1": [
+        "GA"
+      ],
+      "aliases": [
+        "Atlanta Metro",
+        "Greater Atlanta",
+        "Atlanta Area",
+        "Atlanta Metropolitan Area"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Atlanta": "GA",
+        "Alpharetta": "GA",
+        "Marietta": "GA",
+        "Sandy Springs": "GA",
+        "Decatur": "GA",
+        "Kennesaw": "GA",
+        "Norcross": "GA",
+        "Duluth": "GA"
+      },
+      "city_aliases": {
+        "ATL": "Atlanta"
+      },
+      "notes": "The Atlanta metro, Georgia."
+    },
+    {
+      "id": "placewise:region/twin-cities",
+      "short_name": "Twin Cities",
+      "name": "Minneapolis–Saint Paul",
+      "country": "US",
+      "admin1": [
+        "MN",
+        "WI"
+      ],
+      "aliases": [
+        "Minneapolis-Saint Paul",
+        "Minneapolis-St. Paul",
+        "Minneapolis St Paul",
+        "Minneapolis-St Paul",
+        "MSP Area"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Minneapolis": "MN",
+        "Saint Paul": "MN",
+        "St. Paul": "MN",
+        "Bloomington": "MN",
+        "Eden Prairie": "MN",
+        "Edina": "MN",
+        "Eagan": "MN",
+        "Maple Grove": "MN"
+      },
+      "city_aliases": {
+        "MPLS": "Minneapolis",
+        "MSP": "Minneapolis"
+      },
+      "notes": "The Minneapolis-Saint Paul metro takes in two Wisconsin counties."
+    },
+    {
+      "id": "placewise:region/research-triangle",
+      "short_name": "Research Triangle",
+      "name": "Research Triangle",
+      "country": "US",
+      "admin1": [
+        "NC"
+      ],
+      "aliases": [
+        "RTP",
+        "Research Triangle Park",
+        "The Triangle",
+        "Triangle Area",
+        "Raleigh-Durham",
+        "Raleigh Durham"
+      ],
+      "members": [],
+      "principal_cities": {
+        "Raleigh": "NC",
+        "Durham": "NC",
+        "Chapel Hill": "NC",
+        "Cary": "NC",
+        "Morrisville": "NC",
+        "Apex": "NC"
+      },
+      "city_aliases": {
+        "RDU": "Raleigh"
+      },
+      "notes": "The Raleigh-Durham-Chapel Hill area of North Carolina, around Research Triangle Park."
+    }
+  ]
+}

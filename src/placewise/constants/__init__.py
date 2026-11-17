@@ -2,6 +2,7 @@
 
 from . import (
     config,
+    countries,
     crs,
     defaults,
     distance,
@@ -11,6 +12,8 @@ from . import (
     gpx,
     kml,
     licences,
+    location_filter,
+    location_text,
     lookup,
     nmea,
     overrides,
@@ -28,10 +31,12 @@ from . import (
     utm,
     web_mercator,
     wgs84,
+    work_modes,
 )
 
 __all__ = [
     "config",
+    "countries",
     "crs",
     "defaults",
     "distance",
@@ -41,6 +46,8 @@ __all__ = [
     "gpx",
     "kml",
     "licences",
+    "location_filter",
+    "location_text",
     "lookup",
     "nmea",
     "overrides",
@@ -58,4 +65,5 @@ __all__ = [
     "utm",
     "web_mercator",
     "wgs84",
+    "work_modes",
 ]
