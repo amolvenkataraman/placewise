@@ -76,7 +76,8 @@ def test_build_us_fetches_every_registry_url_and_hands_eight_layers_to_the_write
 ):
     calls = []
 
-    def fake_write_pack(out_dir, name, version, layers, created=None):
+    def fake_write_pack(out_dir, name, version, layers, created=None, names=None):
+        assert names is not None and len(names) > 0  # every pack carries a name index
         calls.append((out_dir, name, version, layers))
         return Path(out_dir) / f"{name}-{version}"
 
@@ -115,6 +116,10 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
 
     park = (37.7694, -122.4862)
     assert at("places", *park)["name"] == "San Francisco"
+    sf = pack.names.exact("San Francisco")
+    assert "places" in {pack.names.layers[x] for x in sf.layer}
+    places = sf.layer == pack.names.layers.index("places")
+    assert pack["places"].contains(sf.lat[places][0], sf.lon[places][0], int(sf.row[places][0]))
     assert at("counties", *park)["name"] == "San Francisco County"
     assert at("csa", *park)["name"] == "San Jose-San Francisco-Oakland, CA CSA"
     assert at("cbsa", *park)["type"] == "metro"

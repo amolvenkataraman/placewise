@@ -18,7 +18,7 @@ import datetime as dt
 import logging
 from pathlib import Path
 
-from . import regions_layer
+from . import names, regions_layer
 from .fetch import DEFAULT_CACHE, fetch
 from .layer import write_pack
 from .sources import SOURCES, indiapost, nwdp, url
@@ -71,7 +71,7 @@ def build_india(cache_dir, out_dir, version, refresh=False, **paths):
     layers = build_layers(cache_dir, refresh=refresh, **paths)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "ind", version, layers)
+    return write_pack(Path(out_dir), "ind", version, layers, names=names.for_pack("ind", layers))
 
 
 def main(argv=None):

@@ -23,10 +23,11 @@ from pathlib import Path
 import numpy as np
 
 from placewise.constants import licences
+from placewise.constants import names as names_consts
 from placewise.constants import packs as consts
 from placewise.model import Feature, PackInfo
 
-from . import _arrays, _grid_index
+from . import _arrays, _grid_index, _names_write
 from . import _geometry as gm
 
 
@@ -73,10 +74,11 @@ def write_pack(out_dir, name, version, layers, created=None, names=None):
     layers = list(layers)
     if not layers:
         raise ValueError("a pack needs at least one layer")
-    names = [layer.name for layer in layers]
-    if dupes := sorted(n for n, k in Counter(names).items() if k > 1):
+    layer_names = [layer.name for layer in layers]
+    if dupes := sorted(n for n, k in Counter(layer_names).items() if k > 1):
         raise ValueError(f"duplicate layer name(s): {', '.join(map(str, dupes))}")
     prepared = [_prepare(layer) for layer in layers]
+    plan = None if names is None else _names_write.prepare(names, {p.name: p for p in prepared})
     sources = list(dict.fromkeys(s for p in prepared for s in p.sources))
 
     out_dir = Path(out_dir)
@@ -88,12 +90,14 @@ def write_pack(out_dir, name, version, layers, created=None, names=None):
     try:
         for p in prepared:
             _write_layer(tmp / p.name, p)
+        if plan is not None:
+            _names_write.write(tmp / names_consts.NAMES_DIR, plan, _save, _write_json)
         manifest = {
             "schema": consts.SCHEMA,
             "name": name,
             "version": version,
             "created": _timestamp(created),
-            "layers": names,
+            "layers": layer_names,
             "sources": sources,
             "files": {rel: _file_entry(tmp / rel) for rel in _relative_files(tmp)},
         }
@@ -188,6 +192,8 @@ def write_index(out_dir, packs):
 
 def _prepare(layer):
     _check_name(layer.name, "layer")
+    if layer.name == names_consts.NAMES_DIR:
+        raise ValueError(f"layer name {layer.name!r} is reserved for the name index")
     where = f"layer {layer.name!r}"
     if layer.kind not in consts.KINDS:
         raise ValueError(f"{where}: kind {layer.kind!r} must be one of {', '.join(consts.KINDS)}")

@@ -18,6 +18,7 @@ import logging
 from collections import Counter
 from pathlib import Path
 
+from . import names
 from .fetch import DEFAULT_CACHE
 from .layer import write_pack
 from .sources.parks import _common, cpcad, nps, padus, usfs, wikidata
@@ -54,7 +55,7 @@ def build(region, cache_dir, out_dir, version, refresh=False):
     layers = build_layers(region, cache_dir, refresh)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), PACKS[region], version, layers)
+    return write_pack(Path(out_dir), PACKS[region], version, layers, names=names.for_pack("parks", layers))
 
 
 def main(argv=None):
