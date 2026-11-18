@@ -305,3 +305,45 @@ def test_a_share_alike_pack_may_carry_share_alike_sources(tmp_path, with_share_a
     pack = _pack(tmp_path / "built", "world-sa", sources=(with_share_alike_source,))
     plan = release.prepare_release([pack], tmp_path / "release")
     assert [p.name for p in plan.packs] == ["world-sa"]
+
+
+# --- coverage in the index -----------------------------------------------------------------------
+
+
+def _installed_bytes(pack_dir):
+    return sum(p.stat().st_size for p in Path(pack_dir).rglob("*") if p.is_file())
+
+
+def test_index_says_what_each_pack_covers_and_its_installed_size(tmp_path, built):
+    out = tmp_path / "built"
+    built = [*built, _pack(out, "usa-zip"), _pack(out, "world-water")]
+    plan = release.prepare_release(built, tmp_path / "release")
+    packs = json.loads(plan.index.read_text())["packs"]
+    assert {k: packs["world"][k] for k in ("kind", "covers", "requires")} == {
+        "kind": "base",
+        "covers": ["*"],
+        "requires": [],
+    }
+    assert (packs["usa"]["kind"], packs["usa"]["covers"]) == ("country", ["US"])
+    assert (packs["usa-zip"]["kind"], packs["usa-zip"]["requires"]) == ("postal", ["usa"])
+    assert (packs["world-water"]["kind"], packs["world-water"]["covers"]) == ("water", ["*"])
+    for path in built:
+        entry = packs[json.loads((path / "pack.json").read_text())["name"]]
+        assert entry["installed_bytes"] == _installed_bytes(path)
+        assert entry["archive_bytes"] == entry["size_bytes"]
+
+
+def test_coverage_fields_in_pack_json_win_over_the_name(tmp_path):
+    pack = _pack(tmp_path / "built", "usa-parks-local")
+    manifest = json.loads((pack / "pack.json").read_text())
+    manifest.update(kind="parks", covers=["US", "PR"], requires=["usa-parks"])
+    (pack / "pack.json").write_text(json.dumps(manifest))
+    plan = release.prepare_release([pack], tmp_path / "release")
+    entry = json.loads(plan.index.read_text())["packs"]["usa-parks-local"]
+    assert (entry["kind"], entry["covers"], entry["requires"]) == ("parks", ["PR", "US"], ["usa-parks"])
+
+
+def test_the_store_reads_the_coverage_the_release_wrote(tmp_path, built):
+    plan = release.prepare_release(built, tmp_path / "release")
+    cov = Store(data_dir=tmp_path / "data", index_url=plan.index.as_uri()).coverage()
+    assert cov["usa"].covers == ("US",) and cov["usa"].installed_bytes == _installed_bytes(built[1])

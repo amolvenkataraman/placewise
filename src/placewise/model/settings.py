@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 from placewise.constants import defaults
+from placewise.constants import store as store_const
 
 from ._base import Model, set_field
 
@@ -80,6 +81,13 @@ class NearSettings(Model):
 
 @dataclass(frozen=True, slots=True)
 class DataSettings(Model):
+    """Where packs come from and how they arrive. mode: "auto" fetches the packs a lookup or search
+    needs (of the kinds in auto_packs), "manual" only installs with `placewise data install` (the
+    world pack still installs on first use), "locked" never downloads anything. offline = true is
+    the older spelling of mode = "locked" and wins over mode."""
+
+    mode: str = defaults.DATA_MODE
+    auto_packs: tuple[str, ...] = defaults.DATA_AUTO_PACKS  # pack kinds auto mode may fetch
     offline: bool = False  # never download; a missing pack is an error that names it
     auto_update: str = defaults.AUTO_UPDATE
     pin: str | None = None  # hold a data version, e.g. "2026.11"
@@ -89,7 +97,21 @@ class DataSettings(Model):
 
     def __post_init__(self):
         _check_choice("data.auto_update", self.auto_update, {"never", "weekly"})
+        _check_choice("data.mode", self.mode, set(store_const.MODES))
+        set_field(self, "auto_packs", tuple(self.auto_packs))
+        for kind in self.auto_packs:
+            _check_choice("data.auto_packs entries", kind, set(store_const.AUTO_KINDS))
         set_field(self, "mirrors", tuple(self.mirrors))
+
+    @property
+    def effective_mode(self) -> str:
+        """The mode in force: "locked" whenever offline is set, else mode."""
+        return store_const.MODE_LOCKED if self.offline else self.mode
+
+    @property
+    def locked(self) -> bool:
+        """Nothing may be downloaded, not even the index."""
+        return self.effective_mode == store_const.MODE_LOCKED
 
 
 @dataclass(frozen=True, slots=True)

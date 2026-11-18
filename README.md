@@ -45,8 +45,9 @@ placewise is the third option: the answer a person would give, computed on your 
 > trails, the `reverse`/`explain` CLI commands, Docker. Expect slow first lookups (indexes
 > are built on first use) and roughly 25–50k points/s after that.
 >
-> **Install:** `pip install --pre placewise` (alpha), then `placewise data install world` (and
-> `usa`, `can`, `ind`, `world-water`, `usa-parks` ... as needed; `placewise data list` shows them all).
+> **Install:** `pip install --pre placewise` (alpha). The world pack installs on first use and,
+> in the default auto mode, country packs (`usa`, `can`, `ind`) when a lookup first needs them;
+> `world-water`, `usa-parks` ... are opt-in (see [Data](#data); `placewise data status` shows them all).
 
 ## Coverage
 
@@ -145,7 +146,7 @@ r.label                                       # "Toronto, Ontario, Canada"
 r.admin1.codes, r.tz, r.airport               # ISO codes, "America/Toronto", Nearby(YTZ, 1.8 km)
 placewise.Geocoder().lookup_many(lats, lons)  # vectorised, tens of thousands of points/s
 
-r = placewise.lookup(36.1147, -115.1728)      # with the usa pack installed: the Las Vegas Strip
+r = placewise.lookup(36.1147, -115.1728)      # fetches the usa pack first (auto mode): the Las Vegas Strip
 r.locality.name, r.sublocality.name           # "Las Vegas", "Paradise" (the census place)
 r.postal.name, r.admin2.name                  # "89109", "Clark County"
 
@@ -240,13 +241,43 @@ tool documents what it does *not* protect against.
 
 ## Data
 
+The base install is just the **world** pack (10 MB download, 43 MB on disk), installed on first
+use. Everything else is a pack you add, by hand or on demand:
+
 ```
-placewise data install world          # download, verify and install a pack
-placewise data list                   # installed and available packs (country packs: lookups
-                                      # use them once installed)
+placewise data status                 # mode, installed packs and their size on disk, what auto mode fetches
+placewise data mode                   # how packs arrive: auto (default), manual or locked
+placewise data mode locked            # never download anything (written to placewise.toml)
+placewise data mode auto --kinds country,parks,water   # auto mode may fetch these kinds of pack
+placewise data install usa            # download, verify and install a pack (and any it requires)
+placewise data list                   # installed and available packs, every version
 placewise data update                 # newer versions (never automatic, never deletes)
 placewise attribution                 # the installed packs' sources, licences and credits (--all, --short)
 ```
+
+**Modes** (`data.mode` in `placewise.toml`, `PLACEWISE_DATA_MODE`, `placewise data mode`):
+
+- **auto** (the default): the first lookup batch with points in the US installs `usa`, a point in
+  Canada `can`, and so on, once, before the batch runs, with a log line naming the pack and its
+  size. Only the kinds in `data.auto_packs` are fetched, by default `country` packs, the ones that
+  change the main answer (city, county, metro area, postal code). Add `parks`, `water`,
+  `notable` or `postal` to fetch those too (`PLACEWISE_DATA_AUTO_PACKS=country,parks`). A search
+  that asks for a kind (`find("Banff", kinds="park", country="CA")`) fetches that kind's packs for
+  its country (`can-parks`) even when it isn't in `auto_packs`. Installed packs are used straight
+  away; a lookup that needs nothing new doesn't download anything (auto mode plans from the cached
+  index, fetching a fresh one only when that is over a week old). Fetching a country pack does tell the download host which
+  country you looked up; choose `manual` or `locked` if that matters to you.
+- **manual**: packs arrive only with `placewise data install`; the world pack still installs on
+  first use. A lookup that a missing pack would improve logs once which pack to install.
+- **locked**: never download anything, not even the index; use exactly what is installed (a
+  missing world pack is an error). `--offline` and `data.offline = true` (the older spelling)
+  mean locked whatever the mode. Servers and read-only deployments should run locked.
+
+To keep the base lean, stay in auto with the default kinds (only country packs, and only for the
+countries you look up), or switch to manual and install exactly what you want. Sizes for the
+2026.11 data (download / on disk): `usa` 38 / 96 MB, `can` 23 / 110 MB, `ind` 15 / 41 MB,
+`usa-parks` 40 / 108 MB, `can-parks` 9 / 33 MB, `world-water` 25 / 46 MB, `world-parks` 0.1 / 0.6 MB;
+`placewise data status` shows the current ones.
 
 Everything placewise downloads lives in `~/.placewise/` unless configured otherwise (`--data-dir`,
 `PLACEWISE_DATA_DIR` or `data.data_dir` in `placewise.toml`; `placewise data where` prints it).

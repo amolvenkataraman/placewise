@@ -22,6 +22,12 @@ NEAR_KM = {
 MAX_NEAR = 5
 
 AUTO_UPDATE = "never"  # data never changes answers behind the user's back
+# How packs arrive (DataSettings.mode): "auto" fetches the packs a lookup or search needs, but by
+# default only country packs, the ones that change the main answer (city, county, postal code);
+# parks, water, notable and postal packs are opt-in (data.auto_packs). The world pack always
+# installs on first use unless the mode is "locked".
+DATA_MODE = "auto"
+DATA_AUTO_PACKS = ("country",)
 
 SERVER_HOST = "127.0.0.1"  # exposing a server is a deliberate choice
 SERVER_PORT = 8770

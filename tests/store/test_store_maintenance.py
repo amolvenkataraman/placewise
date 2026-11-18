@@ -65,3 +65,13 @@ def test_verify_reports_tampering_and_extra_files(data_dir, release):
     assert store.verify("can") == []
     with pytest.raises(PackNotInstalled):
         store.verify("nowhere")
+
+
+def test_size_on_disk_is_the_installed_files_not_the_archive(data_dir, release):
+    from store_kit import DEFAULT_FILES, make_store
+
+    release.add("world", "2026.11")
+    store = make_store(data_dir, release)
+    path = store.install("world")
+    expected = sum(len(v) for v in DEFAULT_FILES.values()) + (path / "pack.json").stat().st_size
+    assert store.size_on_disk("world", "2026.11") == expected

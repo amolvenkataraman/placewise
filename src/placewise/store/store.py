@@ -2,11 +2,13 @@
 them. The install procedure follows docs/pack-format.md, "Distribution": a pack is either fully in
 place and verified, or not there at all.
 
-`Store` composes the index (index.py), installing (install.py) and maintenance (maintenance.py);
+`Store` composes the index (index.py), installing (install.py), maintenance (maintenance.py) and
+packs on demand (ondemand.py);
 this module holds what they share: settings, the on-disk layout, what's installed and the lock.
 """
 
 import os
+import threading
 from pathlib import Path
 
 from placewise.constants import store as const
@@ -17,10 +19,11 @@ from .index import IndexMixin
 from .install import InstallMixin
 from .lock import DirLock
 from .maintenance import MaintenanceMixin
+from .ondemand import OnDemandMixin
 from .paths import Layout, check_name, parse_pack_dir, resolve_data_dir, version_key
 
 
-class Store(IndexMixin, InstallMixin, MaintenanceMixin):
+class Store(IndexMixin, InstallMixin, MaintenanceMixin, OnDemandMixin):
     """Packs on disk under `<data_dir>/packs/<name>-<version>/`, fed from an index of releases.
 
     data_dir: overrides DataSettings.data_dir, $PLACEWISE_DATA_DIR and the platform default.
@@ -37,6 +40,9 @@ class Store(IndexMixin, InstallMixin, MaintenanceMixin):
             or const.DEFAULT_INDEX_URL
         )
         self._index = None
+        self._plan_index_cache = None  # the index auto mode plans from (False: none to be had)
+        self._fetch_lock = threading.Lock()  # one on-demand fetch at a time in this process
+        self._skipped = set()  # packs on-demand fetching gave up on, or already hinted at
 
     @property
     def data_dir(self) -> Path:

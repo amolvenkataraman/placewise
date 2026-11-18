@@ -156,3 +156,27 @@ def test_unreachable_default_index_explains_how_to_point_elsewhere(tmp_path, mon
     with pytest.raises(DownloadError, match="index_url") as caught:
         store.fetch_index()
     assert "PLACEWISE_INDEX_URL" in str(caught.value) and "--index-url" in str(caught.value)
+
+
+def test_coverage_comes_from_the_index_and_survives_the_cache(data_dir, release):
+    release.add("world", "2026.11")
+    release.add("usa-zip", "2026.11", meta={"kind": "postal", "covers": ["US", "PR"], "installed_bytes": 9})
+    release.add("usa", "2026.11")  # an older entry without coverage fields: from its name
+    store = make_store(data_dir, release)
+    cov = store.coverage()
+    assert (cov["usa-zip"].kind, cov["usa-zip"].covers, cov["usa-zip"].requires) == (
+        "postal",
+        ("PR", "US"),
+        ("usa",),
+    )
+    assert cov["usa-zip"].installed_bytes == 9
+    assert (cov["usa"].kind, cov["usa"].covers) == ("country", ("US",))
+    assert cov["world"].kind == "base"
+    cached = make_store(data_dir, release, offline=True).coverage()
+    assert cached == cov
+
+
+def test_a_malformed_coverage_field_is_a_clear_error(data_dir, release):
+    release.add("usa", "2026.11", meta={"covers": "US"})
+    with pytest.raises(StoreError, match=r"usa.*covers"):
+        make_store(data_dir, release).fetch_index()

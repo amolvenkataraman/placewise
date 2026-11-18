@@ -99,8 +99,11 @@ class Release:
     def index_url(self):
         return (self.root / "index.json").as_uri()
 
-    def add(self, name, version, entries=None, *, schema=1, sha=None, size=None, url=None, **pack_kw):
-        """Add a pack archive and its index entry; the keyword overrides fake a lying index."""
+    def add(
+        self, name, version, entries=None, *, schema=1, sha=None, size=None, url=None, meta=None, **pack_kw
+    ):
+        """Add a pack archive and its index entry; the keyword overrides fake a lying index, `meta`
+        adds coverage fields (kind, covers, requires, installed_bytes) to the entry."""
         data = tar_xz(entries if entries is not None else pack_entries(name, version, **pack_kw))
         filename = f"{name}-{version}.tar.xz"
         (self.root / filename).write_bytes(data)
@@ -111,6 +114,7 @@ class Release:
             "sha256": sha or sha256(data),
             "size_bytes": len(data) if size is None else size,
             "sources": ["naturalearth"],
+            **(meta or {}),
         }
         self.write()
         return data

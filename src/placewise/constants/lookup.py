@@ -1,7 +1,8 @@
 """Point lookup (placewise.engine): how far, how big and how the answer is scored."""
 
+from . import notable, parks, water
 from .distance import METRES_PER
-from .naming import NAME, STATE
+from .naming import COUNTRY_PACKS, NAME, STATE
 
 # layers the lookup reads from a pack, by name (docs/pack-format.md, packbuild/README.md)
 COUNTRIES = "countries"
@@ -10,6 +11,9 @@ CITIES = "cities"
 AIRPORTS = "airports"
 TIMEZONES = "timezones"  # time-zone polygons, in the world pack and country packs (packbuild/timezones.py)
 DEFAULT_PACK = "world"  # what Geocoder() opens through the store when no packs are given
+# the packs a store-backed Geocoder opens beside it when installed, in this order; auto mode fetches
+# only these (a pack this placewise doesn't read is never downloaded for it)
+OPTIONAL_PACKS = (*COUNTRY_PACKS, water.PACK, *parks.PACKS, notable.PACK)
 
 # rule names in Result.sources ("world/countries:offshore")
 POLYGON = "polygon"  # the point is inside the feature

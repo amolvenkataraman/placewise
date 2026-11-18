@@ -14,12 +14,12 @@ class PackNotInstalled(StoreError, LookupError):  # noqa: N818 - reads better at
             command = f"placewise data install {name}" + (f" --version {version}" if version else "")
             message += f"; install it with: {command}"
         if offline:
-            message += " (offline mode is on, so it won't be downloaded automatically)"
+            message += " (data mode is locked, or offline, so it won't be downloaded automatically)"
         super().__init__(message)
 
 
 class OfflineError(StoreError):
-    """The operation needs the network and DataSettings.offline forbids it."""
+    """The operation needs the network and the data mode is locked (DataSettings.mode, or offline)."""
 
 
 class IntegrityError(StoreError):

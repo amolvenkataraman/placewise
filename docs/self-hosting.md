@@ -159,7 +159,10 @@ MemoryDenyWriteExecute=true
 WantedBy=multi-user.target
 ```
 
-`--offline` means the server never downloads anything. Updating data is a deliberate step
+`--offline` means the server never downloads anything (the same as `[data] mode = "locked"`;
+the default mode, auto, would fetch a country pack in the middle of a request the first time a
+point in that country arrives, so a server should always run locked: install the packs it serves
+first, `placewise data status` lists them with their size on disk). Updating data is a deliberate step
 (`placewise data update`, then `systemctl restart placewise`). On SIGTERM (`systemctl stop`) the
 server stops accepting connections, lets requests already in progress finish (up to 10 s) and
 exits.
@@ -179,6 +182,9 @@ require_keys = true        # turning this off on a public address is logged as a
 log_coordinates = false    # coordinates reveal where people live; keep it off
 max_batch = 10000
 cors_origins = ["https://app.example.org"]   # browsers on other origins get 403; "*" only if you list it
+
+[data]
+mode = "locked"           # never download at runtime; install packs as an admin step
 
 [worldview]
 lock = true                # requests can't change the worldview; each response says worldview_locked once

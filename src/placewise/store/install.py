@@ -24,16 +24,17 @@ class InstallMixin:
         try:
             return self.current(name)
         except PackNotInstalled as e:
-            if self.settings.offline:
+            if self.settings.locked:
                 raise PackNotInstalled(
                     name, e.version, pinned=bool(self.settings.pin), offline=True
                 ) from None
         return self.install(name, self.settings.pin, progress=progress)
 
-    def install(self, name, version=None, *, progress=None) -> Path:
-        """Install `name` (the index's version, or `version`, which must be the one the index offers).
-        A version that's already installed and verifies is left alone. `progress(done, total)` is
-        called with byte counts during the download."""
+    def install(self, name, version=None, *, progress=None, _requiring=()) -> Path:
+        """Install `name` (the index's version, or `version`, which must be the one the index offers),
+        after any pack it requires (index.json `requires`) that isn't installed yet. A version that's
+        already installed and verifies is left alone. `progress(done, total)` is called with byte
+        counts during the download."""
         check_name(name)
         if version is not None:
             check_version(version)
@@ -51,19 +52,23 @@ class InstallMixin:
                 f"{name} {info.version} uses pack schema {info.schema}, but this placewise reads schema "
                 f"{const.PACK_SCHEMA}; upgrade placewise to use it"
             )
+        coverage = index.coverage.get(name)
+        for required in coverage.requires if coverage is not None else ():
+            if required not in (name, *_requiring) and required not in self.installed():
+                self.install(required, progress=progress, _requiring=(*_requiring, name))
         with self._lock() as lock:
             if self._intact(name, info.version):  # another process may have just installed it
                 return self.layout.pack(name, info.version)
-            if self.settings.offline:
-                raise OfflineError(f"offline mode is on, so {name} {info.version} can't be downloaded")
+            if self.settings.locked:
+                raise OfflineError(_locked(f"{name} {info.version} can't be downloaded"))
             self._clean_temp()
             return self._install_locked(info, index.urls[name], progress, lock)
 
     def update(self, names=None, *, progress=None) -> list[tuple[str, str | None, str]]:
         """Install newer versions from the index for `names` (default: every installed pack). Never
         deletes; a pack held by DataSettings.pin is left alone. Returns (name, old, new) per change."""
-        if self.settings.offline:
-            raise OfflineError("offline mode is on, and updating needs the network")
+        if self.settings.locked:
+            raise OfflineError(_locked("updating needs the network"))
         index = self.fetch_index()
         installed = self.installed()
         changes = []
@@ -139,3 +144,10 @@ class InstallMixin:
                 with contextlib.suppress(OSError):
                     if entry.stat().st_mtime < cutoff:
                         shutil.rmtree(entry)
+
+
+def _locked(what):
+    return (
+        f"data mode is locked (offline), so {what}; to allow downloads, run "
+        "`placewise data mode manual` (and drop --offline or data.offline if set)"
+    )

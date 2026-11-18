@@ -222,13 +222,41 @@ arrays and any xz decoder reads) and one `index.json` for all packs:
   "schema": 1,
   "packs": {
     "world": {"version": "2026.11", "schema": 1, "url": "world-2026.11.tar.xz",
-              "sha256": "…", "size_bytes": 123, "sources": ["naturalearth", "geonames"]}
+              "sha256": "…", "size_bytes": 123, "sources": ["naturalearth", "geonames"],
+              "kind": "base", "covers": ["*"], "requires": [],
+              "installed_bytes": 456, "archive_bytes": 123},
+    "usa-zip": {"version": "2026.11", "…": "…",
+                "kind": "postal", "covers": ["US"], "requires": ["usa"]}
   }
 }
 ```
 
 Relative `url`s resolve against the index's own URL, so a mirror is a copy of the directory. Each
-entry is `PackInfo.to_dict()` minus `name` (it's the key), plus `url`. The archive holds one
+entry is `PackInfo.to_dict()` minus `name` (it's the key), plus `url`, plus what the pack covers,
+which tells the store which pack serves which point (auto mode, `placewise data status`):
+
+### Index
+
+- `kind`: what the pack adds. `base` (the world pack), `country` (one country in depth:
+  municipality, county, metro area, postal code), `parks`, `water`, `notable`, `postal` (postal
+  areas split out of a country pack), `other`.
+- `covers`: the ISO 3166-1 alpha-2 codes of the countries it has data for, sorted, or `["*"]` for
+  world-wide data.
+- `requires`: packs that must be installed with it (`usa-zip` needs `usa`); installing a pack
+  installs these first.
+- `installed_bytes`: the unpacked pack's size on disk (its files, pack.json included);
+  `archive_bytes`: the download, the same as `size_bytes` (kept for readers of older indexes).
+
+`packbuild/release.py` writes them from each pack's `pack.json`: a pack.json may carry `kind`,
+`covers` and `requires` itself (same meaning); otherwise they come from the pack's name, so a
+reader of an older index or pack derives the same values. The name rules (`placewise.store.coverage`):
+`world` is `base` world-wide; a lower-case alpha-3 country code alone (`usa`, also the older
+alpha-2 names `us`, `ca`, `in`) is `country` for that country; `<country>-<suffix>` and
+`world-<suffix>` cover that country or the world with the suffix's kind (`parks`, `parks-local`:
+parks; `water`; `notable`; `zip`, `postal`, `postcodes`: postal, requiring the country pack); a
+trailing `-sa` (share-alike) is ignored; failing that, the layers decide (`parks_*` and
+`park_points`: parks; `marine`, `lakes`, `rivers`: water; `notable`; `zcta`, `postal`: postal), else
+`other`. Readers ignore fields they don't know, so these additions keep index schema 1. The archive holds one
 top-level directory `<name>-<version>/` with only regular files and directories. The store downloads to a temporary file, checks the archive's
 SHA-256, unpacks to a temporary directory (refusing absolute paths, `..` and links), checks every
 file in `pack.json`, then renames the directory into place, so a pack is either fully there or
