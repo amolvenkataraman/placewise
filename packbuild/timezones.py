@@ -1,34 +1,40 @@
-"""The packs' `timezones` layer: the curated zone tables (placewise-data datasets/timezones/*.json,
-CC BY 4.0) checked and drawn with the boundaries the packs already carry.
+"""The packs' time zones: the curated zone tables (placewise-data datasets/timezones/*.json,
+CC BY 4.0) checked and written as a `tz` column on the admin layers the packs already carry, plus a
+small `timezones` layer of the few hand-drawn shapes.
 
-    layer = world_layer(load("world"), countries, admin1)            # Natural Earth units
-    layer = country_layer(load("usa"), states, [counties], parent, shapes, ("uscensus",))
+    countries, admin1, shapes = world_tables(load("world"), countries, admin1)   # Natural Earth units
+    counties, shapes = country_tables(load("usa"), states, [counties], parent, aiannh, ("uscensus",))
 
-216 of the tz database's 247 countries have one zone, so most of the world is a country polygon with
-its zone; the rest follow admin lines, so the tables map admin units to zones (`world.json`: Natural
+216 of the tz database's 247 countries have one zone, so most of the world is a country with its
+zone; the rest follow admin lines, so the tables map admin units to zones (`world.json`: Natural
 Earth admin-1; `usa.json`: Census counties; `can.json`: StatCan divisions and subdivisions), each
 entry citing tzdb or the law it follows, plus a few hand-drawn `shapes` (boxes or a polygon) where no
 unit fits (Eucla, the western Aleutians) and, in the US, Census AIANNH areas (the Navajo Nation).
 
-Every unit keeps its own outline (nothing is dissolved), so the layer answers exactly as the unit
-layers do. Rows are in priority order, a point taking the first that contains it: shapes, then the
-finer units (parts: subdivisions before the divisions they lie in), then admin-1 units, then whole
-countries. A unit whose entry is null (tzdb records no zone there: Bir Tawil, Antarctica away from
-its stations) is drawn with zone "", so the layer covers all land and the engine falls back to the
-nearest-city rule there. A zone may be a list: the unit is split along a line the pack doesn't draw; `zone` is
-its first entry and `zones` all of them, and the engine lets the nearest town inside the unit whose
+The zone goes on the unit's own row (column TZ_FIELD, placewise.constants.lookup): the world's
+countries and admin-1 units each carry their own entry ("" when they have none); a country pack's
+finest units (counties, census subdivisions) carry their resolved zone (their own, else their
+division's, else their state's or province's), so the engine reads the zone of the unit it has
+already found, and no unit's outline is copied. Only the shapes are drawn, in the `timezones`
+layer, which the engine tests first. A unit whose entry is null (tzdb records no zone there: Bir
+Tawil, Antarctica away from its stations) has TZ_NONE, and the engine falls back to the
+nearest-city rule there. A zone may be a list: the unit is split along a line the pack doesn't draw;
+the column joins them with TZ_SEPARATOR, and the engine lets the nearest town inside the unit whose
 zone is listed decide (placewise.engine._timezones).
 
 The build fails, listing every problem, on a zone the tz database doesn't have
 (`zoneinfo.available_timezones()`), a unit of the layer without an entry, an entry naming a unit the
 layer doesn't have or one of another country, a split country whose admin-1 units aren't all listed,
-an unknown source, or a malformed shape: fix the dataset, never the build.
+a split zone a country pack's finer units would inherit, an unknown source, or a malformed shape:
+fix the dataset, never the build.
 """
 
+import dataclasses
 import json
 import zoneinfo
 from functools import cache
 
+from placewise.constants.lookup import TZ_FIELD, TZ_NONE, TZ_SEPARATOR
 from placewise.model import Feature, Outline
 
 from . import datasets
@@ -151,15 +157,24 @@ def shape_feature(shape):
     return Feature(tuple(outlines))
 
 
-def _row(rid, name, zone, basis, unit="", within="", country=""):
-    first, every = (zone[0] if zone else "", "|".join(zone)) if isinstance(zone, list) else (zone or "", "")
+def _joined(zone):
+    """A table's zone as the `tz` column holds it: TZ_NONE for null, the list joined by TZ_SEPARATOR."""
+    if zone is None:
+        return TZ_NONE
+    return TZ_SEPARATOR.join(zone) if isinstance(zone, list) else zone
+
+
+def _shape_row(shape, within, country):
     return {
-        "id": rid, "name": name, "zone": first, "zones": every, "basis": basis, "unit": unit,
-        "within": within, "country": country,
+        "id": shape["id"], "name": shape.get("name", shape["id"]), "zone": shape["zone"], "zones": "",
+        "basis": "shape", "unit": "", "within": within, "country": country,
     }  # fmt: skip
 
 
-def _layer(rows, features, sources):
+def _shapes_layer(rows, features, sources):
+    """The `timezones` layer: the hand-drawn shapes alone (None when there are none)."""
+    if not rows:
+        return None
     columns = {c: [r[c] for r in rows] for c in COLUMNS}
     return LayerData(
         LAYER,
@@ -171,6 +186,16 @@ def _layer(rows, features, sources):
     )
 
 
+def _with_zones(layer, zones):
+    """`layer` with the `tz` column (and the curated dataset among its sources)."""
+    return dataclasses.replace(
+        layer,
+        columns={**layer.columns, TZ_FIELD: zones},
+        types={**layer.types, TZ_FIELD: "str"},
+        sources=tuple(dict.fromkeys((*layer.sources, CURATED_SOURCE))),
+    )
+
+
 def _units(layer):
     """{id: (row index, name)} of a built LayerData."""
     return {uid: (i, layer.columns["name"][i]) for i, uid in enumerate(layer.columns["id"])}
@@ -179,9 +204,13 @@ def _units(layer):
 # --- the world pack -----------------------------------------------------------------------------
 
 
-def world_layer(doc, countries, admin1, sources=("naturalearth",)):
-    """The world pack's layer from world.json and the built Natural Earth `countries` and `admin1`
-    LayerData (whose `adm0_a3` column says which country an admin-1 unit belongs to)."""
+def world_tables(doc, countries, admin1, sources=("naturalearth",)):
+    """(countries, admin1, shapes) from world.json and the built Natural Earth `countries` and
+    `admin1` LayerData (whose `adm0_a3` column says which country an admin-1 unit belongs to): the
+    two with a `tz` column (placewise.constants.lookup.TZ_FIELD: a country's zone, "" for one split
+    by admin-1 units; an admin-1 unit's own zone, "" for one that takes its country's), and the
+    `timezones` layer of the hand-drawn shapes alone. The engine finds a point's zone from the
+    units the admin answer found, so no unit's outline is copied."""
     problems = check_entries(doc)
     table = doc.get("countries", {})
     c_units, a_units = _units(countries), _units(admin1)
@@ -193,8 +222,8 @@ def world_layer(doc, countries, admin1, sources=("naturalearth",)):
     }
     problems += [f"{cid}: no entry" for cid in c_units if cid not in table]
     problems += [f"{cid}: not a unit of the countries layer" for cid in table if cid not in c_units]
-    admin_rows, country_rows = [], []
-    for cid in c_units:
+    country_zone, admin1_zone = [""] * len(c_units), [""] * len(a_units)
+    for cid, (ci, _) in c_units.items():
         entry = table.get(cid)
         entry = entry if isinstance(entry, dict) else {"zone": entry}
         listed = entry.get("admin1", {})
@@ -206,17 +235,9 @@ def world_layer(doc, countries, admin1, sources=("naturalearth",)):
             problems += [f"{cid}: no zone for {aid}" for aid in mine if aid not in listed]
         for aid, zone in listed.items():
             if aid in a_units:
-                admin_rows.append(
-                    (_row(f"tz:{aid}", a_units[aid][1], zone, "admin1", aid, country=cid), admin1, aid)
-                )
+                admin1_zone[a_units[aid][0]] = _joined(zone)
         if "zone" in entry:
-            country_rows.append(
-                (
-                    _row(f"tz:{cid}", c_units[cid][1], entry["zone"], "country", cid, country=cid),
-                    countries,
-                    cid,
-                )
-            )
+            country_zone[ci] = _joined(entry["zone"])
     shape_rows = []
     for shape in doc.get("shapes", ()):
         within = shape.get("within", "")
@@ -226,32 +247,30 @@ def world_layer(doc, countries, admin1, sources=("naturalearth",)):
                 f"{shape.get('id')}: within {within!r} is no unit of the countries or admin1 layer"
             )
             continue
-        shape_rows.append(
-            _row(
-                shape["id"],
-                shape.get("name", shape["id"]),
-                shape["zone"],
-                "shape",
-                within=within,
-                country=country,
-            )
-        )
+        shape_rows.append(_shape_row(shape, within, country))
     _fail(problems)
-    rows = [*shape_rows, *(r for r, _, _ in admin_rows), *(r for r, _, _ in country_rows)]
-    index = {"admin1": a_units, "countries": c_units}
     features = [shape_feature(s) for s in doc.get("shapes", ())]
-    features += [layer.features[index[layer.name][uid][0]] for _, layer, uid in (*admin_rows, *country_rows)]
-    return _layer(rows, features, sources)
+    return (
+        _with_zones(countries, country_zone),
+        _with_zones(admin1, admin1_zone),
+        _shapes_layer(shape_rows, features, sources),
+    )
 
 
 # --- country packs ------------------------------------------------------------------------------
 
 
-def country_layer(doc, admin1, parts, parent, shapes, sources):
-    """A country pack's layer from its table (usa.json, can.json): `admin1` the pack's states or
-    provinces LayerData, `parts` its finer unit layers (counties; census divisions and subdivisions),
-    `parent(part id, part row)` the admin-1 id a part lies in, `shapes` {shape id: Feature} for the
-    shapes drawn from the pack's sources (Census AIANNH areas)."""
+def country_tables(doc, admin1, parts, parent, shapes, sources, container=lambda pid, row: None):
+    """(finest, shapes) from a country table (usa.json, can.json): `admin1` the pack's states or
+    provinces LayerData, `parts` its finer unit layers, coarse to fine (counties; census divisions
+    then subdivisions), `parent(part id, part row)` the admin-1 id a part lies in, `container(part
+    id, part row)` the id of the coarser part it lies in (a subdivision's division) or None,
+    `shapes` {shape id: Feature} for the shapes drawn from the pack's sources (Census AIANNH
+    areas). `finest` is the last of `parts` with a `tz` column: each unit's own zone, else that of
+    the listed part it lies in, else its admin-1 unit's, as the first of the shapes, parts and
+    admin-1 units containing a point decided when each was drawn; `shapes` is the `timezones`
+    layer of the shapes alone (None when the table has none). A split zone (a list) is never
+    inherited: its nearest-town rule searches the unit it was given to."""
     problems = check_entries(doc)
     table = doc.get("admin1", {})
     country = f"iso:{doc.get('country', '')}"
@@ -259,15 +278,14 @@ def country_layer(doc, admin1, parts, parent, shapes, sources):
     part_units = {}
     for layer in parts:
         for i, pid in enumerate(layer.columns["id"]):
-            row = {c: values[i] for c, values in layer.columns.items()}
-            part_units[pid] = (layer, i, row)
+            part_units[pid] = {c: values[i] for c, values in layer.columns.items()}
     problems += [f"{aid}: no entry" for aid in a_units if aid not in table]
     problems += [f"{aid}: not a unit of the {admin1.name} layer" for aid in table if aid not in a_units]
     others = sorted({aid[4:6] for aid in a_units if aid.startswith("iso:")} - {doc.get("country")})
     if others:
         problems.append(f"{country}: the {admin1.name} layer's admin1 units are of {', '.join(others)}")
-    part_rows, admin_rows = [], []
-    for aid, (i, name) in a_units.items():
+    zone_of = {}  # unit id -> its table zone (parts and admin-1 units)
+    for aid in a_units:
         entry = table.get(aid)
         entry = entry if isinstance(entry, dict) else {"zone": entry}
         if entry.get("zone") is None and aid in table:
@@ -276,19 +294,23 @@ def country_layer(doc, admin1, parts, parent, shapes, sources):
         for pid, zone in entry.get("parts", {}).items():
             if pid not in part_units:
                 problems.append(f"{aid}: {pid} is not a unit of the pack")
-                continue
-            layer, j, row = part_units[pid]
-            if (home := parent(pid, row)) != aid:
+            elif (home := parent(pid, part_units[pid])) != aid:
                 problems.append(f"{aid}: {pid} lies in {home}")
             elif zone is not None:
-                part_rows.append(
-                    (_row(f"tz:{pid}", row["name"], zone, "part", pid, country=country), layer.features[j])
-                )
+                zone_of[pid] = zone
         if aid in table:
-            admin_rows.append(
-                (_row(f"tz:{aid}", name, entry["zone"], "admin1", aid, country=country), admin1.features[i])
-            )
-    shape_rows = []
+            zone_of[aid] = entry["zone"]
+    finest = parts[-1]
+    zones = []
+    for pid in finest.columns["id"]:
+        row = part_units[pid]
+        chain = [pid, container(pid, row), parent(pid, row)]
+        unit = next((u for u in chain if u in zone_of), None)
+        zone = zone_of.get(unit, "")
+        if isinstance(zone, list) and unit != pid:
+            problems.append(f"{unit}: a split zone (a list) would pass to {pid}; list the zones of its parts")
+        zones.append(_joined(zone) if unit is not None else "")
+    shape_rows, features = [], []
     for shape in doc.get("shapes", ()):
         feature = shapes.get(shape.get("id")) if "aiannh" in shape else None
         if "aiannh" in shape and feature is None:
@@ -297,10 +319,7 @@ def country_layer(doc, admin1, parts, parent, shapes, sources):
         if feature is None and not _check_geometry(shape.get("id"), shape):
             feature = shape_feature(shape)
         if feature is not None:
-            row = _row(shape["id"], shape.get("name", shape["id"]), shape["zone"], "shape", country=country)
-            shape_rows.append((row, feature))
+            shape_rows.append(_shape_row(shape, "", country))
+            features.append(feature)
     _fail(problems)
-    # finer parts first: a subdivision listed inside a listed division wins there
-    part_rows.sort(key=lambda rf: -len(rf[0]["unit"]))
-    ordered = [*shape_rows, *part_rows, *admin_rows]
-    return _layer([r for r, _ in ordered], [f for _, f in ordered], sources)
+    return _with_zones(finest, zones), _shapes_layer(shape_rows, features, sources)

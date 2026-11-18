@@ -13,8 +13,13 @@
   Angeles -> Los Angeles). No locality: the metro's largest principal city in the state (OMB list
   2) within METRO_CITY_KM, else the GeoNames score.
 - sublocality: the nearest GeoNames place within SUBLOCALITY_KM inside the same census place.
-- borough (New York City's five counties), admin2 (county), postal (ZCTA), regions (the pack's
-  curated `regions` and the CBSA and CSA, smallest first).
+- borough (New York City's five counties), admin2 (county), postal (ZCTA, from the optional usa-zip
+  pack; without it, none), regions (the pack's curated `regions` and the CBSA and CSA, smallest
+  first).
+
+The postal city is the ZCTA's `postal_place`: from the ZCTAs when usa-zip is open, else from the
+usa pack's `postal_cities` (the same areas, kept only where a postal city can name a locality:
+packbuild.us_zip), so the locality is the same either way.
 """
 
 import numpy as np
@@ -40,9 +45,11 @@ class Usa:
         self.layers, self.admin, self.cities = layers, admin, cities
         self.county = layers.add(pack, names["county"], common.area_maker(PlaceKind.ADMIN2, "state"))
         self.place = layers.add(pack, names["place"], common.area_maker(PlaceKind.LOCALITY, "state", "class"))
-        self.postal = self.cbsa = self.csa = self.regions = None
-        if names["postal"] in pack:
+        self.postal = self.postal_cities = self.cbsa = self.csa = self.regions = None
+        if names["postal"] in pack:  # packs built before the ZIP Code areas moved to usa-zip
             self.postal = layers.add(pack, names["postal"], common.area_maker(PlaceKind.POSTAL_CODE))
+        if names["postal_cities"] in pack:
+            self.postal_cities = layers.add(pack, names["postal_cities"])
         if const.REGIONS in pack:
             self.regions = layers.add(pack, const.REGIONS, common.region_place)
         # the CBSA names the principal cities, whichever regions the Result lists
@@ -50,6 +57,20 @@ class Usa:
             self.cbsa = layers.add(pack, names["cbsa"], common.region_place)
         if names["csa"] in pack:
             self.csa = layers.add(pack, names["csa"], common.region_place)
+
+    def add_packs(self, packs):
+        """The ZIP Code areas from the usa-zip pack, when it is open and the usa pack lacks them."""
+        zips = next((p for p in packs if const.USA_LAYERS["postal"] in p), None)
+        if self.postal is None and zips is not None:
+            self.postal = self.layers.add(
+                zips, const.USA_LAYERS["postal"], common.area_maker(PlaceKind.POSTAL_CODE)
+            )
+
+    @property
+    def _postal_areas(self):
+        """The layer whose areas carry the postal cities: the ZIP Code areas when open (they also
+        give `postal`), else the usa pack's postal_cities (the same areas, where they can matter)."""
+        return self.postal if self.postal is not None else self.postal_cities
 
     # -- per-row tables -----------------------------------------------------------------------------
 
@@ -108,13 +129,22 @@ class Usa:
 
     @once
     def _zcta(self):
-        """Per ZCTA row, the place row of its postal city (-1: none or not a place in the pack)."""
+        """Per row of the postal areas, the place row of its postal city (-1: none or not a place
+        in the pack)."""
         row_of = self._place["row_of"]
         return np.array(
-            [row_of.get(p or "", -1) for p in self._col(self.postal, "postal_place")], dtype=np.int64
+            [row_of.get(p or "", -1) for p in self._col(self._postal_areas, "postal_place")], dtype=np.int64
         )
 
     # -- the rules ----------------------------------------------------------------------------------
+
+    def tz_layer(self):
+        """The counties' key when they carry their time zone (placewise.engine._timezones), else None."""
+        return common.tz_layer(self.layers, self.county)
+
+    def tz_rows(self, state):
+        """Per point of `boundaries`, the county it lies inside (-1: none, or only near one)."""
+        return common.inside_rows(state["county"], state["rule"])
 
     def boundaries(self, a, pts, lat, lon):
         county, rule = common.polygon(self.layers.layer(self.county), lat, lon)
@@ -132,8 +162,9 @@ class Usa:
             out.sources[i]["admin1"] = f"{self.county}:{const.STATE}"
         place, prule = self._places(lat, lon, st["rule"])
         zcta = np.full(len(pts), -1, dtype=np.int64)
+        if self._postal_areas is not None:
+            zcta = np.atleast_1d(self.layers.layer(self._postal_areas).query(lat, lon)).astype(np.int64)
         if self.postal is not None:
-            zcta = np.atleast_1d(self.layers.layer(self.postal).query(lat, lon)).astype(np.int64)
             out.put("postal", every, self.postal, zcta, lookup_const.POLYGON)
         metro = (county >= 0) & self._county["metro"][safe]
         postal = self._postal_cities(lat, lon, zcta, place, metro)

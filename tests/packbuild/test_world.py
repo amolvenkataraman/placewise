@@ -81,7 +81,7 @@ def test_build_world_fetches_every_source_and_hands_six_layers_to_the_writer(tmp
     counts = {layer.name: len(layer.columns["id"]) for layer in layers}
     assert counts == {
         "countries": 3, "admin1": 5, "worldviews": 2, "cities": 5, "airports": 5, "country_facts": 1,
-        "timezones": 3,
+        "timezones": 1,
     }  # fmt: skip
     for layer in layers:
         assert set(layer.sources) <= set(SOURCES)
@@ -96,7 +96,7 @@ def test_build_world_writes_a_real_pack_that_reopens(tmp_path, offline):
     path = world.build_world(tmp_path / "cache", tmp_path / "out", "2026.11")
     pack = open_pack(path, verify=True)
     assert [layer.name for layer in pack] == LAYERS
-    assert [len(pack[name]) for name in LAYERS] == [3, 5, 2, 5, 5, 1, 3]  # facts: Ottawa is the one capital
+    assert [len(pack[name]) for name in LAYERS] == [3, 5, 2, 5, 5, 1, 1]  # facts: Ottawa is the one capital
     cities = pack["cities"]
     assert cities.row(int(cities.find("id", "geonames:7262586")[0]))["elevation"] is None
     countries = pack["countries"]
@@ -117,8 +117,10 @@ def test_build_world_writes_a_real_pack_that_reopens(tmp_path, offline):
     assert [
         pack.names.resolve(int(x), int(r)).id for x, r in zip(bangalore.layer, bangalore.row, strict=True)
     ] == ["geonames:1277333"]
-    zones = pack["timezones"]
-    assert zones.value("zone", zones.query(43.65, -79.38)) == "America/Toronto"
+    assert countries.value("tz", countries.query(43.65, -79.38)) == "America/Toronto"
+    assert pack["admin1"].column("tz").tolist() == [""] * 5  # no country here is split
+    zones = pack["timezones"]  # the hand-drawn shapes alone
+    assert zones.value("zone", zones.query(50.5, -97.5)) == "America/Winnipeg"
     facts = pack["country_facts"].row(0)
     assert (facts["id"], facts["capital"], facts["currency"], facts["point"]) == (
         "iso:CA",

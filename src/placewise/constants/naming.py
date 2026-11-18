@@ -4,7 +4,13 @@ labelled set of public places (tests/e2e)."""
 
 # layers the naming rules read from country packs (packbuild/README.md)
 REGIONS = "regions"  # curated region polygons, in any country pack: id, name, kind, country
-USA_LAYERS = {"county": "counties", "place": "places", "postal": "zcta", "cbsa": "cbsa", "csa": "csa"}
+USA_LAYERS = {
+    "county": "counties", "place": "places", "postal": "zcta", "cbsa": "cbsa", "csa": "csa",
+    "postal_cities": "postal_cities",
+}  # fmt: skip
+# the optional pack holding the US ZIP Code areas (`zcta`); without it the usa pack's `postal_cities`
+# (the ZIP Codes' postal cities where they can name a locality) still corrects the locality
+USA_ZIP_PACK = "usa-zip"
 CAN_LAYERS = {
     "division": "cd", "subdivision": "csd", "metro": "cma", "postal": "fsa", "named": "populated_places",
 }  # fmt: skip
@@ -21,7 +27,7 @@ IND_VIEW_ONLY_SUFFIX = "#india-view"
 IND_NEIGHBOURHOOD_KM = 1.5
 IND_NEIGHBOURHOOD_CANDIDATES = 8
 # installed packs the default Geocoder opens beside "world" (alpha-3 names, and the older alpha-2)
-COUNTRY_PACKS = ("usa", "us", "can", "ca", "ind", "in")
+COUNTRY_PACKS = ("usa", "us", USA_ZIP_PACK, "can", "ca", "ind", "in")
 
 # rule names in Result.sources ("us/places:metro")
 METRO = "metro"  # the metro area's principal city (US) or first city (Canada) stands for the point

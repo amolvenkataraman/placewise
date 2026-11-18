@@ -1,9 +1,10 @@
 """The US pack: states, counties, places (incorporated places and CDPs), metro/micro areas (cbsa),
-combined statistical areas (csa) and ZIP Code Tabulation Areas (zcta), all from the US Census
+combined statistical areas (csa) and the ZIP Code areas' postal cities (postal_cities: the ZCTAs
+themselves are the optional usa-zip pack, packbuild.us_zip), all from the US Census
 Bureau (public domain) with GeoNames postal names filling ZIP Codes the Census files lack (CC BY
-4.0), the curated regions (Bay Area ...) as unions of counties, and time-zone polygons by county
-(datasets/timezones/usa.json, with the Navajo Nation from the Census AIANNH areas:
-packbuild.timezones).
+4.0), the curated regions (Bay Area ...) as unions of counties, and each county's time zone (a `tz`
+column from datasets/timezones/usa.json) with the few areas no county fits (the Navajo Nation from
+the Census AIANNH areas, the western Aleutians) as the `timezones` layer: packbuild.timezones.
 
     uv run python -m packbuild.us --version 2026.11
 
@@ -42,7 +43,7 @@ POPULATION_NULL = uscensus.POPULATION_NULL
 def build_layers(cache_dir, refresh=False, regions=None):
     """The US layers, fetching (or reusing) the source files in `cache_dir`: the six Census layers,
     then `regions` (curated regions as unions of counties; `regions` None reads datasets/regions) and
-    `timezones` (datasets/timezones/usa.json)."""
+    `timezones` (datasets/timezones/usa.json's shapes; its zones are the counties' `tz` column)."""
 
     def get(name):
         return fetch(url(uscensus.SOURCE, name), cache_dir, refresh=refresh)
@@ -90,13 +91,14 @@ def build_layers(cache_dir, refresh=False, regions=None):
     counties = next(layer for layer in layers if layer.name == "counties")
     curated = regions_layer.for_country(regions, "US")
     layers.append(regions_layer.from_features(curated, regions_layer.by_id(counties), counties.sources))
-    layers.append(timezones_layer(layers, shapefile("aiannh")))
-    return layers
+    counties, shapes = timezones_layer(layers, shapefile("aiannh"))
+    layers = [counties if layer.name == "counties" else layer for layer in layers]
+    return [*layers, *([shapes] if shapes else [])]
 
 
 def timezones_layer(layers, aiannh_shp):
-    """The `timezones` layer: usa.json's states and counties, its Census AIANNH areas read from
-    `aiannh_shp` by AIANNHCE code."""
+    """The counties with their `tz` column and the `timezones` layer of usa.json's shapes (its
+    Census AIANNH areas read from `aiannh_shp` by AIANNHCE code): (counties, shapes)."""
     doc = timezones.load("usa")
     codes = timezones.aiannh_codes(doc)
     areas = (
@@ -105,7 +107,7 @@ def timezones_layer(layers, aiannh_shp):
     shapes = {sid: areas[code] for sid, code in codes.items() if code in areas}
     states, counties = (next(layer for layer in layers if layer.name == n) for n in ("states", "counties"))
     state_of = dict(zip(states.columns["statefp"], states.columns["id"], strict=True))
-    return timezones.country_layer(
+    return timezones.country_tables(
         doc, states, [counties], lambda pid, row: state_of.get(row["statefp"]), shapes, (uscensus.SOURCE,)
     )
 
@@ -194,7 +196,9 @@ def zcta_columns(zcta, places, population, zbp, geonames, overlaps):
 
 def build_us(cache_dir, out_dir, version, refresh=False, regions=None):
     """Fetch the sources, build the layers and write `<out_dir>/usa-<version>/`."""
-    layers = build_layers(cache_dir, refresh=refresh, regions=regions)
+    from .us_zip import split  # the ZCTAs go to usa-zip; usa keeps the postal cities it names with
+
+    layers, _ = split(build_layers(cache_dir, refresh=refresh, regions=regions))
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
     return write_pack(Path(out_dir), "usa", version, layers, names=names.for_pack("usa", layers))

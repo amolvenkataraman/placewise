@@ -1,6 +1,9 @@
 """US naming over the synthetic us pack (naming_kit): places, counties, ZCTAs and their postal
 cities, principal cities."""
 
+import pytest
+
+from placewise.engine import Geocoder
 from placewise.model import PlaceKind
 
 
@@ -128,3 +131,55 @@ def test_census_city_drops_its_geonames_twin_from_near(geo, world_only):
     r = geo.lookup(10.6, -149.88)
     assert r.city.name == "New York"
     assert not {"New York City", "Brooklyn"} & {n.place.name for n in r.near}
+
+
+# --- the ZIP Code areas in their own pack (usa-zip) ------------------------------------------------
+
+# every point the tests above look up, and a few more across the US boxes
+POINTS = [
+    (10.4, -149.9), (10.27, -149.85), (10.15, -149.9), (10.05, -149.75), (10.4, -149.75), (10.15, -149.75),
+    (10.25, -149.9),
+    (10.05, -149.42), (10.27, -149.75), (10.52, -149.27), (10.55, -149.2), (10.75, -149.2), (10.6, -149.9),
+    (10.75, -149.76), (10.2, -149.05), (10.45, -149.6), (10.75, -149.495), (10.1, -149.6), (10.35, -149.3),
+]  # fmt: skip
+
+
+def _answers(geo, postal=True):
+    out = []
+    for r in geo.lookup_many([p[0] for p in POINTS], [p[1] for p in POINTS]):
+        d = r.to_dict()
+        d.pop("data_version")
+        if not postal:
+            d.pop("postal", None)
+            d["sources"].pop("postal", None)
+            d.get("matches", {}).pop("postal", None)
+        out.append(d)
+    return out
+
+
+@pytest.fixture(scope="module")
+def split(tmp_path_factory, packs):
+    from naming_kit import write_us, write_us_zip
+
+    root = tmp_path_factory.mktemp("zip")
+    return packs[0], write_us(root, zip_pack=True), write_us_zip(root)
+
+
+def test_with_usa_zip_every_answer_is_as_with_the_zip_codes_in_the_usa_pack(geo, split):
+    world, us, zips = split
+    with_zip = Geocoder(packs=[world, us, zips])
+    got, want = _answers(with_zip), _answers(Geocoder(packs=[world, geo.packs[1]]))
+    for g, w in zip(got, want, strict=True):
+        w["sources"] = {k: v.replace("us/zcta", "usa-zip/zcta") for k, v in w["sources"].items()}
+        if w.get("postal"):
+            w["postal"]["source"] = g["postal"]["source"]
+        assert g == w
+
+
+def test_without_usa_zip_there_is_no_postal_code_and_the_rest_is_the_same(geo, split):
+    world, us, _ = split
+    without = Geocoder(packs=[world, us])
+    r = without.lookup(10.27, -149.85)  # Paradise CDP, ZIP Code 89109: Las Vegas
+    assert r.postal is None and "postal" not in r.sources
+    assert r.locality.name == "Las Vegas" and r.sources["locality"] == "us/places:postal"
+    assert _answers(without, postal=False) == _answers(Geocoder(packs=[world, geo.packs[1]]), postal=False)

@@ -1,13 +1,16 @@
-"""Result.tz from the packs' `timezones` polygons (placewise.engine._timezones) on lookup_kit's
-synthetic world, with invented zone names (the engine doesn't check them; packbuild does).
-
-World pack's timezones layer (rows in priority order):
+"""Result.tz from the zones the packs give their units (placewise.engine._timezones) on lookup_kit's
+synthetic world, with invented zone names (the engine doesn't check them; packbuild does). Every
+world-pack test runs on both forms of the same zones: the `tz` column on the countries and admin1
+layers with the shape alone drawn ("columns"), and packs built before it, whose `timezones` layer
+copies each unit's outline ("polygons"):
   tz:tip           shape inside North Province, the box 0.9-1.0 N, 140.0-139.9 W   Pacific/Tip
   tz:iso:XA-N      North Province                                                  Pacific/North
   tz:iso:XA-S      South Province, split between Pacific/South and Pacific/Alpha (towns decide)
   tz:iso:XB        Betaland, whole                                                 Pacific/Beta
   tz:iso:XC        Gammaland: no zone ("": the nearest-city rule answers)
 """
+
+import dataclasses
 
 import numpy as np
 import pytest
@@ -76,6 +79,30 @@ def write(out_dir, name, layers):
     return write_pack(out_dir, name, "2026.11", layers, created=CREATED)
 
 
+def with_tz(layer, zones):
+    """`layer` with a `tz` column: zones {id: tz}, "" for the others."""
+    column = [zones.get(i, "") for i in layer.columns["id"]]
+    return dataclasses.replace(
+        layer, columns={**layer.columns, "tz": column}, types={**layer.types, "tz": "str"}
+    )
+
+
+def columns_world(rows=WORLD_TZ):
+    """WORLD_TZ as the packs carry it now: each unit's zone on its own row, the shapes drawn."""
+    tz = {}
+    for _, zone, zones, basis, unit, *_ in rows:
+        if basis != "shape":
+            tz[unit] = zones or zone or "-"
+    countries, admin1 = with_tz(countries_layer(), tz), with_tz(admin1_layer(), tz)
+    return [
+        countries,
+        admin1,
+        cities_layer(),
+        airports_layer(),
+        tz_layer([r for r in rows if r[3] == "shape"]),
+    ]
+
+
 @pytest.fixture(scope="module")
 def packs(tmp_path_factory):
     root = tmp_path_factory.mktemp("tz")
@@ -115,12 +142,22 @@ def packs(tmp_path_factory):
     )
     # the same world layer in a pack of its own: answered by geometry, not through the admin units
     alone = write(root / "alone", "zones", [tz_layer(WORLD_TZ)])
-    return {"world": world, "plain": plain, "alp": alpha, "alone": alone}
+    columns = write(root / "columns", "world", columns_world())
+    return {"world": world, "plain": plain, "alp": alpha, "alone": alone, "columns": columns}
 
 
-@pytest.fixture(scope="module")
-def geo(packs):
-    return Geocoder(packs=[packs["world"]])
+@pytest.fixture(scope="module", params=["polygons", "columns"])
+def geo(packs, request):
+    return Geocoder(packs=[packs["world" if request.param == "polygons" else "columns"]])
+
+
+def test_the_columns_world_draws_only_its_shape(packs):
+    from placewise.packs import open_pack
+
+    pack = open_pack(packs["columns"])
+    assert pack["timezones"].column("id").tolist() == ["tz:tip"]
+    assert pack["countries"].column("tz").tolist() == ["", "Pacific/Beta", "-"]
+    assert pack["admin1"].column("tz").tolist()[:2] == ["Pacific/North", "Pacific/South|Pacific/Alpha"]
 
 
 def tz(geo, lat, lon, **kw):
@@ -187,15 +224,16 @@ def test_a_worldview_that_reports_a_one_zone_country_takes_that_zone(packs, tmp_
         ("tz:iso:XA", "Pacific/Alpha", "", "country", "iso:XA", "", "iso:XA", box_feature(0, -140, 1, -139))
     )
     base = [countries_layer(), admin1_layer(), cities_layer(), airports_layer()]
-    geo = Geocoder(packs=[write(tmp_path, "world", [*base, tz_layer(rows)])])
-    assert tz(geo, 2.25, -139.75, worldview="xa") == ("Pacific/Alpha", "world/timezones:worldview")
-    assert tz(geo, 2.25, -139.75) == ("Pacific/Gamma", "world/cities:nearest")  # de facto: no zone
-    settings = Settings(worldview=WorldviewSettings(order=("XA", "de_facto"), lock=True))
-    locked = Geocoder(packs=[geo.packs[0]], settings=settings)
-    assert tz(locked, 2.25, -139.75, worldview=("de_facto",)) == (
-        "Pacific/Alpha",
-        "world/timezones:worldview",
-    )
+    for form, layers in (("polygons", [*base, tz_layer(rows)]), ("columns", columns_world(rows))):
+        geo = Geocoder(packs=[write(tmp_path / form, "world", layers)])
+        assert tz(geo, 2.25, -139.75, worldview="xa") == ("Pacific/Alpha", "world/timezones:worldview")
+        assert tz(geo, 2.25, -139.75) == ("Pacific/Gamma", "world/cities:nearest")  # de facto: no zone
+        settings = Settings(worldview=WorldviewSettings(order=("XA", "de_facto"), lock=True))
+        locked = Geocoder(packs=[geo.packs[0]], settings=settings)
+        assert tz(locked, 2.25, -139.75, worldview=("de_facto",)) == (
+            "Pacific/Alpha",
+            "world/timezones:worldview",
+        )
 
 
 def test_lookup_many_agrees_with_lookup(geo):

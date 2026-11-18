@@ -99,6 +99,14 @@ class Can:
 
     # -- the rules ----------------------------------------------------------------------------------
 
+    def tz_layer(self):
+        """The subdivisions' key when they carry their time zone (placewise.engine._timezones)."""
+        return common.tz_layer(self.layers, self.csd)
+
+    def tz_rows(self, state):
+        """Per point of `boundaries`, the subdivision it lies inside (-1: none, or only near one)."""
+        return common.inside_rows(state["csd"], state["rule"])
+
     def boundaries(self, a, pts, lat, lon):
         csd, rule = common.polygon(self.layers.layer(self.csd), lat, lon)
         admin1 = np.where(csd >= 0, self._csd["admin1"][np.maximum(csd, 0)], -1)

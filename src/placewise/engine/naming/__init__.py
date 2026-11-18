@@ -27,7 +27,10 @@ class Naming:
         for cls in RULES:
             pack = next((p for p in packs if cls.accepts(p)), None)
             if pack is not None:
-                self.rules.append(cls(pack, layers, admin, cities))
+                rule = cls(pack, layers, admin, cities)
+                if hasattr(rule, "add_packs"):  # layers a rule reads from optional packs (usa-zip)
+                    rule.add_packs(packs)
+                self.rules.append(rule)
 
     def __bool__(self):
         return bool(self.rules)

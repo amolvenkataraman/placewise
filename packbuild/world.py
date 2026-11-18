@@ -2,8 +2,9 @@
 (OurAirports, with the city each one serves: packbuild.served), the names people type for cities,
 admin-1 units and countries (alias columns: packbuild.world_aliases, from datasets/names and
 GeoNames alternate names), country facts (GeoNames, Unicode CLDR, Wikidata:
-packbuild.country_profiles) and time-zone polygons (datasets/timezones/world.json drawn with the
-Natural Earth units: packbuild.timezones). Natural Earth's disputed areas are the `worldviews` layer.
+packbuild.country_profiles) and time zones (datasets/timezones/world.json as a `tz` column on the
+Natural Earth units, plus the hand-drawn shapes: packbuild.timezones). Natural Earth's disputed
+areas are the `worldviews` layer.
 
     uv run python -m packbuild.world --version 2026.11
 
@@ -25,7 +26,7 @@ log = logging.getLogger(__name__)
 
 
 def build_layers(cache_dir, refresh=False):
-    """The six world layers, fetching (or reusing) the source files in `cache_dir`."""
+    """The world layers, fetching (or reusing) the source files in `cache_dir`."""
 
     def get(url):
         return fetch(url, cache_dir, refresh=refresh)
@@ -65,8 +66,8 @@ def build_layers(cache_dir, refresh=False):
         refresh=refresh,
         fetcher=lambda u, d, refresh: fetch(u, d, refresh),
     )
-    zones = timezones.world_layer(timezones.load("world"), countries, admin1)
-    return [countries, admin1, worldviews, cities, airports, facts, zones]
+    countries, admin1, shapes = timezones.world_tables(timezones.load("world"), countries, admin1)
+    return [countries, admin1, worldviews, cities, airports, facts, *([shapes] if shapes else [])]
 
 
 def build_world(cache_dir, out_dir, version, refresh=False):

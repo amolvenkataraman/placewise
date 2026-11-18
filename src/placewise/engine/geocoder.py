@@ -4,7 +4,7 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 
 1. country and admin1 (_admin), with the worldview order applied;
 2. country packs' boundaries: admin1 corrected by their states, provinces or PIN areas (naming);
-3. time zones from the packs' timezones polygons (_timezones); GeoNames cities: the provisional
+3. time zones from the zones the packs give their admin units (_timezones); GeoNames cities: the provisional
    city score, the nearest-city time zone where no polygon answered, notable cities (_cities);
 4. country packs' names: sublocality, locality, city, borough, admin2, postal, regions (naming);
 5. airport, and the nearest country far offshore (_nearby);
@@ -79,8 +79,8 @@ class Geocoder:
 
     @once
     def timezones(self):
-        """The packs' timezones layers, or None when no pack has one."""
-        found = Timezones(self.layers, self.admin)
+        """The packs' time zones (placewise.engine._timezones), or None when no pack has any."""
+        found = Timezones(self.layers, self.admin, self.naming)
         return found if found else None
 
     @once
@@ -172,7 +172,7 @@ class Geocoder:
         naming = self.naming
         work = naming.boundaries(a, lat, lon) if naming else ()
         if everything and self.timezones is not None:
-            self.timezones.answer(a, lat, lon)
+            self.timezones.answer(a, lat, lon, work)
         if self.cities is not None:
             k_notable = max(const.NOTABLE_CANDIDATES, self.settings.near.max_near + 1)
             self.cities.answer(a, lat, lon, near, self._near_km(PlaceKind.LOCALITY), k_notable)

@@ -68,6 +68,16 @@ class Named:
         return found
 
 
+def tz_layer(layers, key):
+    """`key` when its layer carries a time-zone column (placewise.engine._timezones), else None."""
+    return key if lookup_const.TZ_FIELD in layers.layer(key).fields else None
+
+
+def inside_rows(rows, rule):
+    """`rows` (features per point, as `polygon` gives them) where the point is inside, else -1."""
+    return np.where(rule == lookup_const.POLYGON, rows, -1)
+
+
 def polygon(layer, lat, lon, snap_km=const.SHORE_KM):
     """(feature or -1, rule) per point: the containing feature ("polygon"), else the one whose
     boundary is nearest within snap_km ("nearest"), for shapes clipped to the shoreline."""
