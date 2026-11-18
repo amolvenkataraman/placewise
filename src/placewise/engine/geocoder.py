@@ -14,7 +14,8 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 9. the Results and their labels (_results).
 
 `lookup_many` runs every spatial query for all points at once and then builds the Results;
-`lookup` is `lookup_many` with one point, so the two always agree.
+`lookup` is `lookup_many` with one point, so the two always agree. A point given more than once
+in a batch is looked up once, and its Result (frozen) is shared by every position that has it.
 """
 
 import inspect
@@ -124,7 +125,8 @@ class Geocoder:
         return self.lookup_many([lat], [lon], worldview=worldview, near=near)[0]
 
     def lookup_many(self, lats, lons, *, worldview=None, near=True):
-        """Results for many points, one per point, in order. Vectorised: much faster per point."""
+        """Results for many points, one per point, in order. Vectorised: much faster per point.
+        Exactly repeated points are looked up once and share one Result."""
         return self._lookup(lats, lons, worldview, near, everything=True)
 
     def _lookup_places(self, lats, lons, *, worldview=None):
@@ -146,6 +148,10 @@ class Geocoder:
         order, locked = self._order(worldview)
         if not len(lat):
             return []
+        first, inverse = _repeats(lat, lon)
+        if first is not None:  # each distinct point once, in order of first appearance
+            unique = self._lookup(lat[first], lon[first], worldview, near, everything)
+            return [unique[i] for i in inverse.tolist()]
         a, named = self._answer(lat, lon, order, near, everything)
         results = _results.build(self, lat, lon, a, named, order, locked)
         if self.overrides is not None:
@@ -219,6 +225,22 @@ class Geocoder:
         if result.country is None and result.admin1 is None:
             return result.label  # offshore labels name a reference place, not the result's fields
         return _results.compose(self.settings.label, result)
+
+
+def _repeats(lat, lon):
+    """(first, inverse) when some points repeat exactly (bit for bit: -0.0 is not 0.0): the
+    position of each distinct point's first appearance, in order, and the distinct point of every
+    point; (None, None) when none repeats."""
+    if len(lat) < 2:
+        return None, None
+    bits = np.stack([lat, lon], axis=1).view(np.int64)
+    _, first, inverse = np.unique(bits, axis=0, return_index=True, return_inverse=True)
+    if len(first) == len(lat):
+        return None, None
+    order = np.argsort(first)
+    rank = np.empty(len(order), dtype=np.int64)
+    rank[order] = np.arange(len(order))
+    return first[order], rank[inverse.ravel()]
 
 
 def _installed_country_packs(store):

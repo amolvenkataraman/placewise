@@ -1,6 +1,7 @@
 """Point lookup on a tiny synthetic pack (lookup_kit): rules, worldviews, hooks, batch == single."""
 
 import dataclasses
+import math
 
 import numpy as np
 import pytest
@@ -299,6 +300,28 @@ def test_lookup_many_equals_lookup(geo, worldview):
     assert len(many) == len(lats)
     for r, a, b in zip(many, lats, lons, strict=True):
         assert r.to_dict() == geo.lookup(float(a), float(b), worldview=worldview).to_dict()
+
+
+def test_lookup_many_looks_up_repeated_points_once(world):
+    seen = []
+
+    class Hook:
+        def apply(self, result, lat, lon):
+            seen.append((lat, lon))
+            return result
+
+    geo = Geocoder(packs=[world], overrides=Hook())
+    lats = [0.75, 1.1, 0.75, 0.75, -0.0, 0.0, 1.1]
+    lons = [-139.45, -139.5, -139.45, -139.45, -139.5, -139.5, -139.5]
+    many = geo.lookup_many(lats, lons)
+    asked = [(a, math.copysign(1, a), b) for a, b in seen]
+    assert [r.to_dict() for r in many] == [
+        geo.lookup(a, b).to_dict() for a, b in zip(lats, lons, strict=True)
+    ]
+    assert many[0] is many[2] is many[3] and many[1] is many[6]  # one answer, shared (Results are frozen)
+    # -0.0 and 0.0 are different inputs: each Result echoes its own
+    assert math.copysign(1, many[4].lat) == -1 and math.copysign(1, many[5].lat) == 1
+    assert asked == [(0.75, 1, -139.45), (1.1, 1, -139.5), (0.0, -1, -139.5), (0.0, 1, -139.5)]
 
 
 def test_lookup_many_empty_and_scalar_types(geo):
