@@ -18,7 +18,6 @@ pack; constants in placewise.constants.water, docs/water.md).
 """
 
 from dataclasses import dataclass
-from functools import cached_property
 
 import numpy as np
 
@@ -26,6 +25,7 @@ from placewise.constants import lookup as lookup_const
 from placewise.constants import water as const
 from placewise.geo import compass, initial_bearing
 from placewise.model import Nearby, Place, PlaceKind, Relation
+from placewise.packs import once
 
 from ._index import best_per_query
 
@@ -154,7 +154,7 @@ class Water:
     def _set(a, pts, layer, row, km, at):
         a["wet_layer"][pts], a["wet_row"][pts], a["wet_km"][pts], a["wet_at"][pts] = layer, row, km, at
 
-    @cached_property
+    @once
     def _lake_margin_km(self):
         lakes = self.layer(const.LAKES)
         sources = lakes.column("source").tolist() if "source" in lakes.fields else [""] * lakes.count
@@ -163,14 +163,14 @@ class Water:
             [margins.get(s, const.LAKE_SHORE_MARGIN_DEFAULT_KM) for s in sources], dtype=np.float64
         )
 
-    @cached_property
+    @once
     def _lake_area_km2(self):
         lakes = self.layer(const.LAKES)
         if "area_km2" not in lakes.fields:
             return np.zeros(lakes.count)
         return np.asarray(lakes.column("area_km2"), dtype=np.float64)
 
-    @cached_property
+    @once
     def _lake_near_km(self):
         """How close each lake's shore must be to count as near, by its area."""
         area, near = self._lake_area_km2, np.zeros(len(self._lake_area_km2))

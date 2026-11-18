@@ -14,11 +14,11 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 9. the Results and their labels (_results).
 
 `lookup_many` runs every spatial query for all points at once and then builds the Results;
-`lookup` is `lookup_many` with one point, so the two always agree.
+`lookup` is `lookup_many` with one point, so the two always agree. A point given more than once
+in a batch is looked up once, and its Result (frozen) is shared by every position that has it.
 """
 
 import inspect
-from functools import cached_property
 
 import numpy as np
 
@@ -29,7 +29,7 @@ from placewise.constants import notable as notable_const
 from placewise.constants import parks as parks_const
 from placewise.constants import water as water_const
 from placewise.model import CityRule, PlaceKind, Settings
-from placewise.packs import Pack, open_pack
+from placewise.packs import Pack, once, open_pack
 
 from . import _nearby, _results
 from ._admin import Admin
@@ -73,37 +73,37 @@ class Geocoder:
     def __repr__(self):
         return f"<Geocoder {self.data_version}>"
 
-    @cached_property
+    @once
     def cities(self):
         return Cities(self.layers, self.admin) if self.layers.has(const.CITIES) else None
 
-    @cached_property
+    @once
     def timezones(self):
         """The packs' timezones layers, or None when no pack has one."""
         found = Timezones(self.layers, self.admin)
         return found if found else None
 
-    @cached_property
+    @once
     def parks(self):
         """The park packs' layers (placewise.engine._within), or None when no pack has any."""
         return Parks(self.packs, self.layers, self.settings.near) or None
 
-    @cached_property
+    @once
     def water(self):
         """The water layers (placewise.engine._water); falsy when no pack has them."""
         return Water(self.packs, self.layers)
 
-    @cached_property
+    @once
     def notable(self):
         """The world-notable pack's layer (placewise.engine._notable), or None when no pack has it."""
         return Notable(self.packs, self.layers) or None
 
-    @cached_property
+    @once
     def naming(self):
         """The country packs' rules; they need the GeoNames cities beside them."""
         return Naming(self.packs, self.layers, self.admin, self.cities) if self.cities is not None else None
 
-    @cached_property
+    @once
     def search(self):
         """Forward search over these packs (placewise.search.Search)."""
         from placewise.search import Search
@@ -125,7 +125,8 @@ class Geocoder:
         return self.lookup_many([lat], [lon], worldview=worldview, near=near)[0]
 
     def lookup_many(self, lats, lons, *, worldview=None, near=True):
-        """Results for many points, one per point, in order. Vectorised: much faster per point."""
+        """Results for many points, one per point, in order. Vectorised: much faster per point.
+        Exactly repeated points are looked up once and share one Result."""
         return self._lookup(lats, lons, worldview, near, everything=True)
 
     def _lookup_places(self, lats, lons, *, worldview=None):
@@ -147,6 +148,10 @@ class Geocoder:
         order, locked = self._order(worldview)
         if not len(lat):
             return []
+        first, inverse = _repeats(lat, lon)
+        if first is not None:  # each distinct point once, in order of first appearance
+            unique = self._lookup(lat[first], lon[first], worldview, near, everything)
+            return [unique[i] for i in inverse.tolist()]
         a, named = self._answer(lat, lon, order, near, everything)
         results = _results.build(self, lat, lon, a, named, order, locked)
         if self.overrides is not None:
@@ -186,7 +191,7 @@ class Geocoder:
 
     # -- worldview, settings, overrides -------------------------------------------------------------
 
-    @cached_property
+    @once
     def _rules_read_parks(self):
         """Whether the overrides could set a city from the parks a point is in: a city rule (its
         area may name a park), or a hook whose rules can't be seen."""
@@ -220,6 +225,22 @@ class Geocoder:
         if result.country is None and result.admin1 is None:
             return result.label  # offshore labels name a reference place, not the result's fields
         return _results.compose(self.settings.label, result)
+
+
+def _repeats(lat, lon):
+    """(first, inverse) when some points repeat exactly (bit for bit: -0.0 is not 0.0): the
+    position of each distinct point's first appearance, in order, and the distinct point of every
+    point; (None, None) when none repeats."""
+    if len(lat) < 2:
+        return None, None
+    bits = np.stack([lat, lon], axis=1).view(np.int64)
+    _, first, inverse = np.unique(bits, axis=0, return_index=True, return_inverse=True)
+    if len(first) == len(lat):
+        return None, None
+    order = np.argsort(first)
+    rank = np.empty(len(order), dtype=np.int64)
+    rank[order] = np.arange(len(order))
+    return first[order], rank[inverse.ravel()]
 
 
 def _installed_country_packs(store):

@@ -1,10 +1,12 @@
 """Data packs: write them (`write_pack`, `archive`, `write_index`) and read them (`open_pack`).
 `PointIndex` is the layers' nearest-neighbour search, for any set of points. `Pack.names` is
 the name index (`NameIndex`) forward search reads; `NameData` is what write_pack builds it from.
+`once` is the thread-safe cached property the lazy indexes use (and the engine's, over them).
 
 The on-disk format is docs/pack-format.md (schema 1).
 """
 
+from ._lazy import once
 from ._names import Candidates, NameIndex, Resolved
 from ._names_write import NameData
 from ._points import PointIndex
@@ -25,6 +27,7 @@ __all__ = [
     "PolygonLayer",
     "Resolved",
     "archive",
+    "once",
     "open_pack",
     "pack_info",
     "write_index",

@@ -10,7 +10,6 @@ import json
 import math
 import re
 from dataclasses import dataclass
-from functools import cached_property
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +21,7 @@ from placewise.geo import normalize_lon
 from placewise.model import BBox, Outline
 
 from . import _geometry as gm
+from ._lazy import once
 from ._name_match import IdView, KeyTable, PackedTrigrams, Trigrams, ranges
 
 # prefix lookups over many entries rank only the best `limit` x this by rank
@@ -244,15 +244,15 @@ class NameIndex:
             self._arrays[rel] = np.load(self.path / f"{rel}.npy", mmap_mode="r", allow_pickle=False)
         return self._arrays[rel]
 
-    @cached_property
+    @once
     def _names(self):
         return KeyTable(self.path, "name")
 
-    @cached_property
+    @once
     def _codes(self):
         return KeyTable(self.path, "code")
 
-    @cached_property
+    @once
     def _trigrams(self):
         if PackedTrigrams.present(self.path):
             return PackedTrigrams(self.path, self._names)

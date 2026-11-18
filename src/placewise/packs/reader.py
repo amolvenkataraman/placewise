@@ -11,7 +11,6 @@ may differ between neighbouring points on the same edge; don't rely on either.
 import hashlib
 import json
 import math
-from functools import cached_property
 from pathlib import Path, PurePosixPath
 
 import numpy as np
@@ -25,6 +24,7 @@ from placewise.model import BBox, Feature, Outline
 from . import _geometry as gm
 from ._boundary import Boundary
 from ._edges import EdgeCaps
+from ._lazy import once
 from ._names import NameIndex
 from ._points import PointIndex
 from ._refine import Refinement
@@ -94,7 +94,7 @@ class Pack:
     def __contains__(self, name):
         return name in self.layers
 
-    @cached_property
+    @once
     def names(self):
         """The pack's name index (a NameIndex for forward search), or None when it has none."""
         if not (self.path / names_consts.NAMES_DIR / names_consts.NAMES_JSON).is_file():
@@ -224,7 +224,7 @@ class Layer:
             self._arrays[rel] = np.load(self.path / rel, mmap_mode="r", allow_pickle=False)
         return self._arrays[rel]
 
-    @cached_property
+    @once
     def _strings(self):
         return (self.path / consts.STRINGS_BIN).read_bytes(), np.asarray(self._array(consts.STRINGS_IDX))
 
@@ -241,23 +241,23 @@ class Layer:
         out[:] = [blob[a:b].decode("utf-8") for a, b in zip(starts, stops, strict=True)]
         return out
 
-    @cached_property
+    @once
     def _string_ids(self):
         return {self._string(k): k for k in range(len(self._strings[1]) - 1)}
 
 
 class PointLayer(Layer):
-    @cached_property
+    @once
     def lat(self):
         """Latitudes in degrees (float64)."""
         return gm.from_e7(self._array(f"{consts.GEOM_DIR}/lat.npy"))
 
-    @cached_property
+    @once
     def lon(self):
         """Longitudes in degrees (float64)."""
         return gm.from_e7(self._array(f"{consts.GEOM_DIR}/lon.npy"))
 
-    @cached_property
+    @once
     def index(self):
         """The layer's points as a PointIndex (built on first use; indexes are row numbers)."""
         return PointIndex(self.lat, self.lon)
@@ -275,7 +275,7 @@ class PointLayer(Layer):
 
 
 class PolygonLayer(Layer):
-    @cached_property
+    @once
     def _grid_meta(self):
         return _read_json(
             self.path / consts.GRID_DIR / consts.GRID_META,
@@ -301,7 +301,7 @@ class PolygonLayer(Layer):
         # for tests and experiments: all -1 turns the shortcut off
         self._arrays[f"{consts.GRID_DIR}/inside.npy"] = value
 
-    @cached_property
+    @once
     def _geom(self):
         lat = gm.from_e7(self._array(f"{consts.GEOM_DIR}/lat.npy"))
         lon = gm.from_e7(self._array(f"{consts.GEOM_DIR}/lon.npy"))
@@ -321,7 +321,7 @@ class PolygonLayer(Layer):
             "lon_b": lon[nxt],
         }
 
-    @cached_property
+    @once
     def _bbox(self):
         return gm.from_e7(self._array(f"{consts.GEOM_DIR}/bbox.npy")).reshape(-1, 4)
 
@@ -392,19 +392,19 @@ class PolygonLayer(Layer):
             inside[~fine] = self._slabs.even_odd(lat[~fine], lon[~fine], feature[~fine])
         return inside
 
-    @cached_property
+    @once
     def _slabs(self):
         g = self._geom
         return gm.Slabs(g["vertex"], (g["lat"], g["lon"], g["lat_b"], g["lon_b"]), _SLAB_DEG)
 
-    @cached_property
+    @once
     def _refined(self):
         g = self._geom
         return Refinement(
             g["vertex"], (g["lat"], g["lon"], g["lat_b"], g["lon_b"]), self.cell_deg, self._slabs.even_odd
         )
 
-    @cached_property
+    @once
     def _tested(self):
         return np.zeros(self.count, dtype=np.int64)
 
@@ -459,6 +459,8 @@ class PolygonLayer(Layer):
             np.asarray(offsets[cell]).astype(np.int64),
             np.asarray(offsets[cell + 1]).astype(np.int64),
         )
+        if not (stop > start).any():  # no candidates: a layer far from every point
+            return np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.int64)
         point = np.repeat(ok, stop - start)
         items = self._array(f"{consts.GRID_DIR}/items.npy")
         feature = np.asarray(items[_ranges(start, stop)]).astype(np.int64)
@@ -528,7 +530,7 @@ class PolygonLayer(Layer):
         best = best.reshape(shape)
         return float(best) if best.ndim == 0 else best
 
-    @cached_property
+    @once
     def _edge_caps(self):
         g = self._geom
 
@@ -565,7 +567,7 @@ class PolygonLayer(Layer):
                 best[q0 : q0 + step] = chunk
         return best
 
-    @cached_property
+    @once
     def _boundary(self):
         g = self._geom
         owner = np.repeat(np.arange(self.count), np.diff(g["vertex"]))

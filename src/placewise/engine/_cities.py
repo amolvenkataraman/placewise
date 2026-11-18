@@ -10,11 +10,10 @@
 - notable: cities of NOTABLE_POPULATION+ near each point, for Result.near.
 """
 
-from functools import cached_property
-
 import numpy as np
 
 from placewise.constants import lookup as const
+from placewise.packs import once
 
 from ._index import RowIndex
 
@@ -27,7 +26,7 @@ class Cities:
         self._by_country = {}
         self._inside = {}  # layer key -> per city row, the feature containing it (-2: not asked yet)
 
-    @cached_property
+    @once
     def table(self):
         layer = self.layer
         n, f = layer.count, layer.fields
