@@ -2,6 +2,7 @@
 
     import placewise
     placewise.lookup(43.6426, -79.3871).label     # "Toronto, Ontario, Canada"
+    placewise.find("Yosemite")[0].bbox             # name in, place out
     placewise.country("can").name                  # "Canada"  (placewise.world has the rest)
 
 The headline names load on first use, so `import placewise` stays cheap for toolkit-only users.
@@ -13,6 +14,9 @@ __version__ = "0.1.0a1"
 _LAZY = {
     "lookup": ("placewise.engine", "lookup"),
     "Geocoder": ("placewise.engine", "Geocoder"),
+    "find": ("placewise.search", "find"),
+    "get": ("placewise.search", "get"),
+    "suggest": ("placewise.search", "suggest"),
     "Client": ("placewise.service", "Client"),
     "load_settings": ("placewise.config", "load_settings"),
     "load_overrides": ("placewise.overrides", "load_overrides"),

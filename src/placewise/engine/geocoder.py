@@ -95,7 +95,22 @@ class Geocoder:
         """The country packs' rules; they need the GeoNames cities beside them."""
         return Naming(self.packs, self.layers, self.admin, self.cities) if self.cities is not None else None
 
+    @cached_property
+    def search(self):
+        """Forward search over these packs (placewise.search.Search)."""
+        from placewise.search import Search
+
+        return Search(self)
+
     # -- public API -------------------------------------------------------------------------------
+
+    def find(self, text, **options):
+        """Places named `text`, best first (placewise.search.find has the options)."""
+        return self.search.find(text, **options)
+
+    def get(self, ident, **options):
+        """The Entity with placewise id `ident` (placewise.search.get)."""
+        return self.search.get(ident, **options)
 
     def lookup(self, lat, lon, *, worldview=None, near=True):
         """The Result for one point (WGS84 degrees)."""

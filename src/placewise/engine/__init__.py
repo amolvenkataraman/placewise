@@ -14,7 +14,7 @@ import threading
 
 from .geocoder import Geocoder
 
-__all__ = ["Geocoder", "lookup"]
+__all__ = ["Geocoder", "default_geocoder", "lookup"]
 
 _default = None
 _lock = threading.Lock()
@@ -29,12 +29,17 @@ def _make_default():
     return Geocoder(settings=settings, overrides=load_overrides(settings=settings))
 
 
-def lookup(lat, lon, *, worldview=None, near=True):
-    """Geocoder.lookup on a default Geocoder, created on first call from the user's settings and
-    overrides (which may download the world pack, unless settings say offline)."""
+def default_geocoder():
+    """The Geocoder `lookup` and `placewise.find` use, created on first call from the user's
+    settings and overrides (which may download the world pack, unless settings say offline)."""
     global _default
     if _default is None:
         with _lock:
             if _default is None:
                 _default = _make_default()
-    return _default.lookup(lat, lon, worldview=worldview, near=near)
+    return _default
+
+
+def lookup(lat, lon, *, worldview=None, near=True):
+    """Geocoder.lookup on the default Geocoder (default_geocoder)."""
+    return default_geocoder().lookup(lat, lon, worldview=worldview, near=near)

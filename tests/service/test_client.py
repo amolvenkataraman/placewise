@@ -165,3 +165,29 @@ def test_reuses_the_connection_and_recovers_after_restart(serve, fake):
 def test_context_manager(serve):
     with Client(url(serve())) as client:
         assert client.lookup(*EIFFEL).label.startswith("Eiffel")
+
+
+def test_find_and_get_round_trip(serve, fake):
+    from placewise.model import Entity, Point
+
+    client = Client(url(serve()))
+    found = client.find(
+        "tower", limit=1, country="CA", near=Point(43.6, -79.4), kinds=["landmark"], strict=False
+    )
+    assert len(found) == 1 and isinstance(found[0], Entity) and found[0].place.id == "test:cn_tower"
+    options = fake.calls[-1][2]
+    assert options["country"] == ["CA"] and options["near"] == (43.6, -79.4) and options["strict"] is False
+    assert client.find("tower", bbox=(40, -80, 50, -70))[0].city == "Toronto"
+    assert client.get("test:eiffel") == fake.get("test:eiffel")
+    with pytest.raises(KeyError):
+        client.get("test:nowhere")
+    with pytest.raises(BadRequestError):
+        client.find("tower", limit=0)
+
+
+def test_local_service_passes_search_through(serve, fake):
+    from placewise.service import CachedGeocoder
+
+    cached = CachedGeocoder(fake)
+    assert cached.find("opera")[0].place.id == "test:opera_house"
+    assert cached.get("test:eiffel").place.id == "test:eiffel"

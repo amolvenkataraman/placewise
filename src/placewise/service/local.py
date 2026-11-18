@@ -179,6 +179,13 @@ class CachedGeocoder:
             return result
         return dataclasses.replace(result, lat=lat, lon=lon)
 
+    def find(self, text, **options):
+        """Forward search, passed through uncached (placewise.search.find)."""
+        return self.geocoder.find(text, **options)
+
+    def get(self, ident, **options):
+        return self.geocoder.get(ident, **options)
+
     def lookup(self, lat, lon, *, worldview=None):
         lat, lon = float(lat), float(lon)
         key = self._key(lat, lon, worldview)

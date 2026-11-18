@@ -130,7 +130,10 @@ class AppPlace(Model):
 
 @dataclass(frozen=True, slots=True)
 class Entity(Model):
-    """What `find` returns: a place with a point guaranteed inside it, its extent and its context."""
+    """What `find` returns: a place with a point guaranteed inside it, its extent and its context.
+    `city`, `region` (state, province) and `country` (ISO alpha-2) say where it is, for telling
+    places of one name apart; `alternates` are the same place as found in other data (a city's
+    metro area of the same name, a park's point record)."""
 
     place: Place
     point: Point
@@ -141,10 +144,12 @@ class Entity(Model):
     region: str | None = None
     country: str | None = None
     score: float | None = None
+    alternates: tuple[Place, ...] = ()
 
     def __post_init__(self):
         if self.radius_km < 0:
             raise ValueError("radius can't be negative")
+        set_field(self, "alternates", tuple(self.alternates))
 
     def contains(self, lat, lon):
         """Which points lie in this entity: inside its outline when it has one, otherwise within
