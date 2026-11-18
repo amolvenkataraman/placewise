@@ -63,9 +63,10 @@ class _Prepared:
     cell_deg: float
 
 
-def write_pack(out_dir, name, version, layers, created=None):
+def write_pack(out_dir, name, version, layers, created=None, names=None):
     """Write `<out_dir>/<name>-<version>/` and return its path. `created` is an ISO 8601 UTC
-    timestamp (or datetime); it defaults to now, so pass it for reproducible output."""
+    timestamp (or datetime); it defaults to now, so pass it for reproducible output. `names`
+    (a NameData) adds the name index, `names/`."""
     _check_name(name, "pack")
     if not isinstance(version, str) or not re.fullmatch(consts.VERSION_PATTERN, version):
         raise ValueError(f"pack version {version!r} must be CalVer YYYY.MM or YYYY.MM.N")
