@@ -161,6 +161,27 @@ def test_lookup_many_equals_lookup(geo):
     ]
 
 
+PLACE_FIELDS = ("country", "admin1", "admin2", "city", "locality", "sublocality", "borough", "postal")
+
+
+def test_lookup_places_matches_lookup_many_without_reading_water(packs, monkeypatch):
+    geo = Geocoder(packs=list(packs))
+    lats = np.array([0.35, 0.3005, 0.29, 1.4, 1.7, 1.1, 1.005, -10.0, 5.1, -30.0, 0.61, 0.75])
+    lons = np.array([-139.85, -139.85, -139.85, -139.3, -139.7, -139.5, -139.5, -160.0, -140.0,
+                     -100.0, -139.8, -139.45])  # fmt: skip
+    full = geo.lookup_many(lats, lons, near=False)
+
+    def no_water(*args, **kwargs):
+        raise AssertionError("the water step ran")
+
+    monkeypatch.setattr(geo.water, "answer", no_water)
+    light = geo._lookup_places(lats, lons)
+    for a, b in zip(light, full, strict=True):
+        assert {f: getattr(a, f) for f in PLACE_FIELDS} == {f: getattr(b, f) for f in PLACE_FIELDS}
+        assert (a.cc, a.regions) == (b.cc, b.regions)
+        assert a.airport is None and (a.water is None or a.water.place.kind != PlaceKind.WATER)
+
+
 def test_land_far_from_water_is_unchanged(geo, land):
     for lat, lon in [(0.75, -139.45), (0.25, -138.97), (2.25, -139.75)]:
         assert geo.lookup(lat, lon).to_dict() == land.lookup(lat, lon).to_dict() | {

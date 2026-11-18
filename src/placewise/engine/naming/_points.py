@@ -30,9 +30,9 @@ class NamedPoints:
     def __init__(self, layers, key, polygons):
         self.layers, self.key, self.polygons = layers, key, polygons
         self.layer = layers.layer(key)
-        generic = np.asarray(self.layer.column("generic").tolist(), dtype=object)
-        self._locality_ok = np.isin(generic, list(const.CGNDB_LOCALITY_TERMS))
-        self._sublocality_ok = np.isin(generic, list(const.CGNDB_SUBLOCALITY_TERMS))
+        generic, of_row = self.layer.distinct("generic")
+        self._locality_ok = np.isin(generic, list(const.CGNDB_LOCALITY_TERMS))[of_row]
+        self._sublocality_ok = np.isin(generic, list(const.CGNDB_SUBLOCALITY_TERMS))[of_row]
         scale = np.asarray(self.layer.column("scale"), dtype=np.float64)
         self._radius = np.full(len(scale), const.CGNDB_SUBLOCALITY_KM[-1][1])
         for at_least, km in reversed(const.CGNDB_SUBLOCALITY_KM):
@@ -84,12 +84,11 @@ class NamedPoints:
         reach = self._radius.max(initial=0.0)
         rows, km, usable = self._candidates(lat, lon, feature, self._sublocality_ok, reach)
         depth = np.where(usable & (km <= self._radius[rows]), km / self._radius[rows], np.inf)
-        names = self.layers.column(self.key, "name")
         for i in np.flatnonzero(np.isfinite(depth).any(axis=1)).tolist():
             for j in np.argsort(depth[i], kind="stable").tolist():
                 if not np.isfinite(depth[i, j]):
                     break
-                if not skip(i, names[rows[i, j]]):
+                if not skip(i, self.layers.value(self.key, "name", int(rows[i, j]))):
                     out[i] = rows[i, j]
                     break
         return out

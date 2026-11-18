@@ -62,7 +62,10 @@ def choose_cell_deg(lat, lon):
     for cell_deg in sorted(POINT_CELL_DEGS, reverse=True):
         rows, cols = gm.grid_shape(cell_deg)
         ids = gm.cell_rows(lat, cell_deg, rows) * cols + gm.cell_cols(lon, cell_deg, cols)
-        counts = np.unique(ids, return_counts=True)[1].astype(np.float64)
+        if rows * cols <= _TABLE_CELLS:  # counting is cheaper than sorting (empty cells add 0)
+            counts = np.bincount(ids, minlength=rows * cols).astype(np.float64)
+        else:
+            counts = np.unique(ids, return_counts=True)[1].astype(np.float64)
         if np.sum(counts * counts) <= POINT_CELL_TARGET * len(lat):
             return cell_deg
     return min(POINT_CELL_DEGS)
@@ -284,7 +287,9 @@ class _Grid:
         self.ids, self.first = ids[order], None
         n_cells = self.rows * self.cols
         if n_cells <= _TABLE_CELLS:
-            self.ids, self.first = None, np.searchsorted(ids[order], np.arange(n_cells + 1)).astype(small)
+            first = np.zeros(n_cells + 1, dtype=np.int64)  # entries in cells before each cell
+            np.cumsum(np.bincount(ids, minlength=n_cells), out=first[1:])
+            self.ids, self.first = None, first.astype(small)
         # sine and cosine of every row edge, for the disks' widths
         edge = np.radians(np.minimum(-90.0 + np.arange(self.rows + 1) * cell_deg, 90.0))
         self.sin_edge, self.cos_edge = np.sin(edge), np.cos(edge)

@@ -95,7 +95,7 @@ class Ind:
         cache = self.layers.cache(f"{self.pin}#area")
         if row not in cache:
             postal = self.layers.place(self.pin, row)
-            office = self.layers.column(self.pin, "name")[row]
+            office = self.layers.value(self.pin, "name", row)
             code = postal.name
             name = rules.office_area_name(office) if office else ""
             cache[row] = (

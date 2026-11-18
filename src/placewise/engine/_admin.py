@@ -77,7 +77,7 @@ class Admin:
         vocab = {}
         cities = self.layers.layer(const.CITIES)
         if cities is not None and "country" in cities.fields:
-            for code in np.unique(cities.column("country")):
+            for code in cities.distinct("country")[0]:
                 vocab.setdefault(code, len(vocab))
         if self.worldviews is not None:
             for code in self.worldviews.code:

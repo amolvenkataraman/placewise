@@ -128,3 +128,36 @@ def test_default_geocoder_opens_installed_park_packs(packs):
     geo = Geocoder(store=FakeStore())
     assert geo.data_version == "world-2026.11+usa-parks-2026.11+world-parks-2026.11"
     assert geo.lookup(0.75, -139.75).within[0].name == "Alpha Preserve"
+
+
+# --- the places-only lookup behind search's context ----------------------------------------------
+
+PLACE_FIELDS = ("country", "admin1", "admin2", "city", "locality", "sublocality", "borough", "postal")
+POINTS = ([0.75, 0.105, 0.97, 2.25, -10.0], [-139.75, -139.295, -139.75, -139.75, -160.0])
+
+
+def _places(results):
+    return [({f: getattr(r, f) for f in PLACE_FIELDS}, r.cc) for r in results]
+
+
+def test_lookup_places_skips_parks_when_no_rule_can_read_them(packs, monkeypatch):
+    geo = Geocoder(packs=list(packs))
+    full = geo.lookup_many(*POINTS, near=False)
+
+    def no_parks(*args, **kwargs):
+        raise AssertionError("the parks step ran")
+
+    monkeypatch.setattr(geo.parks, "answer", no_parks)
+    assert _places(geo._lookup_places(*POINTS)) == _places(full)
+
+
+def test_lookup_places_reads_parks_for_a_city_rule_naming_a_park(packs):
+    from placewise.model import AreaSelector, CityRule
+    from placewise.model.overrides import Layer, OverrideSet
+    from placewise.overrides.engine import OverrideEngine
+
+    rule = CityRule(within=AreaSelector(place="nps:ALPH"), city="Parkville")
+    geo = Geocoder(packs=list(packs), overrides=OverrideEngine([OverrideSet(Layer.LOCAL, (rule,))]))
+    light = geo._lookup_places(*POINTS)
+    assert light[0].city.name == "Parkville"
+    assert _places(light) == _places(geo.lookup_many(*POINTS, near=False))
