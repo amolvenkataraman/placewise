@@ -154,7 +154,9 @@ names/
 ├─ code_keys.bin  code_keys.idx.npy  code_start.npy    # codes: matched exactly only
 ├─ layer.npy  row.npy  kind.npy  rank.npy  name_kind.npy   # one row per entry
 ├─ entry/<layer>.npy   ids/<layer>.npy                 # per indexed layer
-└─ inside/<layer>.npy  radius/<layer>.npy              # per indexed polygon layer
+├─ inside/<layer>.npy  radius/<layer>.npy              # per indexed polygon layer
+└─ trigram_codes.npy  trigram_start.npy  trigram_counts.npy  trigram_repeats.npy
+   trigram_postings.bin                                # fuzzy matching (optional)
 ```
 
 `names.json`: `{"format": 1, "layers": [...], "kinds": [...], "name_kinds": [...], "entries": E,
@@ -189,8 +191,25 @@ feature's largest polygon), checked with the even-odd test after rounding; `radi
 their point is the feature, and their radius comes from a `radius_km` or `radius_m` column, else
 a disc of 2,000 people per km² for a `population` column (0.5 to 40 km), else 1 km.
 
-**Fuzzy matching** needs no files: readers build padded character trigram postings over the
-name keys in memory on first use.
+**Fuzzy matching** reads padded character trigram postings over the name keys: each key (as
+code points, with one space added before and after) holds the trigrams starting at each of its
+characters, " to", "tor" ... "to " for "toronto", and a trigram's posting lists the name keys
+(numbers into `name_keys`, ascending) holding it. A trigram's code is its three code points, 21
+bits each, the first highest (`(a << 42) | (b << 21) | c`).
+
+- `trigram_codes.npy` (u8, T): the distinct trigram codes, ascending.
+- `trigram_counts.npy` (i4, T): how many keys each trigram's posting lists.
+- `trigram_start.npy` (u4, T + 1; i8 should the postings pass 4 GiB): each posting's byte range
+  in `trigram_postings.bin`: trigram t's is `start[t]:start[t + 1]`.
+- `trigram_postings.bin`: every posting, in trigram order, as its first key number and then the
+  differences between consecutive key numbers, each a varint (7 bits per byte, low bits first,
+  the high bit set on every byte but a number's last).
+- `trigram_repeats.npy` (i4, shape (r, 2): key, distinct trigrams): the keys holding a trigram
+  more than once ("banana"); every other key holds as many distinct trigrams as it has characters.
+
+The postings add about a third to the name index (all of it for very small packs). The files are
+optional: readers build the same postings in memory on the first fuzzy lookup when a pack written
+before them lacks them (a few hundred ms per pack of a couple of hundred thousand keys).
 
 ## Distribution
 

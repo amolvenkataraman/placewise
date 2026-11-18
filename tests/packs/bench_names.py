@@ -4,8 +4,8 @@
 
 Queries are names from the pack's own layer (default: its first indexed layer with the most
 rows): exact names, their first four characters as prefixes, and the names with one character
-dropped as typos. Prints the cold costs (opening, first fuzzy lookup building the trigram
-postings) and the warm mean and 95th percentile per query.
+dropped as typos. Prints the cold costs (opening, first fuzzy lookup reading the trigram
+postings, or building them for older packs) and the warm mean and 95th percentile per query.
 """
 
 import sys
@@ -46,7 +46,7 @@ def main(path, layer=None, count=2000, seed=0):
     print(f"first exact (loads key table)  {1000 * (time.perf_counter() - t):7.1f} ms")
     t = time.perf_counter()
     idx.fuzzy(typos[0])
-    print(f"first fuzzy (builds trigrams)  {1000 * (time.perf_counter() - t):7.1f} ms")
+    print(f"first fuzzy (reads trigrams)   {1000 * (time.perf_counter() - t):7.1f} ms")
     print(f"{len(picked)} names from {layer!r}")
     per_query("exact", idx.exact, picked)
     per_query("prefix (4 chars, limit 10)", lambda q: idx.prefix(q[:4]), picked)

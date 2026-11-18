@@ -4,6 +4,17 @@ NAMES_DIR = "names"  # reserved layer directory: no layer may be called this
 NAMES_JSON = "names.json"
 NAMES_FORMAT = 1  # the layout of names/ this code reads and writes
 INSIDE_DIR = "inside"  # names/inside/<layer>.npy: a point inside each polygon feature
+# the fuzzy trigram postings, packed (optional: readers without them build them in memory)
+TRIGRAM_CODES = "trigram_codes.npy"
+TRIGRAM_START = "trigram_start.npy"
+TRIGRAM_COUNTS = "trigram_counts.npy"
+TRIGRAM_REPEATS = "trigram_repeats.npy"
+TRIGRAM_POSTINGS = "trigram_postings.bin"
+# decoded postings of at least TRIGRAM_KEEP_MIN keys stay in memory, the oldest dropped first once
+# they hold more than TRIGRAM_KEEP_TOTAL keys (8 bytes each) per pack
+TRIGRAM_KEEP_MIN = 2_000
+TRIGRAM_KEEP_TOTAL = 500_000
+TRIGRAM_FILES = (TRIGRAM_CODES, TRIGRAM_START, TRIGRAM_COUNTS, TRIGRAM_REPEATS, TRIGRAM_POSTINGS)
 
 # what an entry's text is to its feature; an entry's name_kind is its index here
 NAME_KINDS = ("official", "alias", "former", "abbreviation", "code")
