@@ -85,6 +85,17 @@ def test_string_columns_are_cached(pack):
     assert pack["spots"].column("name") is pack["spots"].column("name")
 
 
+def test_distinct_is_numpy_unique_of_the_column(pack):
+    spots = pack["spots"]
+    for field in ("code", "a_str", "name", "id"):
+        values, inverse = spots.distinct(field)
+        expected, expected_inverse = np.unique(spots.column(field), return_inverse=True)
+        assert values.dtype == object and values.tolist() == expected.tolist()
+        assert inverse.tolist() == expected_inverse.ravel().tolist()
+    with pytest.raises(TypeError, match="a_u2"):
+        spots.distinct("a_u2")
+
+
 def test_values_and_rows_turn_nulls_into_none(pack):
     spots = pack["spots"]
     assert spots.value("a_i1", 0) is None  # the sentinel

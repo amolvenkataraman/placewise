@@ -29,6 +29,7 @@ from placewise.constants.packs import POINT_CELL_DEGS, POINT_CELL_TARGET
 from placewise.geo import haversine, validate
 
 from . import _geometry as gm
+from ._lazy import Guarded
 
 _KM_PER_DEG = math.pi * MEAN_RADIUS_KM / 180
 _HALF_TURN_KM = math.pi * MEAN_RADIUS_KM  # no two points on the sphere are farther apart
@@ -62,13 +63,16 @@ def choose_cell_deg(lat, lon):
     for cell_deg in sorted(POINT_CELL_DEGS, reverse=True):
         rows, cols = gm.grid_shape(cell_deg)
         ids = gm.cell_rows(lat, cell_deg, rows) * cols + gm.cell_cols(lon, cell_deg, cols)
-        counts = np.unique(ids, return_counts=True)[1].astype(np.float64)
+        if rows * cols <= _TABLE_CELLS:  # counting is cheaper than sorting (empty cells add 0)
+            counts = np.bincount(ids, minlength=rows * cols).astype(np.float64)
+        else:
+            counts = np.unique(ids, return_counts=True)[1].astype(np.float64)
         if np.sum(counts * counts) <= POINT_CELL_TARGET * len(lat):
             return cell_deg
     return min(POINT_CELL_DEGS)
 
 
-class PointIndex:
+class PointIndex(Guarded):
     """Exact k-nearest and radius search over a fixed set of points (WGS84 degrees), with
     haversine distances in km on the mean-radius sphere.
 
@@ -80,6 +84,7 @@ class PointIndex:
     only affects speed, never answers."""
 
     def __init__(self, lat, lon, cell_deg=None):
+        super().__init__()
         lat = np.array(lat, dtype=np.float64).ravel()
         lon = np.array(lon, dtype=np.float64).ravel()
         if lat.shape != lon.shape:
@@ -231,8 +236,10 @@ class PointIndex:
         return np.minimum(level, self._n_levels - 1)
 
     def _grid(self, level):
-        while len(self._grids) <= level:
-            self._grids.append(_Grid.of_points(self.lat, self.lon, self._grids[-1].cell_deg * 2))
+        if len(self._grids) <= level:
+            with self._lock:  # each level once, in order, however many threads ask
+                while len(self._grids) <= level:
+                    self._grids.append(_Grid.of_points(self.lat, self.lon, self._grids[-1].cell_deg * 2))
         return self._grids[level]
 
     def _by_level(self, rho):
@@ -284,7 +291,9 @@ class _Grid:
         self.ids, self.first = ids[order], None
         n_cells = self.rows * self.cols
         if n_cells <= _TABLE_CELLS:
-            self.ids, self.first = None, np.searchsorted(ids[order], np.arange(n_cells + 1)).astype(small)
+            first = np.zeros(n_cells + 1, dtype=np.int64)  # entries in cells before each cell
+            np.cumsum(np.bincount(ids, minlength=n_cells), out=first[1:])
+            self.ids, self.first = None, first.astype(small)
         # sine and cosine of every row edge, for the disks' widths
         edge = np.radians(np.minimum(-90.0 + np.arange(self.rows + 1) * cell_deg, 90.0))
         self.sin_edge, self.cos_edge = np.sin(edge), np.cos(edge)

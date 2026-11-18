@@ -96,6 +96,20 @@ def _example_result():
     )
 
 
+def test_to_dicts_is_to_dict_of_each_with_shared_parts_converted_once():
+    first = _example_result()
+    second = dataclasses.replace(first, lat=43.7, label="Toronto", airport=None)
+    entity = Entity(first.city, point=first.city.point, bbox=BBox(43.6, -79.5, 43.8, -79.3), radius_km=9.0)
+    items = [first, second, first, entity]
+    dicts = Result.to_dicts(items)
+    assert dicts == [x.to_dict() for x in items]
+    assert dicts[0]["country"] is dicts[1]["country"]  # one Place, one dict
+    assert dicts[0]["city"] is dicts[3]["place"]
+    assert Result.to_dicts([]) == []
+    # to_dict itself still gives fresh dicts every time
+    assert first.to_dict()["country"] is not first.to_dict()["country"]
+
+
 def test_result_round_trips_through_plain_json():
     result = _example_result()
     as_json = json.dumps(result.to_dict())

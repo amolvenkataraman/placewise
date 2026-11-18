@@ -19,13 +19,16 @@ class Model:
 
     def to_dict(self):
         """JSON-ready dict in field order; None and empty collections are left out to keep it small."""
-        out = {}
-        for f in dataclasses.fields(self):
-            value = getattr(self, f.name)
-            if value is None or (isinstance(value, tuple | list | dict) and not value):
-                continue
-            out[f.name] = _plain(value)
-        return out
+        return _to_dict(self, None)
+
+    @staticmethod
+    def to_dicts(items):
+        """[item.to_dict() for item in items], faster for a batch whose items share parts (the
+        same country, city, park in many Results): each part met again is converted once, and
+        its dict is then the same object in every item that has it. Treat the dicts as read-only
+        (copy one before changing it), or serialise them straight away."""
+        memo = {}
+        return [_to_dict(item, memo) for item in items]
 
     @classmethod
     def from_dict(cls, data):
@@ -43,15 +46,37 @@ def set_field(obj, name, value):
     object.__setattr__(obj, name, value)
 
 
-def _plain(value):
+@functools.cache
+def _field_names(cls):
+    return tuple(f.name for f in dataclasses.fields(cls))
+
+
+def _to_dict(model, memo):
+    out = {}
+    for name in _field_names(type(model)):
+        value = getattr(model, name)
+        if value is None or (isinstance(value, tuple | list | dict) and not value):
+            continue
+        out[name] = _plain(value, memo)
+    return out
+
+
+def _plain(value, memo=None):
     if isinstance(value, Model):
-        return value.to_dict()
+        if type(value).to_dict is not Model.to_dict:
+            return value.to_dict()  # a model with its own shape
+        if memo is None:
+            return _to_dict(value, None)
+        found = memo.get(id(value))  # the batch holds every part, so ids aren't reused meanwhile
+        if found is None:
+            found = memo[id(value)] = _to_dict(value, memo)
+        return found
     if isinstance(value, Enum):
         return value.value
     if isinstance(value, tuple | list):
-        return [_plain(v) for v in value]
+        return [_plain(v, memo) for v in value]
     if isinstance(value, dict):
-        return {k: _plain(v) for k, v in value.items()}
+        return {k: _plain(v, memo) for k, v in value.items()}
     if isinstance(value, dt.date):  # datetimes too
         return value.isoformat()
     return value

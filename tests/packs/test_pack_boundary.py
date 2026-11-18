@@ -3,9 +3,10 @@ nearest_edge_km over every feature (exact great-circle distance to every edge)."
 
 import numpy as np
 import pytest
-from pack_kit import CREATED, blob_features, box_feature, fiji, polygon_layer
+from pack_kit import CREATED, blob_features, blob_ring, box_feature, fiji, polygon_layer
 
 from placewise.geo import haversine
+from placewise.model import Feature, Outline
 from placewise.packs import open_pack, write_pack
 
 
@@ -21,6 +22,13 @@ def _layers():
     return {
         "blobs": blob_features(30, rng, radius=(0.3, 3.0), lat_range=(-30, 30)),
         "holes_and_islands": blob_features(25, rng, radius=(1.0, 4.0), holes=True),
+        # fine outlines (short edges in runs), at high latitudes and beside ±180 too
+        "fine": [
+            *blob_features(12, rng, radius=(0.05, 0.8), vertices=(300, 1500), lat_range=(-60, 60)),
+            *blob_features(3, rng, radius=(0.2, 0.6), vertices=(400, 900), lat_range=(76, 79)),
+            Feature(outlines=(Outline((blob_ring(-16.0, 179.6, 0.25, 600, rng),)),)),
+            Feature(outlines=(Outline((blob_ring(-16.0, -179.6, 0.25, 600, rng),)),)),
+        ],
         # long edges far north (arcs bulge from straight lines in lat/lon), Fiji split at ±180
         "polar_and_antimeridian": [
             fiji(),
@@ -51,7 +59,7 @@ def _brute(layer, lat, lon):
 
 
 @pytest.mark.parametrize("kind", list(LAYERS))
-@pytest.mark.parametrize("radius_km", [0.0, 22.2, 150.0])
+@pytest.mark.parametrize("radius_km", [0.0, 1.0, 22.2, 150.0])
 def test_near_boundary_equals_brute_force(tmp_path, kind, radius_km):
     layer = _open(tmp_path, LAYERS[kind])
     lat, lon = _points(layer, LAYERS[kind], np.random.default_rng(52), 400)
@@ -61,7 +69,7 @@ def test_near_boundary_equals_brute_force(tmp_path, kind, radius_km):
     np.testing.assert_array_equal(point, want_p)
     np.testing.assert_array_equal(feature, want_f)
     np.testing.assert_allclose(dist, km[want_p, want_f], rtol=1e-9, atol=1e-9)
-    if radius_km:
+    if radius_km > 1:
         assert len(point) > 20  # the comparison means something
 
 
@@ -125,3 +133,20 @@ def test_boundary_queries_shapes_and_odd_input(tmp_path):
     assert f == 1 and d == pytest.approx(1.5 * 111.195, rel=1e-2) and type(f) is int and type(d) is float
     f, d, a, _ = layer.nearest_boundary(np.nan, 0.0)
     assert f == -1 and d == np.inf and np.isnan(a)
+
+
+def test_near_boundary_skips_points_far_from_every_border(tmp_path, monkeypatch):
+    layer = _open(tmp_path, [box_feature(10, 10, 11, 11), fiji()])
+    boundary = layer._boundary
+    lat, lon = np.array([10.5, 40.0, -17.5, -17.5, 89.9]), np.array([10.5, -60.0, 175.0, -175.0, 0.0])
+    # near the box, far from all, Fiji either side of ±180, near the pole (not decided by cells)
+    assert boundary._covered(lat, lon, 25.0).tolist() == [True, False, True, True, True]
+    assert boundary._covered(lat, lon, 500.0).all()  # wider than the cells can tell
+    measured = []
+    real = type(boundary)._measure
+    monkeypatch.setattr(
+        type(boundary), "_measure", lambda self, a, b, r: measured.append(len(a)) or real(self, a, b, r)
+    )
+    point, feature, _ = layer.near_boundary(lat, lon, 25.0)
+    assert measured == [4] and point.tolist() == [] and feature.tolist() == []
+    assert layer.near_boundary(40.0, -60.0, 25.0)[0].tolist() == [] and measured == [4, 0]

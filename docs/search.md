@@ -118,13 +118,17 @@ by name and by `get`. See `docs/overrides.md`.
 
 ## Speed
 
-Each pack's name index is memory-mapped; the first query opens what it touches. Measured on
-world + usa + can + ind + world-water + the three park packs: opening ~0.1 s, the first query
-~0.15 s (the first typo query ~0.9 s while the index builds its trigram postings), then a median of
-~1.5 ms per query and under 10 ms for every query in the e2e list (typos ~5 ms). Entities' context
-(city, region, country) is looked up for all results at once and cached (4,096 points per
-worldview). Outlines are built only with `geometry=True`: a country's outline has tens of thousands
-of vertices.
+Each pack's name index is memory-mapped, its fuzzy trigram postings included; the first query
+opens what it touches. Measured in fresh processes on world + usa + can + ind + world-water + the
+three park packs (`tests/search/bench_search_coldstart.py`): the first query for a name ~0.1-0.25 s,
+the first typo ~0.3 s, the first airport or postal code ~0.4 s (its results carry a city, so the
+reverse lookup's indexes load), then a median of ~1.5 ms per query and under 10 ms for every query
+in the e2e list (typos ~6 ms). Packs written before the postings were stored build them in memory
+on the first typo (~0.7 s more). Entities' context (city, region, country) is looked up for all
+results at once, with only the steps that place a point (no water, airport or time zone polygons),
+and cached (4,096 points per worldview). Coordinates typed as text get a full reverse lookup, whose
+first call builds the water shore index (~6 s). Outlines are built only with `geometry=True`: a
+country's outline has tens of thousands of vertices.
 
 ## Limits
 

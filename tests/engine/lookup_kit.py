@@ -10,6 +10,8 @@ South Province   |             |
 lat 0 - 1, lon -140 .. -139 | -139 .. -138.5 | -138.5 .. -138
 """
 
+import dataclasses
+
 import numpy as np
 
 from placewise.model import Feature, Outline
@@ -133,4 +135,38 @@ def airports_layer():
 def write_world(out_dir):
     """The synthetic pack, named and versioned like the real one: world-2026.11."""
     layers = [countries_layer(), admin1_layer(), cities_layer(), airports_layer()]
+    return write_pack(out_dir, "world", "2026.11", layers, created=CREATED)
+
+
+def ragged_box(south, west, north, east, teeth=400, depth=0.004):
+    """A box whose sides zigzag: hundreds of edges, so lookups need the slabs and fine grids."""
+    t = np.linspace(0, 1, teeth, endpoint=False)
+    wave = depth * (np.arange(teeth) % 2)
+    sides = [
+        (np.full(teeth, south) + wave, west + (east - west) * t),
+        (south + (north - south) * t, np.full(teeth, east) - wave),
+        (np.full(teeth, north) - wave, east - (east - west) * t),
+        (north - (north - south) * t, np.full(teeth, west) + wave),
+    ]
+    lat = np.round(np.concatenate([s[0] for s in sides]), 7)
+    lon = np.round(np.concatenate([s[1] for s in sides]), 7)
+    return Feature(
+        outlines=(
+            Outline(
+                (tuple(zip(lat.tolist(), lon.tolist(), strict=True)),),
+            ),
+        )
+    )
+
+
+def write_ragged_world(out_dir):
+    """The synthetic pack with zigzag country and admin1 borders (the thread-safety tests)."""
+    countries = countries_layer()
+    countries = dataclasses.replace(
+        countries, features=[dataclasses.replace(ragged_box(*c[6]), id=c[0]) for c in COUNTRIES]
+    )
+    admin1 = dataclasses.replace(
+        admin1_layer(), features=[dataclasses.replace(ragged_box(*a[5]), id=a[0]) for a in ADMIN1]
+    )
+    layers = [countries, admin1, cities_layer(), airports_layer()]
     return write_pack(out_dir, "world", "2026.11", layers, created=CREATED)

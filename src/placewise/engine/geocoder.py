@@ -14,11 +14,11 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 9. the Results and their labels (_results).
 
 `lookup_many` runs every spatial query for all points at once and then builds the Results;
-`lookup` is `lookup_many` with one point, so the two always agree.
+`lookup` is `lookup_many` with one point, so the two always agree. A point given more than once
+in a batch is looked up once, and its Result (frozen) is shared by every position that has it.
 """
 
 import inspect
-from functools import cached_property
 
 import numpy as np
 
@@ -28,8 +28,8 @@ from placewise.constants import naming as naming_const
 from placewise.constants import notable as notable_const
 from placewise.constants import parks as parks_const
 from placewise.constants import water as water_const
-from placewise.model import PlaceKind, Settings
-from placewise.packs import Pack, open_pack
+from placewise.model import CityRule, PlaceKind, Settings
+from placewise.packs import Pack, once, open_pack
 
 from . import _nearby, _results
 from ._admin import Admin
@@ -73,37 +73,37 @@ class Geocoder:
     def __repr__(self):
         return f"<Geocoder {self.data_version}>"
 
-    @cached_property
+    @once
     def cities(self):
         return Cities(self.layers, self.admin) if self.layers.has(const.CITIES) else None
 
-    @cached_property
+    @once
     def timezones(self):
         """The packs' timezones layers, or None when no pack has one."""
         found = Timezones(self.layers, self.admin)
         return found if found else None
 
-    @cached_property
+    @once
     def parks(self):
         """The park packs' layers (placewise.engine._within), or None when no pack has any."""
         return Parks(self.packs, self.layers, self.settings.near) or None
 
-    @cached_property
+    @once
     def water(self):
         """The water layers (placewise.engine._water); falsy when no pack has them."""
         return Water(self.packs, self.layers)
 
-    @cached_property
+    @once
     def notable(self):
         """The world-notable pack's layer (placewise.engine._notable), or None when no pack has it."""
         return Notable(self.packs, self.layers) or None
 
-    @cached_property
+    @once
     def naming(self):
         """The country packs' rules; they need the GeoNames cities beside them."""
         return Naming(self.packs, self.layers, self.admin, self.cities) if self.cities is not None else None
 
-    @cached_property
+    @once
     def search(self):
         """Forward search over these packs (placewise.search.Search)."""
         from placewise.search import Search
@@ -125,7 +125,18 @@ class Geocoder:
         return self.lookup_many([lat], [lon], worldview=worldview, near=near)[0]
 
     def lookup_many(self, lats, lons, *, worldview=None, near=True):
-        """Results for many points, one per point, in order. Vectorised: much faster per point."""
+        """Results for many points, one per point, in order. Vectorised: much faster per point.
+        Exactly repeated points are looked up once and share one Result."""
+        return self._lookup(lats, lons, worldview, near, everything=True)
+
+    def _lookup_places(self, lats, lons, *, worldview=None):
+        """Results whose country, admin1 ... postal and regions are as lookup_many(near=False) has
+        them, without airport or water, the time zone only as the nearest city has it, and parks
+        (`within`) only when an override rule could read them to set the city. Forward search's
+        context: it skips the water step, whose shore index takes seconds to build on first use."""
+        return self._lookup(lats, lons, worldview, False, everything=False)
+
+    def _lookup(self, lats, lons, worldview, near, everything):
         lat = np.asarray(lats, dtype=np.float64).ravel()
         lon = np.asarray(lons, dtype=np.float64).ravel()
         if lat.shape != lon.shape:
@@ -137,7 +148,11 @@ class Geocoder:
         order, locked = self._order(worldview)
         if not len(lat):
             return []
-        a, named = self._answer(lat, lon, order, near)
+        first, inverse = _repeats(lat, lon)
+        if first is not None:  # each distinct point once, in order of first appearance
+            unique = self._lookup(lat[first], lon[first], worldview, near, everything)
+            return [unique[i] for i in inverse.tolist()]
+        a, named = self._answer(lat, lon, order, near, everything)
         results = _results.build(self, lat, lon, a, named, order, locked)
         if self.overrides is not None:
             apply = self.overrides.apply
@@ -149,31 +164,41 @@ class Geocoder:
 
     # -- the steps ----------------------------------------------------------------------------------
 
-    def _answer(self, lat, lon, order, near):
+    def _answer(self, lat, lon, order, near, everything=True):
+        """(a, named): the steps' arrays; without `everything`, only the places a point is in."""
         a = {}
         self.admin.answer(a, lat, lon, order)
         named = {}
         naming = self.naming
         work = naming.boundaries(a, lat, lon) if naming else ()
-        if self.timezones is not None:
+        if everything and self.timezones is not None:
             self.timezones.answer(a, lat, lon)
         if self.cities is not None:
             k_notable = max(const.NOTABLE_CANDIDATES, self.settings.near.max_near + 1)
             self.cities.answer(a, lat, lon, near, self._near_km(PlaceKind.LOCALITY), k_notable)
         if work:
             named = naming.names(a, lat, lon, work)
-        if self.layers.has(const.AIRPORTS):
+        if everything and self.layers.has(const.AIRPORTS):
             _nearby.airports(a, self.layers.layer(const.AIRPORTS), lat, lon, self._near_km(PlaceKind.AIRPORT))
         _nearby.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
-        if self.parks is not None:
+        if (everything or self._rules_read_parks) and self.parks is not None:
             a["parks"] = self.parks.answer(lat, lon, near)
-        if self.water:
+        if everything and self.water:
             self.water.answer(a, lat, lon, self.layers.layer(const.COUNTRIES))
         if near and self.notable is not None:
             a["notable_places"] = self.notable.answer(lat, lon)
         return a, named
 
     # -- worldview, settings, overrides -------------------------------------------------------------
+
+    @once
+    def _rules_read_parks(self):
+        """Whether the overrides could set a city from the parks a point is in: a city rule (its
+        area may name a park), or a hook whose rules can't be seen."""
+        if self.overrides is None:
+            return False
+        rules = getattr(self.overrides, "rules", None)
+        return rules is None or any(isinstance(r, CityRule) for r in rules)
 
     def _order(self, worldview):
         """(order, locked): the request's spelling normalised ("xa", "XAA" -> "XA"), then the
@@ -200,6 +225,22 @@ class Geocoder:
         if result.country is None and result.admin1 is None:
             return result.label  # offshore labels name a reference place, not the result's fields
         return _results.compose(self.settings.label, result)
+
+
+def _repeats(lat, lon):
+    """(first, inverse) when some points repeat exactly (bit for bit: -0.0 is not 0.0): the
+    position of each distinct point's first appearance, in order, and the distinct point of every
+    point; (None, None) when none repeats."""
+    if len(lat) < 2:
+        return None, None
+    bits = np.stack([lat, lon], axis=1).view(np.int64)
+    _, first, inverse = np.unique(bits, axis=0, return_index=True, return_inverse=True)
+    if len(first) == len(lat):
+        return None, None
+    order = np.argsort(first)
+    rank = np.empty(len(order), dtype=np.int64)
+    rank[order] = np.arange(len(order))
+    return first[order], rank[inverse.ravel()]
 
 
 def _installed_country_packs(store):

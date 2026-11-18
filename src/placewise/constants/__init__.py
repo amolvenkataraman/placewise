@@ -7,7 +7,6 @@ import importlib
 
 __all__ = [
     "cli",
-    "codab",
     "config",
     "countries",
     "crs",

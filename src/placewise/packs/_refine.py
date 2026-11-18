@@ -27,6 +27,7 @@ import numpy as np
 from placewise.constants.packs import REFINE_CELL_DEG
 
 from . import _geometry as gm
+from ._lazy import Guarded
 
 # degrees: crossings nearer than this to a path's corner or ends send the point to the full test;
 # far above float64 rounding at 180 degrees, far below the 1e-7 degree storage grid
@@ -34,13 +35,15 @@ _TOL = 1e-9
 _PAIR_BUDGET = 4_000_000
 
 
-class Refinement:
+class Refinement(Guarded):
     """Fine grids for chosen features of a layer, whose edges are ya[offsets[f]:offsets[f + 1]]
-    (and likewise xa, yb, xb). len() is the number of features refined so far."""
+    (and likewise xa, yb, xb). len() is the number of features refined so far. Safe to share
+    between threads: adding features and answering from them hold one lock."""
 
     def __init__(self, offsets, edges, cell_deg, full):
         """full(lat, lon, feature): the exact even-odd test of a few points against their features
         (cell centres and corners, many at once, use the sort-based gm.even_odd_pairs)."""
+        super().__init__()
         self._full = full
         self.offsets = np.asarray(offsets, dtype=np.int64)
         self.edges = tuple(np.asarray(e, dtype=np.float64) for e in edges)  # ya, xa, yb, xb
@@ -62,6 +65,10 @@ class Refinement:
 
     def add(self, features):
         """Build the fine grids of these features (those not built yet)."""
+        with self._lock:
+            self._add(features)
+
+    def _add(self, features):
         new = np.unique(np.asarray(features, dtype=np.int64))
         new = new[~self.refined[new]]
         if not len(new):
@@ -78,6 +85,10 @@ class Refinement:
 
     def contains(self, lat, lon, feature):
         """Even-odd containment of each point in its own (refined) feature."""
+        with self._lock:  # the grids and the answers memoised from them change together
+            return self._contains(lat, lon, feature)
+
+    def _contains(self, lat, lon, feature):
         cols = self.cols
         cell = gm.cell_rows(lat, self.cell_deg, self.rows) * cols + gm.cell_cols(lon, self.cell_deg, cols)
         key = feature * self.n_cells + cell

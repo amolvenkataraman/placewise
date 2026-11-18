@@ -10,11 +10,10 @@
 - notable: cities of NOTABLE_POPULATION+ near each point, for Result.near.
 """
 
-from functools import cached_property
-
 import numpy as np
 
 from placewise.constants import lookup as const
+from placewise.packs import once
 
 from ._index import RowIndex
 
@@ -27,16 +26,16 @@ class Cities:
         self._by_country = {}
         self._inside = {}  # layer key -> per city row, the feature containing it (-2: not asked yet)
 
-    @cached_property
+    @once
     def table(self):
         layer = self.layer
         n, f = layer.count, layer.fields
         pop = np.asarray(layer.column("population"), dtype=np.float64) if "population" in f else np.zeros(n)
         codes = layer.column("feature_code") if "feature_code" in f else np.full(n, "", dtype=object)
-        country = layer.column("country") if "country" in f else np.full(n, "", dtype=object)
-        unique, inverse = np.unique(country, return_inverse=True)
+        unique, inverse = _distinct(layer, "country")
         lookup = np.array([self.admin.codes.get(c, -2) for c in unique], dtype=np.int64)
-        excluded = np.isin(codes, list(const.CITY_EXCLUDED_FEATURE_CODES))
+        kinds, kind_of = _distinct(layer, "feature_code")
+        excluded = np.isin(kinds, list(const.CITY_EXCLUDED_FEATURE_CODES))[kind_of]
         notable = np.flatnonzero((pop >= const.NOTABLE_POPULATION) & ~excluded)
         return {
             "population": pop,
@@ -174,3 +173,10 @@ def _needs_tz(a, pts):
 def _country_ok(codes, allowed):
     match = (codes[:, :, None] == allowed[:, None, :]).any(axis=2)
     return match | (allowed < 0).all(axis=1)[:, None]
+
+
+def _distinct(layer, field):
+    """np.unique(column, return_inverse=True) of a string column ("" for every row without it)."""
+    if field in layer.fields:
+        return layer.distinct(field)
+    return np.array([""] * bool(layer.count), dtype=object), np.zeros(layer.count, dtype=np.int64)

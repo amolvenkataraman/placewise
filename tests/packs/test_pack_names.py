@@ -120,6 +120,37 @@ def test_fuzzy_finds_typos(pack):
     assert c.match_score[0] == pytest.approx(1 - 1 / len("mississauga"))
 
 
+def test_the_fuzzy_postings_are_stored_packed_and_read_without_building(pack, monkeypatch):
+    from placewise.packs import _name_match
+
+    files = pack.manifest["files"]
+    for name in nc.TRIGRAM_FILES:
+        assert f"names/{name}" in files
+    fresh = open_pack(pack.path)
+
+    def no_build(table):
+        raise AssertionError("built in memory")
+
+    monkeypatch.setattr(_name_match.Trigrams, "build", no_build)
+    assert isinstance(fresh.names._trigrams, _name_match.PackedTrigrams)
+    assert _rows(fresh.names.fuzzy("Torono"), fresh.names)[0] == ("cities", 2)
+
+
+def test_a_pack_without_stored_postings_builds_them_with_the_same_answers(tmp_path):
+    from placewise.packs import _name_match
+
+    path = names_pack(tmp_path).path
+    stored = open_pack(path).names
+    for name in nc.TRIGRAM_FILES:
+        (path / "names" / name).unlink()
+    built = open_pack(path).names
+    assert type(built._trigrams) is _name_match.Trigrams
+    for text in ("Torono", "Missisauga", "Yosemit", "Sprinfgield", "Springfield", "Pari", "qqqq"):
+        a, b = stored.fuzzy(text, limit=20), built.fuzzy(text, limit=20)
+        for field in a.__slots__:
+            np.testing.assert_array_equal(getattr(a, field), getattr(b, field))
+
+
 def test_fuzzy_exact_text_scores_one_and_dedupes_features(pack):
     idx = pack.names
     c = idx.fuzzy("Springfield", limit=5)

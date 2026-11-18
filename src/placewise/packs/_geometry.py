@@ -13,6 +13,8 @@ import numpy as np
 from placewise.constants.packs import E7
 from placewise.geo import normalize_lon
 
+from ._lazy import Guarded
+
 # pairs of (edge, point) examined at once by the even-odd test; bounds memory to ~0.5 GB worst case
 _PAIR_BUDGET = 4_000_000
 # Slabs builds every feature at once when asked for more than this many new ones
@@ -119,13 +121,14 @@ def even_odd_pairs(lat, lon, feature, offsets, ya, xa, yb, xb):
     return inside
 
 
-class Slabs:
+class Slabs(Guarded):
     """The edges of a layer's features listed under every latitude band (band_deg high) their
     latitude span touches, so the even-odd test of a point need only look at its own feature's
     edges in its own band: only they can cross its ray. Built per feature on first use (all at
-    once when many are asked for)."""
+    once when many are asked for); safe to share between threads."""
 
     def __init__(self, offsets, edges, band_deg):
+        super().__init__()
         self.offsets = np.asarray(offsets, dtype=np.int64)  # feature f's edges: offsets[f]:offsets[f + 1]
         self.edges = tuple(np.asarray(e, dtype=np.float64) for e in edges)  # ya, xa, yb, xb
         self.band_deg = band_deg
@@ -138,6 +141,10 @@ class Slabs:
         return np.clip(np.floor((lat + 90.0) / self.band_deg), 0, self.bands - 1).astype(np.int64)
 
     def add(self, features):
+        with self._lock:
+            self._add(features)
+
+    def _add(self, features):
         new = np.unique(np.asarray(features, dtype=np.int64))
         new = new[~self.built[new]]
         if len(new) > _BUILD_ALL_AFTER:
@@ -169,16 +176,18 @@ class Slabs:
         if int(np.sum(self.offsets[feats + 1] - self.offsets[feats])) <= _PAIRS_PER_POINT * n:
             # many points per feature (grid corners, big batches): sorting them beats the bands
             return even_odd_pairs(lat, lon, feature, self.offsets, *self.edges)
-        self.add(feats)
+        with self._lock:  # the slabs of these features, consistent with each other
+            self._add(feats)
+            slab_key, slab_edge = self.key, self.edge
         key = feature * self.bands + self._band(lat)
-        start, stop = np.searchsorted(self.key, key, "left"), np.searchsorted(self.key, key, "right")
+        start, stop = np.searchsorted(slab_key, key, "left"), np.searchsorted(slab_key, key, "right")
         parity = np.zeros(n, dtype=np.int64)
         cum = np.cumsum(stop - start)
         cuts = np.searchsorted(cum, np.arange(_PAIR_BUDGET, cum[-1], _PAIR_BUDGET), "left") if cum[-1] else []
         ya, xa, yb, xb = self.edges
         for c0, c1 in zip([0, *cuts], [*cuts, n], strict=True):
             point, k = _expand(start[c0:c1], stop[c0:c1])
-            e = self.edge[k]
+            e = slab_edge[k]
             plat = lat[c0:c1][point]
             e_ya, e_xa, e_yb, e_xb = ya[e], xa[e], yb[e], xb[e]
             # the crossing rule of `even_odd` (ymin <= lat < ymax), then its arithmetic

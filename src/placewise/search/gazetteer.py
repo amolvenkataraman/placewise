@@ -33,8 +33,9 @@ class SearchGazetteer:
 
     def match(self, city, country_iso2=None, admin1_code=None):
         k = (city_key(city), country_iso2, admin1_code)
-        if k in self._cache:
-            return self._cache[k]
+        found = self._cache.get(k, _MISSING)  # one read: another thread may clear the cache
+        if found is not _MISSING:
+            return found
         admin1 = f"{country_iso2}-{admin1_code}" if country_iso2 and admin1_code else None
         try:
             found = self.search.find(city, limit=1, country=country_iso2, admin1=admin1, kinds=_CITY_KINDS)
@@ -49,6 +50,9 @@ class SearchGazetteer:
             self._cache.clear()
         self._cache[k] = place
         return place
+
+
+_MISSING = object()
 
 
 def _alias_keys(entity):

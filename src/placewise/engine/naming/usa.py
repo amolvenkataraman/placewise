@@ -17,13 +17,12 @@
   curated `regions` and the CBSA and CSA, smallest first).
 """
 
-from functools import cached_property
-
 import numpy as np
 
 from placewise.constants import lookup as lookup_const
 from placewise.constants import naming as const
 from placewise.model import Place, PlaceKind
+from placewise.packs import once
 
 from . import _common as common
 from . import rules
@@ -58,7 +57,7 @@ class Usa:
         values = self.layers.column(key, field) if key is not None else None
         return values if values is not None else [""] * (self.layers.layer(key).count if key else 0)
 
-    @cached_property
+    @once
     def _place(self):
         ids = self._col(self.place, "id")
         return {
@@ -69,7 +68,7 @@ class Usa:
             "row_of": {pid: r for r, pid in enumerate(ids)},
         }
 
-    @cached_property
+    @once
     def _county(self):
         ids, states = self._col(self.county, "id"), self._col(self.county, "state")
         row_of = self.admin.admin1_row_of_id
@@ -107,7 +106,7 @@ class Usa:
                 out[c] = next((p for p in lists[row] if place_states[p] == state), -1)
         return out
 
-    @cached_property
+    @once
     def _zcta(self):
         """Per ZCTA row, the place row of its postal city (-1: none or not a place in the pack)."""
         row_of = self._place["row_of"]
@@ -182,14 +181,15 @@ class Usa:
     def _locality(self, place, prule, postal):
         """(locality, city, their rules, which points' CDP gave way to its postal city), by the
         module's rules. Rows are place rows, -1 for none."""
-        tables, names = self._place, self.layers.column(self.place, "name")
+        tables = self._place
         inc = tables["incorporated"]
         has, safe, psafe = place >= 0, np.maximum(place, 0), np.maximum(postal, 0)
         cdp = has & ~inc[safe]
         postal_inc = (postal >= 0) & inc[psafe]
         extends = np.zeros(len(place), dtype=bool)
         for i in np.flatnonzero(cdp & postal_inc).tolist():
-            extends[i] = rules.extends(names[place[i]], names[postal[i]])
+            names = [self.layers.value(self.place, "name", int(r)) for r in (place[i], postal[i])]
+            extends[i] = rules.extends(*names)
         small = tables["population"][safe] < const.CDP_KEEP_POPULATION  # NaN (unknown): not small
         rolled = cdp & (postal >= 0) & ((postal_inc & ~extends) | (~postal_inc & small))
         takes = rolled | (~has & (postal >= 0))

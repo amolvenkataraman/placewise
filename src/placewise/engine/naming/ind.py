@@ -21,8 +21,6 @@ part of Kashmir Pakistan administers, Aksai Chin, the Shaksgam valley) answer on
 view decided the country.
 """
 
-from functools import cached_property
-
 import numpy as np
 
 from placewise.constants import lookup as lookup_const
@@ -30,6 +28,7 @@ from placewise.constants import naming as const
 from placewise.constants.countries.ind import subregions
 from placewise.constants.worldviews import IND_VIEW_ONLY
 from placewise.model import Place, PlaceKind
+from placewise.packs import once
 
 from . import _common as common
 from . import rules
@@ -60,7 +59,7 @@ class Ind:
         self.hoods = optional("neighbourhood", point_maker(PlaceKind.SUBLOCALITY))
         self.regions = layers.add(pack, const.REGIONS, common.region_place) if const.REGIONS in pack else None
 
-    @cached_property
+    @once
     def _admin1(self):
         """Per row of the states layer (else of the PIN areas), the world admin1 row of its state
         (new or replaced ISO code), or -1."""
@@ -175,7 +174,7 @@ class Ind:
         cache = self.layers.cache(f"{self.pin}#area")
         if row not in cache:
             postal = self.layers.place(self.pin, row)
-            office = self.layers.column(self.pin, "name")[row]
+            office = self.layers.value(self.pin, "name", row)
             name = rules.office_area_name(office) if office else ""
             cache[row] = (
                 Place(

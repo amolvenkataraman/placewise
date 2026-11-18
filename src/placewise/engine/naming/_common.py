@@ -169,10 +169,9 @@ def geonames_inside(cities, key, feature, local, local_km, max_km, excluded_code
         inside = np.full(local.shape, -1, dtype=np.int64)
         inside[ok] = cities.inside(key, safe[ok])
         ok &= inside == feature[:, None]
-    names = cities.layers.column(lookup_const.CITIES, "name")
     for i in np.flatnonzero(ok.any(axis=1)).tolist():
         for j in np.flatnonzero(ok[i]).tolist():
-            if skip is None or not skip(i, names[safe[i, j]]):
+            if skip is None or not skip(i, cities.layers.value(lookup_const.CITIES, "name", int(safe[i, j]))):
                 out[i] = safe[i, j]
                 break
     return out
