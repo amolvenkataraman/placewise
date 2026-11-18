@@ -136,7 +136,8 @@ class Parks:
 def generic_name(name):
     """Whether a park name only says what kind of land it is ("Open Space", "Unknown Park"):
     placewise.constants.parks.GENERIC_NAMES."""
-    return " ".join(fold(name).split()) in const.GENERIC_NAMES
+    text = name if name.isascii() else fold(name)  # accents only matter outside ASCII
+    return " ".join(text.split()).casefold() in const.GENERIC_NAMES
 
 
 def label_park(within):
@@ -151,10 +152,9 @@ def label_park(within):
 
 
 def _named(names):
-    """Per row: whether its name is a name (not generic: generic_name), each distinct name checked once."""
-    unique, inverse = np.unique(np.asarray(names, dtype=object).astype(str), return_inverse=True)
-    ok = np.array([not generic_name(n) for n in unique.tolist()], dtype=bool)
-    return ok[inverse.ravel()] if len(unique) else np.zeros(0, dtype=bool)
+    """Per row: whether its name is a name, not generic (generic_name)."""
+    names = names.tolist() if hasattr(names, "tolist") else list(names)
+    return np.fromiter((not generic_name(n or "") for n in names), dtype=bool, count=len(names))
 
 
 def _closest(found, pid, value):

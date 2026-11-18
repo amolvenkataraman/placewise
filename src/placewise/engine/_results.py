@@ -247,10 +247,11 @@ def _park_local(names, park):
     first, second = names
     if first is not None and first.name:
         return first
-    if second is not None and second.name and second.point is not None and park.bbox is not None:
-        if park.bbox.contains(second.point.lat, second.point.lon):
-            return second
-    return None
+    inside = (
+        second is not None and second.name and second.point is not None and park.bbox is not None
+        and park.bbox.contains(second.point.lat, second.point.lon)
+    )  # fmt: skip
+    return second if inside else None
 
 
 class _Blank(dict):
