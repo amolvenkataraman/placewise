@@ -21,6 +21,7 @@ __all__ = [
     "location_filter",
     "location_text",
     "lookup",
+    "names",
     "naming",
     "nmea",
     "overrides",
