@@ -75,6 +75,9 @@ class LayerNames:
     # a layer of mixed kinds: each row's kind is kind_values[row's kind_column value], else `kind`
     kind_column: str | None = None
     kind_values: dict = field(default_factory=dict)
+    # a bool column: rows where it is true are not indexed (the India pack's `#india-view` pieces
+    # repeat their unit's names)
+    skip: str | None = None
 
 
 def build(layers, specs):
@@ -91,7 +94,14 @@ def build(layers, specs):
         rank = rank_of(spec.rank, columns, len(columns["id"]))
         row_kinds = _row_kinds(spec, columns)
 
-        def add(texts, rows, name_kind, spec=spec, rank=rank, row_kinds=row_kinds):
+        skipped = {i for i, v in enumerate(columns.get(spec.skip, ())) if v} if spec.skip else set()
+
+        def add(texts, rows, name_kind, spec=spec, rank=rank, row_kinds=row_kinds, skipped=skipped):
+            if skipped:
+                keep = [j for j, r in enumerate(rows) if r not in skipped]
+                texts, rows = [texts[j] for j in keep], [rows[j] for j in keep]
+                if isinstance(name_kind, list):
+                    name_kind = [name_kind[j] for j in keep]
             out["text"] += texts
             out["layer"] += [spec.layer] * len(texts)
             out["row"] += rows

@@ -99,18 +99,29 @@ shape but in none (a pier, Horseshoe Falls) takes the nearest one, with rule `ne
   that, the nearest GeoNames place as in the US (Rouge). **admin2**: the census division (from
   the CSDUID). **postal**: the FSA. **regions**: curated, and the CMA or CA.
 
-## India (India Post pack)
+## India (India pack)
 
-There are no open municipal or state polygons for India yet, so:
+The India pack's `states`, `districts` and `cities` are unions of PIN code areas keyed to the
+Local Government Directory (LGD; packbuild/README.md, India pack). A pack built before them falls
+back to the PIN areas alone.
 
-- **admin1**: the PIN area's state (`ind/pincodes:state`; ISO 3166-2:IN after 2023, mapped to the
-  world pack's older codes such as IN-OR for Odisha). Gurugram is in Haryana even where Natural
-  Earth's coarse line says Delhi, and the city score, which halves cities of another admin1, then
-  picks Gurugram.
-- **locality** and **city**: the GeoNames score.
-- **sublocality**: the PIN area's post office name before its type word ("Whitefield S.O" ->
-  Whitefield, "Gandhi Bazar SO Amritsar" -> Gandhi Bazar), unless it is the city's own name.
+- **admin1**: the `states` feature's state (`ind/states:polygon`; ISO 3166-2:IN after 2023, mapped
+  to the world pack's older codes such as IN-OR for Odisha). Gurugram is in Haryana even where
+  Natural Earth's coarse line says Delhi, and the city score, which halves cities of another
+  admin1, then picks Gurugram. Without `states`: the PIN area's state (`ind/pincodes:state`).
+- **admin2**: the LGD district, with the name in use (Gurugram, Mysuru, Chhatrapati Sambhajinagar).
+- **locality** and **city**: the `cities` feature, an urban local body drawn as its PIN areas
+  (Bengaluru as the former BBMP area, Delhi's reunified corporation, New Delhi's NDMC, Navi
+  Mumbai); a point in no city polygon (towns whose PIN areas are big and rural) takes the GeoNames
+  score.
+- **sublocality**: the nearest `neighbourhoods` point of the point's city within 1.5 km, one of
+  its own PIN area first (a post office's name: "Koramangala S.O" -> Koramangala; institutions such
+  as courts and colleges are left out); else the PIN area's post office name before its type word
+  ("Whitefield S.O" -> Whitefield, "Gandhi Bazar SO Amritsar" -> Gandhi Bazar), unless it is the
+  city's own name.
 - **postal**: the PIN code area.
+- Features flagged `india_view_only` (PIN areas and units on ground only India's view puts in
+  India) answer only when the IN worldview decided the country (docs/worldviews.md).
 
 ## COD-AB countries (Sri Lanka, Nepal, Bangladesh, Thailand, ...)
 
@@ -154,7 +165,7 @@ Earth's longer form stays in `country.aliases`.
 - New England towns and other county subdivisions are not in the pack yet: a point in a town with
   no census place has no locality.
 - No urban-area test for roll-ups: a whole CMA counts, so a rural CSD at a CMA's edge can roll up.
-- India's localities are GeoNames places, which sometimes prefer a taluk or village over the city
-  (Fort Kochi answers Kanayannur).
+- India's cities are postal approximations: a big fringe PIN area of a city stays out of it, and
+  a satellite city keeps its own name as the city (Salt Lake answers Bidhannagar, not Kolkata).
 - Parks, water and notable places are not named yet. India has curated regions only (no
   statistical metro areas).

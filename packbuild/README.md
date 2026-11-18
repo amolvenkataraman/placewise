@@ -259,11 +259,19 @@ uv run python -m packbuild.india --version 2026.11 \
 
 | Layer | Kind | Source | Licence |
 |---|---|---|---|
-| `pincodes` | polygon | All India Pincode Boundary (Department of Posts, 2025), district and state joined from the directory | GODL-India |
+| `states` | polygon | LGD states as unions of PIN area pieces (`lgd:state:<code>`, `iso`, `kind`, `aliases`) | GODL-India + CC BY 4.0 |
+| `districts` | polygon | LGD districts the same way (`lgd:district:<code>`, `lgd_name`, `census2011`, `aliases`: former names first) | GODL-India + CC BY 4.0 |
+| `cities` | polygon | urban local bodies (ULBs) drawn as their PIN areas (`lgd:ulb:<code>`, `official_name`, `type`, `members`, `local_name`) | GODL-India + CC BY 4.0 |
+| `pincodes` | polygon | All India Pincode Boundary (Department of Posts, 2025), district and state joined from the directory, plus the crosswalk (`lgd_district`, `lgd_subdistrict`, `city`) | GODL-India |
 | `post_offices` | point | All India Pincode Directory (Department of Posts): offices whose coordinates lie in or within 2 km of their own PIN area | GODL-India |
-| `regions` | polygon | curated regions as unions of PIN areas grouped by district (see [Regions layer](#regions-layer-us-canada-and-india-packs)) | CC BY 4.0 + GODL-India |
+| `neighbourhoods` | point | post offices inside cities, named without their type words ("Koramangala S.O" -> Koramangala) | GODL-India |
+| `regions` | polygon | curated regions as unions of PIN areas grouped by district or LGD unit (see [Regions layer](#regions-layer-us-canada-and-india-packs)) | CC BY 4.0 + GODL-India |
 
-Registry: `indiapost-pincode-boundary`, `indiapost-pincode-directory`. Ids: `pin:560001`;
+Every polygon layer but `regions` has `india_view_only`; the derived layers have `area_km2`. The
+build takes about 100 s and 1.7 GB.
+
+Registry: `indiapost-pincode-boundary`, `indiapost-pincode-directory`, `lgd-directory`,
+`placewise-names` (placewise-data `datasets/names/ind.json`), `naturalearth`. Ids: `pin:560001`;
 `indiapost:<pincode>:<office name>` (`#2`, `#3`, ... when a name repeats under one PIN code).
 `state_code` is ISO 3166-2 after the 2023 change (`IN-TS`, `IN-OD`, `IN-CG`, `IN-UK`), so it
 matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case as published.
@@ -299,14 +307,41 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
   its bbox; distances exact on the sphere): the PIN areas are written to a temporary pack first;
   the check takes about 7 s of the build's ~16 s. Ids keep
   the directory's numbering, so a left-out office leaves a gap rather than renumbering the rest.
-- **Disputed areas.** PIN areas are delivery zones as published by the Department of Posts (a
-  Government of India body), not administrative boundaries; the pack carries them unchanged.
-  Whether any extend into areas whose status is disputed has not been checked yet (do it on the
-  first real build).
+- **LGD.** The Local Government Directory's daily reports (states, districts, sub-districts, ULBs,
+  village -> PIN and ULB -> PIN tables) are GODL-India on data.gov.in, which blocks scripted
+  downloads; the registry names a community mirror's monthly 7z archives, read with the standard
+  library (`packbuild/ind/sevenzip.py`; the newest day of the month is used).
+- **Crosswalk** (`packbuild/ind/crosswalk.py`). A PIN area's district and sub-district are those
+  most of its LGD villages are in (17,143 areas), else the directory's district matched to LGD by
+  name and the curated former names (2,039), else its ULB's or its neighbours'. It belongs to a
+  city when it is at most 40 km2 and LGD lists it for that ULB (rows listing one PIN code for
+  more than 3 ULBs are office addresses, ignored), the curated dataset seeds it (Bengaluru as the
+  former BBMP area: LGD's five 2025 corporations have no PIN rows yet; Noida and Navi Mumbai,
+  whose LGD rows are empty or wrong), or it is urban (no India Post branch office, or no LGD
+  village: LGD lists revenue villages in Mumbai and Ahmedabad too) and touches the city's listed
+  areas in the same PIN block (first 4 digits: Mumbai Suburban's 4000xx joins Mumbai, not
+  Thane), then the same district; rural areas a city surrounds (75% of their border) join it.
+  Delhi's three former corporations are one city (`lgd:ulb:276402`, the 2022 reunification).
+  Cities are postal approximations: big fringe PIN areas stay out (Mumbai is 280 km2 of BMC's
+  437, Ahmedabad 217 of 505; Bengaluru 767 of BBMP's 741).
+- **De facto pieces** (`packbuild/ind/defacto.py`). PIN areas follow India's official boundary
+  (Gilgit and Skardu are in 194401, filed under Ladakh; Aksai Chin in 194101). Each PIN area
+  reaching ground a neighbour administers in Natural Earth's de facto countries is cut along it
+  (`packbuild/ind/clip.py`); the piece there is `pin:<code>#india-view` (`india_view_only`), and a
+  derived unit with such pieces has a `#india-view` row too (Ladakh's covers 102,000 km2, Jammu
+  and Kashmir's 11,900). The engine shows them only under the IN worldview. 320 of 19,312 PIN
+  areas are cut, most by slivers where generalised borders overlap; Siachen Glacier (Natural
+  Earth's nobody's unit) is not cut, as placewise answers it India de facto.
+- **Accuracy**, against references checked locally and never shipped (122,832 random land points):
+  the state agrees with geoBoundaries IND ADM1 (DataMeet, India's view) at 99.71% of points,
+  0.14% fall in no state (coast); the district agrees with geoBoundaries ADM2 (2021) at 85.4% of
+  the 108,784 points whose 2021 district name is still an LGD name (PIN areas cross district
+  lines; districts split since 2021 count as misses).
 
 **Not here:**
 
-- *State and district polygons.* No source passed the licence gate. The Survey of India's
+- *Surveyed state and district polygons.* The layers above are PIN-area unions; no surveyed
+  source passed the licence gate. The Survey of India's
   Administrative Boundary Database is free but needs an account and an order, and its portal
   allows boundary files for consultative, research and education use. The National Water Data
   Portal republishes it without an account (`packbuild/sources/nwdp.py` reads its attribute
@@ -317,8 +352,9 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
   `--states`/`--districts` are refused until `boundaries.json` lists an `nwdp-soi-boundaries` entry for `ind`.
   Survey of India boundaries show India's official view, including areas India claims that other
   countries administer; Natural Earth's world admin1 is de facto.
-- *Census 2011 towns.* The Town Directory has no coordinates; GeoNames in the world pack covers
-  towns.
+- *Census 2011 towns.* The Town Directory has no coordinates and Wikidata has few census towns
+  with coordinates; GeoNames in the world pack covers towns (the city score names a point in no
+  `cities` polygon).
 
 ## COD-AB packs (`lka`, `npl`, `bgd`, `tha`, ...)
 
@@ -395,10 +431,12 @@ of a point (CN Tower: GTA, GTHA, Golden Horseshoe). Regions overlap freely.
   metros, ABAG's nine counties for the Bay Area); Canada regions are census divisions, subdivisions
   or CMAs (`statcan:<UID>`). India has no openly licensed district polygons (see the India pack),
   so an India region lists the districts its definition names (`districts`, spelled as the India
-  Post directory spells them) and its members are the PIN areas filed under them. A PIN area can
-  cross a district line, so those outlines are the postal approximation of the districts.
+  Post directory spells them) and its members are the PIN areas filed under them, or LGD units
+  (`lgd_units`: `district:<code>`, `subdistrict:<code>`) and its members are the PIN areas the
+  crosswalk puts in them (the Mumbai Metropolitan Region at taluka level). A PIN area can cross a
+  district line, so those outlines are the postal approximation of the units.
 - **Build-time checks.** A member missing from the pack's layers, a region with no members, or
-  (India) members that are not exactly the PIN areas of the listed districts fail the build with
+  (India) members that are not exactly the PIN areas of the listed districts or LGD units fail the build with
   every problem listed: fix the dataset, never the build.
 - **Union.** No geometry library: member rings are cut into directed edges, edges two members
   share (once each way) are dropped and the rest stitched into simple rings. Removing a pair of

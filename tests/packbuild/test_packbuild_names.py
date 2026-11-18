@@ -169,3 +169,23 @@ def test_world_notable_spec():
     assert spec.id_codes == ("wikidata:",)
     fame = {"fame": np.array([0.0, 0.5, 0.75, 1.0])}
     assert rank_of(spec.rank, fame, 4).tolist() == pytest.approx([0.15, 0.15, 0.5, 0.85])
+
+
+def test_rows_a_skip_column_flags_are_not_indexed():
+    # the India pack repeats a unit as its `#india-view` piece: one entry per unit is enough
+    layer = LayerData(
+        "states", "point",
+        {"id": ["lgd:state:37", "lgd:state:37#india-view"], "name": ["Ladakh", "Ladakh"],
+         "aliases": ["", ""], "india_view_only": [False, True]},
+        ("synthetic",), lat=np.array([34.0, 35.0]), lon=np.array([77.0, 76.0]),
+    )  # fmt: skip
+    data = build([layer], [LayerNames("states", "admin1", skip="india_view_only")])
+    assert data.text == ["Ladakh"] and data.row == [0]
+
+
+def test_india_specs_index_the_lgd_layers():
+    layers = {spec.layer: spec for spec in name_specs.SPECS["ind"]}
+    assert {"states", "districts", "cities", "neighbourhoods"} <= set(layers)
+    assert layers["states"].kind == "admin1" and layers["districts"].kind == "admin2"
+    assert layers["cities"].kind == "locality" and layers["neighbourhoods"].kind == "sublocality"
+    assert all(layers[k].skip == "india_view_only" for k in ("states", "districts", "cities"))

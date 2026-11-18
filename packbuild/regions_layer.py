@@ -181,7 +181,7 @@ def union(region_id, rings, tolerance=0.0, projection=LONLAT):
     shells.sort(key=lambda s: signed_area(s), reverse=True)  # smallest first, so a hole finds its own
     groups = [[s] for s in shells]
     for hole in holes:
-        owner = next((g for g, s in zip(groups, shells, strict=True) if _holds(s, hole)), None)
+        owner = next((g for g, s in zip(groups[: len(shells)], shells, strict=True) if _holds(s, hole)), None)
         if owner is not None:
             owner.append(hole)
         else:  # a hole no shell holds (simplification moved it): its own part, same answer

@@ -13,9 +13,13 @@ should still read each licence for its own obligations.
 | Source | Licence | Used in |
 |---|---|---|
 | [OurAirports](https://ourairports.com/data/) | LicenseRef-public-domain | world/airports |
-| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/worldviews, world/country_facts, world/timezones |
+| [Natural Earth 1:10m Cultural Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world/countries, world/admin1, world/worldviews, ind/states, ind/districts, ind/cities, ind/pincodes, world/country_facts, world/timezones |
 | [US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) | LicenseRef-public-domain | usa/states, usa/counties, usa/places, usa/cbsa, usa/csa, usa/zcta, usa/regions, usa/timezones |
 | [Statistics Canada, 2021 Census Boundary Files (cartographic)](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/regions, can/timezones |
+| [Local Government Directory (LGD), Ministry of Panchayati Raj](https://lgdirectory.gov.in/) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/pincodes, ind/neighbourhoods |
+| [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/pincodes, ind/regions |
+| [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/neighbourhoods, ind/pincodes, ind/post_offices, ind/regions |
+| [placewise curated datasets: names and airports (datasets/names, datasets/airports)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | ind/states, ind/districts, ind/cities, world/cities (alias columns), world/admin1 (alias columns), world/countries (alias columns), world/airports (served_city), package: constants/countries/city_aliases.py (generated) |
 | [Sri Lanka - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-lka) | CC-BY-3.0-IGO | lka/admin1, lka/admin2, lka/admin3, lka/admin4 |
 | [Nepal - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-npl) | CC-BY-3.0-IGO | npl/admin1, npl/admin2, npl/admin3 |
 | [Bangladesh - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-bgd) | CC-BY-3.0-IGO | bgd/admin1, bgd/admin2, bgd/admin3 |
@@ -35,12 +39,9 @@ should still read each licence for its own obligations.
 | [USDA Forest Service Administrative Forest Boundaries](https://data.fs.usda.gov/geodata/edw/datasets.php) | LicenseRef-public-domain | usa-parks/parks_state |
 | [Protected Areas Database of the United States (PAD-US) 4.1](https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e) | LicenseRef-public-domain | usa-parks/parks_state, usa-parks/parks_regional, usa-parks/parks_local |
 | [Canadian Protected and Conserved Areas Database (CPCAD), December 2025](https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c) | OGL-Canada-2.0 | can-parks/parks_national, can-parks/parks_state, can-parks/parks_regional, can-parks/parks_local |
-| [placewise curated datasets: names and airports (datasets/names, datasets/airports)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | world/cities (alias columns), world/admin1 (alias columns), world/countries (alias columns), world/airports (served_city), package: constants/countries/city_aliases.py (generated) |
 | [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
 | [Canadian Geographical Names Database (CGNDB), Natural Resources Canada](https://open.canada.ca/data/en/dataset/e27c6eba-3c5d-4051-9db2-082dc6411c2c) | OGL-Canada-2.0 | can/populated_places |
 | [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
-| [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/pincodes, ind/regions |
-| [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/pincodes, ind/post_offices, ind/regions |
 | [placewise curated datasets: regions (datasets/regions)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | usa/regions, can/regions, ind/regions |
 | [placewise curated datasets: time zones (datasets/timezones)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | world/timezones, usa/timezones, can/timezones |
 | [Natural Earth 1:10m Physical Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world-water/marine, world-water/lakes, world-water/rivers |
@@ -56,7 +57,7 @@ should still read each licence for its own obligations.
 | boundaries | bgd | Bangladesh - Subnational Administrative Boundaries (OCHA COD-AB) |
 | boundaries | can | Statistics Canada, 2021 Census Boundary Files (cartographic) |
 | boundaries | egy | Egypt - Subnational Administrative Boundaries (OCHA COD-AB) |
-| boundaries | ind | none: No openly licensed, redistributable state or district boundaries found yet (Survey of India data is not under an open licence; NWDP's terms are unclear; geoBoundaries is CC BY 2.5 IN or ODbL). Natural Earth admin1 covers states in the world pack. See packbuild/README.md, India pack. |
+| boundaries | ind | Local Government Directory (LGD), Ministry of Panchayati Raj, All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India), placewise curated datasets: names and airports (datasets/names, datasets/airports), Natural Earth 1:10m Cultural Vectors |
 | boundaries | ken | Kenya - Subnational Administrative Boundaries (OCHA COD-AB) |
 | boundaries | lka | Sri Lanka - Subnational Administrative Boundaries (OCHA COD-AB) |
 | boundaries | mex | Mexico - Subnational Administrative Boundaries (OCHA COD-AB) |
@@ -74,6 +75,7 @@ should still read each licence for its own obligations.
 | parks | usa | National Park Service Administrative Boundaries of National Park System Units, USDA Forest Service Administrative Forest Boundaries, Protected Areas Database of the United States (PAD-US) 4.1 |
 | places | world | GeoNames, placewise curated datasets: names and airports (datasets/names, datasets/airports) |
 | places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts, Canadian Geographical Names Database (CGNDB), Natural Resources Canada |
+| places | ind | All India Pincode Directory (Department of Posts, Open Government Data Platform India), Local Government Directory (LGD), Ministry of Panchayati Raj |
 | places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 | postal | can | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
 | postal | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India) |
@@ -102,6 +104,8 @@ Released into the public domain by the maintainers. The world pack keeps large a
 
 Public domain (naturalearthdata.com/about/terms-of-use). Borders are de facto; per-country ADM0_A3_XX and FCLASS_XX columns describe other worldviews and are kept for the worldview setting; the disputed-areas file (99 polygons with every view's ADM0_A3_XX) is the world pack's worldviews layer. Text fields are NUL-padded.
 
+The de facto country polygons the India pack cuts PIN areas along: PIN areas follow India's official boundary, and the parts on ground a neighbour administers (Gilgit-Baltistan, the part of Kashmir Pakistan administers, Aksai Chin, the Shaksgam valley, and border slivers) are flagged india_view_only. Siachen Glacier, which Natural Earth gives to nobody, is not cut (placewise answers it as India de facto).
+
 country_facts uses each country's label point (LABEL_X, LABEL_Y) where GeoNames has no capital.
 
 ## US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations
@@ -121,6 +125,52 @@ The American Indian/Alaska Native/Native Hawaiian Areas cartographic boundary fi
 - Website: https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21
 
 Statistics Canada Open Licence (statcan.gc.ca/en/terms-conditions/open-licence); the credit is the licence's required notice for value-added products (the pack reprojects and simplifies the boundaries). Catalogue 92-160-X, reference guide 92-160-G. Cartographic files: clipped to the shoreline (coastal water belongs to no area) but not generalised, with a vertex every few metres; the build simplifies them (Douglas-Peucker, 10 m, per feature). Published only in Statistics Canada Lambert (EPSG:3347, NAD83); the build unprojects to longitude/latitude and uses NAD83 as WGS84 (1-2 m apart in Canada). The zips (Shapefile) sit on www12.statcan.gc.ca, which answers scripted downloads with a browser check (HTTP 403); 'service' is StatCan's own ArcGIS REST service of the same 2021 cartographic files (layers lpr_000b21s_e etc.), which the build can read instead (--via service). Names are StatCan's official forms, some bilingual ('Greater Sudbury / Grand Sudbury'). The Open Government Portal lists the same files under the Open Government Licence - Canada.
+
+## Local Government Directory (LGD), Ministry of Panchayati Raj
+
+- Credit: Ministry of Panchayati Raj, Government of India. Local Government Directory (lgdirectory.gov.in), as published on the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl
+- Licence: LicenseRef-GODL-India
+- Website: https://lgdirectory.gov.in/
+
+LGD's daily reports of states, districts, sub-districts, urban local bodies (ULBs) and the village and ULB to PIN code tables, the same reports data.gov.in carries under GODL (every data.gov.in page: 'licensed under the Government Open Data License - India'). data.gov.in blocks scripted downloads, so the build reads a community mirror's monthly 7z archives of the daily CSVs (github.com/ramSeraph/opendata, release lgd-archive-extra1; one CSV per day, the newest day is read); the mirror adds nothing to the reports. Codes are LGD's (lgd:state:<code>, lgd:district:<code>, lgd:ulb:<code>). LGD's PIN tables are noisy (a PIN code listed for every ULB of a state is an office address, not membership), so the India pack's states, districts and cities are postal approximations: unions of the PIN areas LGD's tables put in each unit (packbuild/README.md, India pack).
+
+Which city each neighbourhood point belongs to (its PIN area's city in the crosswalk).
+
+## All India Pincode Boundary (Department of Posts, Open Government Data Platform India)
+
+- Credit: Department of Posts, Ministry of Communications, Government of India. All India Pincode Boundary Geo JSON, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl
+- Licence: LicenseRef-GODL-India
+- Website: https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json
+
+The derived states, districts and cities are unions of PIN code areas (each area's LGD unit from the crosswalk), drawn unsimplified so they answer exactly as the PIN areas do.
+
+Geofenced delivery post office PIN code areas (19,312 polygons) published by the Department of Posts in 2025, with the 'Know Your PIN Code' portal, under GODL-India, which permits use, adaptation and redistribution, commercial or not, with attribution to the provider, source and licence. The official catalogue page (data.gov.in) and its AIKosh copies (https://aikosh.indiaai.gov.in/home/datasets/details/all_india_pincode_boundary_geo_json.html, https://aikosh.indiaai.gov.in/home/datasets/details/delivery_post_office_pincode_boundary.html) offer no file that can be fetched automatically: data.gov.in refused or blocked automated requests from the build machine in November 2026 and was reported returning 404 for this resource in May 2026, and AIKosh downloads go through a click-through. The build therefore fetches boundary_mirror, a copy of the official file All_India_pincode_Boundary-19312.geojson (90,323,809 bytes, git blob 6a73f2dfc85b9c7657b24c6523e8ca882cb4a8c7, byte-identical in three unrelated GitHub repositories), pinned to a commit, or takes a manually downloaded official copy (--pincode-boundaries). GeoJSON in WGS84 longitude/latitude (CRS84); properties Pincode, Office_Name, Division, Region, Circle, text padded with trailing spaces. It carries no district or state: the build joins those from the All India Pincode Directory. Boundaries are carried as published by the Department of Posts, a Government of India body, so any official-versus-de-facto question follows India's official view; the areas are delivery zones, not administrative units, and do not nest inside states or districts.
+
+India's curated regions are drawn as unions of PIN code areas grouped by district, since no district polygons are openly licensed.
+
+## All India Pincode Directory (Department of Posts, Open Government Data Platform India)
+
+- Credit: Department of Posts, Ministry of Communications, Government of India. All India Pincode Directory, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl
+- Licence: LicenseRef-GODL-India
+- Website: https://www.data.gov.in/catalog/all-india-pincode-directory
+
+Where LGD lists no village for a PIN code, the directory's district (matched to LGD by name and the curated former names) gives the PIN area's district.
+
+Neighbourhood points: post offices inside cities, named without their type words ('Koramangala S.O' -> Koramangala); institutional offices (colleges, courts, hospitals) are left out by the curated not_neighbourhoods words.
+
+Every post office with its PIN code, office type (HO, SO, BO), delivery status, division, region, circle, district, state and, for most offices, a latitude and longitude, published under GODL-India (use, adaptation and redistribution allowed with attribution). The official file is the CSV download of data.gov.in resource 'All India Pincode Directory till last month' (API resource 5c2f62fe-5afa-4119-a499-fec9d604d5bd, which needs a free data.gov.in API key); data.gov.in refused or blocked automated requests from the build machine in November 2026. The build therefore fetches directory_mirror, a copy of that CSV taken from data.gov.in in May 2024 and pinned to a commit, or takes a manually downloaded current CSV (--pincode-directory). District and state names are upper case as published. Coordinates are WGS84; placeholder values (NA, 1/1, blanks) and points outside India's extent are dropped, not repaired. Districts and states are the Department of Posts' own assignment of each office.
+
+The directory's district column decides which PIN areas make up a district.
+
+## placewise curated datasets: names and airports (datasets/names, datasets/airports)
+
+- Credit: placewise curated datasets, CC BY 4.0
+- Licence: CC-BY-4.0
+- Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
+
+Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): per LGD code, the name placewise shows, former names with the year of the rename and other names in use, each citing the notification or a page citing it; cities LGD's PIN table doesn't draw (Bengaluru as the former BBMP area, Delhi's reunified corporation); words that make a post-office name an institution.
+
+Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): the names people type for places (airport codes, short forms, nicknames, former names, with the GeoNames alternate names to drop), each code citing its OurAirports page and each former name a page on the rename; India's former state and city names (datasets/names/ind.json); and the city each major airport serves (datasets/airports/served.json).
 
 ## Sri Lanka - Subnational Administrative Boundaries (OCHA COD-AB)
 
@@ -284,14 +334,6 @@ ScienceBase rights: 'Public Domain.' The credit is USGS's requested citation (no
 
 The Open Government Portal record and the map service's copyright text give the Open Government Licence - Canada. The database is published as a File Geodatabase, so the build reads ECCC's map service of it in its native EPSG:3978 (NAD83 / Canada Atlas Lambert), generalised by the service to 10 m, and unprojects it (packbuild/projection.py; NAD83 used as WGS84). Only public protected areas are kept: private, NGO and habitat-only designations and OECMs are dropped (docs/parks.md). Ids are cpcad:<PARENT_ID>. CPCAD has no city parks apart from some municipal natural areas and British Columbia's municipal parks.
 
-## placewise curated datasets: names and airports (datasets/names, datasets/airports)
-
-- Credit: placewise curated datasets, CC BY 4.0
-- Licence: CC-BY-4.0
-- Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
-
-Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): the names people type for places (airport codes, short forms, nicknames, former names, with the GeoNames alternate names to drop), each code citing its OurAirports page and each former name a page on the rename; India's former state and city names (datasets/names/ind.json); and the city each major airport serves (datasets/airports/served.json).
-
 ## Statistics Canada, 2021 Census of Population, population and dwelling counts
 
 - Credit: Adapted from Statistics Canada, Census of Population 2021, Population and dwelling counts (tables 98-10-0002-01, 98-10-0005-01 and 98-10-0019-01), reference date May 11, 2021. This does not constitute an endorsement by Statistics Canada of this product.
@@ -315,26 +357,6 @@ Official geographical names approved by the Geographical Names Board of Canada a
 - Website: https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X
 
 Catalogue 92-179-X, reference guide 92-179-G, whose use is governed by the Statistics Canada Open Licence; the guide carries the Canada Post notice repeated in the credit. 1,643 census FSAs (first three characters of the postal code) built from the postal codes census respondents reported: each dissemination area is assigned one FSA, so boundaries follow dissemination areas and can differ from Canada Post's delivery FSAs. Full six-character postal codes and their locations are Canada Post data, not open data, and are not used anywhere in placewise. Same projection, download and browser-check notes as statcan-boundaries-2021; the service is layer lfsa000b21s_e of the same map service.
-
-## All India Pincode Boundary (Department of Posts, Open Government Data Platform India)
-
-- Credit: Department of Posts, Ministry of Communications, Government of India. All India Pincode Boundary Geo JSON, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl
-- Licence: LicenseRef-GODL-India
-- Website: https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json
-
-Geofenced delivery post office PIN code areas (19,312 polygons) published by the Department of Posts in 2025, with the 'Know Your PIN Code' portal, under GODL-India, which permits use, adaptation and redistribution, commercial or not, with attribution to the provider, source and licence. The official catalogue page (data.gov.in) and its AIKosh copies (https://aikosh.indiaai.gov.in/home/datasets/details/all_india_pincode_boundary_geo_json.html, https://aikosh.indiaai.gov.in/home/datasets/details/delivery_post_office_pincode_boundary.html) offer no file that can be fetched automatically: data.gov.in refused or blocked automated requests from the build machine in November 2026 and was reported returning 404 for this resource in May 2026, and AIKosh downloads go through a click-through. The build therefore fetches boundary_mirror, a copy of the official file All_India_pincode_Boundary-19312.geojson (90,323,809 bytes, git blob 6a73f2dfc85b9c7657b24c6523e8ca882cb4a8c7, byte-identical in three unrelated GitHub repositories), pinned to a commit, or takes a manually downloaded official copy (--pincode-boundaries). GeoJSON in WGS84 longitude/latitude (CRS84); properties Pincode, Office_Name, Division, Region, Circle, text padded with trailing spaces. It carries no district or state: the build joins those from the All India Pincode Directory. Boundaries are carried as published by the Department of Posts, a Government of India body, so any official-versus-de-facto question follows India's official view; the areas are delivery zones, not administrative units, and do not nest inside states or districts.
-
-India's curated regions are drawn as unions of PIN code areas grouped by district, since no district polygons are openly licensed.
-
-## All India Pincode Directory (Department of Posts, Open Government Data Platform India)
-
-- Credit: Department of Posts, Ministry of Communications, Government of India. All India Pincode Directory, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl
-- Licence: LicenseRef-GODL-India
-- Website: https://www.data.gov.in/catalog/all-india-pincode-directory
-
-Every post office with its PIN code, office type (HO, SO, BO), delivery status, division, region, circle, district, state and, for most offices, a latitude and longitude, published under GODL-India (use, adaptation and redistribution allowed with attribution). The official file is the CSV download of data.gov.in resource 'All India Pincode Directory till last month' (API resource 5c2f62fe-5afa-4119-a499-fec9d604d5bd, which needs a free data.gov.in API key); data.gov.in refused or blocked automated requests from the build machine in November 2026. The build therefore fetches directory_mirror, a copy of that CSV taken from data.gov.in in May 2024 and pinned to a commit, or takes a manually downloaded current CSV (--pincode-directory). District and state names are upper case as published. Coordinates are WGS84; placeholder values (NA, 1/1, blanks) and points outside India's extent are dropped, not repaired. Districts and states are the Department of Posts' own assignment of each office.
-
-The directory's district column decides which PIN areas make up a district.
 
 ## placewise curated datasets: regions (datasets/regions)
 

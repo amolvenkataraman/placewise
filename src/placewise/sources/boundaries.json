@@ -68,7 +68,86 @@
         "notes": "Statistics Canada Open Licence (statcan.gc.ca/en/terms-conditions/open-licence); the credit is the licence's required notice for value-added products (the pack reprojects and simplifies the boundaries). Catalogue 92-160-X, reference guide 92-160-G. Cartographic files: clipped to the shoreline (coastal water belongs to no area) but not generalised, with a vertex every few metres; the build simplifies them (Douglas-Peucker, 10 m, per feature). Published only in Statistics Canada Lambert (EPSG:3347, NAD83); the build unprojects to longitude/latitude and uses NAD83 as WGS84 (1-2 m apart in Canada). The zips (Shapefile) sit on www12.statcan.gc.ca, which answers scripted downloads with a browser check (HTTP 403); 'service' is StatCan's own ArcGIS REST service of the same 2021 cartographic files (layers lpr_000b21s_e etc.), which the build can read instead (--via service). Names are StatCan's official forms, some bilingual ('Greater Sudbury / Grand Sudbury'). The Open Government Portal lists the same files under the Open Government Licence - Canada."
       }
     ],
-    "ind": [],
+    "ind": [
+      {
+        "id": "lgd-directory",
+        "name": "Local Government Directory (LGD), Ministry of Panchayati Raj",
+        "url": "https://lgdirectory.gov.in/",
+        "licence": "LicenseRef-GODL-India",
+        "credit": "Ministry of Panchayati Raj, Government of India. Local Government Directory (lgdirectory.gov.in), as published on the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
+        "used_in": [
+          "ind/states",
+          "ind/districts",
+          "ind/cities",
+          "ind/pincodes"
+        ],
+        "downloads": {
+          "states": "https://github.com/ramSeraph/opendata/releases/download/lgd-archive-extra1/states.Oct2026.7z",
+          "districts": "https://github.com/ramSeraph/opendata/releases/download/lgd-archive-extra1/districts.Oct2026.7z",
+          "subdistricts": "https://github.com/ramSeraph/opendata/releases/download/lgd-archive-extra1/subdistricts.Oct2026.7z",
+          "urban_local_bodies": "https://github.com/ramSeraph/opendata/releases/download/lgd-archive-extra1/urban_local_bodies.Oct2026.7z",
+          "pincode_villages": "https://github.com/ramSeraph/opendata/releases/download/lgd-archive-extra1/pincode_villages.Oct2026.7z",
+          "pincode_urban": "https://github.com/ramSeraph/opendata/releases/download/lgd-archive-extra1/pincode_urban.Oct2026.7z"
+        },
+        "notes": "LGD's daily reports of states, districts, sub-districts, urban local bodies (ULBs) and the village and ULB to PIN code tables, the same reports data.gov.in carries under GODL (every data.gov.in page: 'licensed under the Government Open Data License - India'). data.gov.in blocks scripted downloads, so the build reads a community mirror's monthly 7z archives of the daily CSVs (github.com/ramSeraph/opendata, release lgd-archive-extra1; one CSV per day, the newest day is read); the mirror adds nothing to the reports. Codes are LGD's (lgd:state:<code>, lgd:district:<code>, lgd:ulb:<code>). LGD's PIN tables are noisy (a PIN code listed for every ULB of a state is an office address, not membership), so the India pack's states, districts and cities are postal approximations: unions of the PIN areas LGD's tables put in each unit (packbuild/README.md, India pack)."
+      },
+      {
+        "id": "indiapost-pincode-boundary",
+        "name": "All India Pincode Boundary (Department of Posts, Open Government Data Platform India)",
+        "url": "https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json",
+        "licence": "LicenseRef-GODL-India",
+        "credit": "Department of Posts, Ministry of Communications, Government of India. All India Pincode Boundary Geo JSON, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
+        "used_in": [
+          "ind/states",
+          "ind/districts",
+          "ind/cities"
+        ],
+        "notes": "The derived states, districts and cities are unions of PIN code areas (each area's LGD unit from the crosswalk), drawn unsimplified so they answer exactly as the PIN areas do."
+      },
+      {
+        "id": "indiapost-pincode-directory",
+        "name": "All India Pincode Directory (Department of Posts, Open Government Data Platform India)",
+        "url": "https://www.data.gov.in/catalog/all-india-pincode-directory",
+        "licence": "LicenseRef-GODL-India",
+        "credit": "Department of Posts, Ministry of Communications, Government of India. All India Pincode Directory, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
+        "used_in": [
+          "ind/states",
+          "ind/districts",
+          "ind/cities"
+        ],
+        "notes": "Where LGD lists no village for a PIN code, the directory's district (matched to LGD by name and the curated former names) gives the PIN area's district."
+      },
+      {
+        "id": "placewise-names",
+        "name": "placewise curated datasets: names and airports (datasets/names, datasets/airports)",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
+        "licence": "CC-BY-4.0",
+        "credit": "placewise curated datasets, CC BY 4.0",
+        "used_in": [
+          "ind/states",
+          "ind/districts",
+          "ind/cities"
+        ],
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): per LGD code, the name placewise shows, former names with the year of the rename and other names in use, each citing the notification or a page citing it; cities LGD's PIN table doesn't draw (Bengaluru as the former BBMP area, Delhi's reunified corporation); words that make a post-office name an institution."
+      },
+      {
+        "id": "naturalearth",
+        "name": "Natural Earth 1:10m Cultural Vectors",
+        "url": "https://www.naturalearthdata.com",
+        "licence": "LicenseRef-public-domain",
+        "credit": "Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.",
+        "used_in": [
+          "ind/states",
+          "ind/districts",
+          "ind/cities",
+          "ind/pincodes"
+        ],
+        "downloads": {
+          "countries": "https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip"
+        },
+        "notes": "The de facto country polygons the India pack cuts PIN areas along: PIN areas follow India's official boundary, and the parts on ground a neighbour administers (Gilgit-Baltistan, the part of Kashmir Pakistan administers, Aksai Chin, the Shaksgam valley, and border slivers) are flagged india_view_only. Siachen Glacier, which Natural Earth gives to nobody, is not cut (placewise answers it as India de facto)."
+      }
+    ],
     "lka": [
       {
         "id": "ocha-cod-ab-lka",
@@ -261,7 +340,5 @@
       }
     ]
   },
-  "gaps": {
-    "ind": "No openly licensed, redistributable state or district boundaries found yet (Survey of India data is not under an open licence; NWDP's terms are unclear; geoBoundaries is CC BY 2.5 IN or ODbL). Natural Earth admin1 covers states in the world pack. See packbuild/README.md, India pack."
-  }
+  "gaps": {}
 }

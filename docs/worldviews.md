@@ -60,8 +60,10 @@ are within the 1:10m generalisation of a border.
 | `VIEW_AREA_NAMES` | IN: Azad Kashmir is "Pakistan-occupied Kashmir" | `Disputed.name` in that view |
 
 With the India pack installed, PIN areas give the state in India's view too (they follow India's
-official boundary), and PIN areas the pack flags `india_view_only` (ground only India's view puts
-in India) answer only when the IN view decided the country.
+official boundary). The pack cuts PIN areas, and its LGD states, districts and cities, along
+Natural Earth's de facto borders; the pieces flagged `india_view_only` (ground only India's view
+puts in India: Gilgit-Baltistan, the part of Kashmir Pakistan administers, Aksai Chin, the
+Shaksgam valley) answer only when the IN view decided the country.
 
 ## `disputed`
 

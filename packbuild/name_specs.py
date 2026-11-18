@@ -105,8 +105,20 @@ _OFFICE_SUFFIXES = tuple(
     f" {s}" for s in ("S.O", "B.O", "H.O", "G.P.O", "GPO", "SO", "BO", "HO", "PO", "S.O.", "B.O.", "H.O.")
 )
 
+_VIEW_ONLY = "india_view_only"  # a unit's piece only India's view puts in India: indexed once
+
 IND = (
-    LayerNames("pincodes", "postal_code", names=(), codes=("pincode",), rank=_POSTAL),
+    LayerNames("states", "admin1", aliases=_ALIASES, codes=("iso",), skip=_VIEW_ONLY, rank=Rank(base=0.8)),
+    LayerNames("districts", "admin2", aliases=_ALIASES, skip=_VIEW_ONLY, rank=Rank(base=0.5)),
+    LayerNames(
+        "cities",
+        "locality",
+        aliases=("aliases", "official_name"),
+        skip=_VIEW_ONLY,
+        rank=Rank(base=0.45, span=0.4, column="area_km2", lo=0.5, hi=2.9),  # 3 -> 800 km2
+    ),
+    LayerNames("neighbourhoods", "sublocality", rank=Rank(base=0.2)),
+    LayerNames("pincodes", "postal_code", names=(), codes=("pincode",), skip=_VIEW_ONLY, rank=_POSTAL),
     LayerNames("post_offices", "sublocality", strip_suffixes=_OFFICE_SUFFIXES, rank=Rank(base=0.12)),
     _REGIONS,
 )

@@ -101,6 +101,18 @@ def pincode_districts(rows):
     }
 
 
+def branch_offices(directory_path):
+    """{pincode: number of branch offices (BO)}, for PIN codes that have any. Branch offices are
+    rural post offices, so a PIN area with none is urban (packbuild.ind.crosswalk)."""
+    seen, counts = set(), Counter()
+    for r in read_directory(directory_path):
+        key = (r["pincode"], r["office"])
+        if r["office_type"] == "BO" and key not in seen:
+            seen.add(key)
+            counts[r["pincode"]] += 1
+    return dict(counts)
+
+
 def pincodes(boundary_path, directory_path=None):
     """The pincodes layer: one feature per PIN code (several source polygons of one PIN code become
     one multi-part feature, at the first one's position); features without a valid PIN are dropped."""

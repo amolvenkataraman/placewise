@@ -10,7 +10,18 @@ USA_LAYERS = {"county": "counties", "place": "places", "postal": "zcta", "cbsa":
 CAN_LAYERS = {
     "division": "cd", "subdivision": "csd", "metro": "cma", "postal": "fsa", "named": "populated_places",
 }  # fmt: skip
-IND_LAYERS = {"postal": "pincodes"}
+IND_LAYERS = {
+    "postal": "pincodes", "state": "states", "district": "districts", "city": "cities",
+    "neighbourhood": "neighbourhoods",
+}  # fmt: skip
+# the India pack's id suffix for the part of a unit only India's view puts in India (a district
+# reaching into Gilgit-Baltistan has "lgd:district:9" and "lgd:district:9#india-view")
+IND_VIEW_ONLY_SUFFIX = "#india-view"
+# India: a point in a city takes as sublocality the nearest neighbourhood (a post office's name) of
+# that city within this distance, looking at this many nearest points; city post offices are
+# about 1-2 km apart
+IND_NEIGHBOURHOOD_KM = 1.5
+IND_NEIGHBOURHOOD_CANDIDATES = 8
 # installed packs the default Geocoder opens beside "world" (alpha-3 names, and the older alpha-2),
 # then the COD-AB packs (constants/codab.py)
 COUNTRY_PACKS = ("usa", "us", "can", "ca", "ind", "in", *CODAB_PACKS)
