@@ -5,6 +5,8 @@ first-level divisions ~0.75-0.85, a 3M city ~0.8, a 100k town ~0.55, a hamlet ~0
 parks ~0.8, metro regions ~0.75, postal codes 0.2, a pocket park ~0.1.
 """
 
+from placewise.constants.codab import COUNTRIES, LAYER_PREFIX
+
 from .names import LayerNames, Rank, Term
 
 # populated places by population: 300 people -> base, 20M -> base + span
@@ -137,12 +139,23 @@ PARKS = (
     ),
 )
 
-CODAB = (
-    LayerNames("admin1", "admin1", codes=("pcode",), rank=Rank(base=0.72)),
-    LayerNames("admin2", "admin2", codes=("pcode",), rank=Rank(base=0.45)),
-    LayerNames("admin3", "locality", codes=("pcode",), rank=Rank(base=0.3)),
-    LayerNames("admin4", "sublocality", codes=("pcode",), rank=Rank(base=0.2)),
-)
+
+def codab(country):
+    """Specs for a COD-AB pack: ADM1 is admin1; the levels placewise.constants.codab names
+    admin2, locality and sublocality are those kinds; other levels are administrative (admin2)."""
+    specs = []
+    for level in range(1, country.levels + 1):
+        if level == 1:
+            kind, rank = "admin1", 0.72
+        elif level == country.locality:
+            kind, rank = "locality", 0.35
+        elif level == country.sublocality:
+            kind, rank = "sublocality", 0.2
+        else:
+            kind, rank = "admin2", 0.45 if level == country.admin2 else 0.35
+        specs.append(LayerNames(f"{LAYER_PREFIX}{level}", kind, codes=("pcode",), rank=Rank(base=rank)))
+    return tuple(specs)
+
 
 SPECS = {
     "world": WORLD,
@@ -151,5 +164,5 @@ SPECS = {
     "ind": IND,
     "world-water": WATER,
     "parks": PARKS,  # usa-parks, can-parks, world-parks
-    "codab": CODAB,  # every COD-AB country pack
+    **{iso3: codab(country) for iso3, country in COUNTRIES.items()},  # COD-AB packs
 }
