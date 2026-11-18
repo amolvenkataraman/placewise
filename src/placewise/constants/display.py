@@ -26,6 +26,9 @@ ENTITY_HIDDEN_CODES = ("iso2", "admin1")
 HERE_KM = 0.05
 HERE_RELATIONS = ("on", "over", "at", "within")
 SHORE_RELATIONS = ("on", "over")  # water the point is on: its distance is to the shore, not to it
+NOT_INSIDE = (
+    "not inside"  # a field filled by a fallback (Result.matches): "Lake Louise · 3.1 km away, not inside"
+)
 IN_AREA = "in the area of"  # a point park's circle holds the point: near at 0 km
 
 # ANSI styles, used only when writing to a terminal (https://no-color.org: NO_COLOR turns them off)

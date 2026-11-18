@@ -19,7 +19,7 @@ def result_rows(r):
     for field in const.RESULT_FIELDS:
         value = _RESULT_VALUES.get(field, _name)(getattr(r, field))
         if value:
-            out.append((field, value, r.sources.get(field)))
+            out.append((field, value + _how(r.matches.get(field)), r.sources.get(field)))
     return title, out
 
 
@@ -85,6 +85,18 @@ def nearby(n):
 
 def _far(n):
     return " ".join(x for x in (km(n.distance_km), n.compass) if x)
+
+
+def _how(match):
+    """ "" inside the place; " · 3.1 km away, not inside" for a fallback (Result.matches)."""
+    if match is None or match.relation.value == "within":
+        return ""
+    far = f"{km(match.distance_km)} " if match.distance_km is not None else ""
+    if match.relation.value == "offshore":
+        return f"{const.SEPARATOR}{far}offshore" if far else f"{const.SEPARATOR}offshore"
+    return (
+        f"{const.SEPARATOR}{far}away, {const.NOT_INSIDE}" if far else f"{const.SEPARATOR}{const.NOT_INSIDE}"
+    )
 
 
 def _size(value):

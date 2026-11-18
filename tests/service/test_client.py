@@ -31,6 +31,7 @@ def test_lookup_round_trip(serve):
     result = client.lookup(*CN_TOWER)
     assert isinstance(result, Result)
     assert result == expected(*CN_TOWER)
+    assert result.matches["city"].distance_km == 0.4 and not result.city_within  # through JSON
 
 
 def test_lookup_with_worldview(serve, fake):

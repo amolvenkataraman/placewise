@@ -118,6 +118,23 @@ class Nearby(Model):
 
 
 @dataclass(frozen=True, slots=True)
+class Match(Model):
+    """How a Result field's place was found for the point: `within` it (its outline holds the
+    point; distance 0), or `near` it, a fallback chosen by distance or score (the nearest town,
+    a metro's principal city, a postal city, the polygon beside a shore), with the great-circle km
+    to the place's point, or to its box where it has no point; `offshore` for a country whose
+    territorial sea holds the point. distance_km is None where it can't be known."""
+
+    relation: Relation
+    distance_km: float | None = None
+
+    def __post_init__(self):
+        set_field(self, "relation", Relation(self.relation))
+        if self.distance_km is not None and self.distance_km < 0:
+            raise ValueError("distance can't be negative")
+
+
+@dataclass(frozen=True, slots=True)
 class Disputed(Model):
     """A point inside a disputed area: who claims it, who runs it, and which view was applied."""
 
@@ -193,7 +210,9 @@ class Entity(_Card, Model):
 
 @dataclass(frozen=True, slots=True)
 class Result(_Card, Model):
-    """What `lookup` returns for a point. `sources` maps each field to the layer or rule that set it.
+    """What `lookup` returns for a point. `sources` maps each field to the layer or rule that set it;
+    `matches` says for each place field whether the point is inside that place or it was the
+    nearest fallback, and how far (Match).
 
     Three names per point (docs/naming.md): `sublocality` (what a local adds: Mission District),
     `locality` (the municipality, corrected for how people talk) and `city` (what you'd tell someone
@@ -219,12 +238,32 @@ class Result(_Card, Model):
     disputed: Disputed | None = None
     relative: Relative | None = None
     sources: dict[str, str] = field(default_factory=dict)
+    matches: dict[str, Match] = field(default_factory=dict)  # place field -> how it was found
     data_version: str | None = None
 
     def __post_init__(self):
         Point(self.lat, self.lon)  # validates
 
     @property
+    def city_within(self):
+        """Whether the point lies inside the city (not a nearest-town or metro fallback)."""
+        return _within(self.matches.get("city"))
+
+    @property
+    def locality_within(self):
+        return _within(self.matches.get("locality"))
+
+    @property
+    def city_km(self):
+        """km from the point to the city: 0.0 inside it, None when unknown or no city."""
+        m = self.matches.get("city")
+        return m.distance_km if m is not None else None
+
+    @property
     def cc(self):
         """ISO 3166-1 alpha-2 code of the country, if known."""
         return self.country.codes.get("iso2") if self.country else None
+
+
+def _within(match):
+    return match is not None and match.relation == Relation.WITHIN

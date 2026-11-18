@@ -8,7 +8,7 @@ import math
 import threading
 from contextlib import contextmanager
 
-from placewise.model import BBox, Entity, Place, PlaceKind, Point, Result, Settings
+from placewise.model import BBox, Entity, Match, Place, PlaceKind, Point, Relation, Result, Settings
 
 DATA_VERSION = "2026.11-test"
 
@@ -63,6 +63,7 @@ def _result(lat, lon):
         city=Place(id=f"test:{key}-city", name=city, kind=PlaceKind.LOCALITY, point=Point(best[0], best[1])),
         tz=tz,
         sources={"city": "test"},
+        matches={"country": Match(Relation.WITHIN, 0.0), "city": Match(Relation.NEAR, 0.4)},
         data_version=DATA_VERSION,
     )
 

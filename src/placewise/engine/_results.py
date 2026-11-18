@@ -15,6 +15,7 @@ from placewise.constants.worldviews import WORLDVIEW_RULE
 from placewise.model import Nearby, PlaceKind, Relation, Result
 
 from . import _nearby as nearby
+from ._matches import matches
 from ._notable import RADIUS
 from ._within import label_park
 from .naming.rules import same_name
@@ -163,7 +164,7 @@ def build(geo, lat, lon, a, named, order, locked):
         results.append(
             Result(
                 lat=lats[i], lon=lons[i], label=label, tz=tz, near=near, disputed=disputed, sources=sources,
-                data_version=data_version, **fields,
+                matches=matches(fields, sources, lats[i], lons[i]), data_version=data_version, **fields,
             )
         )  # fmt: skip
     return results

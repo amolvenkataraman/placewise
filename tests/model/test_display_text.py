@@ -132,3 +132,21 @@ def test_entity_card_without_extras_and_with_a_tier():
 @pytest.mark.parametrize("obj", [yosemite_valley(), paris_texas()])
 def test_str_is_the_plain_card(obj):
     assert str(obj) == obj.card(color=False) == text.card(obj)
+
+
+def test_fields_filled_from_outside_say_how_far():
+    from placewise.model import Match, Relation
+
+    r = dataclasses.replace(
+        yosemite_valley(),
+        matches={"locality": Match(Relation.WITHIN, 0.0), "city": Match(Relation.NEAR, 3.14)},
+    )
+    got = rows(str(r))
+    assert got["locality"][0] == "Yosemite Valley"  # inside: nothing added
+    assert got["city"][0] == "Yosemite Valley · 3.1 km away, not inside"
+    off = dataclasses.replace(
+        r, matches={"country": Match(Relation.OFFSHORE, 4.0), "city": Match(Relation.NEAR)}
+    )
+    got = rows(str(off))
+    assert got["country"][0] == "United States (US) · 4.0 km offshore"
+    assert got["city"][0] == "Yosemite Valley · not inside"
