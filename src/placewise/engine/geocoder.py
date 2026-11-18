@@ -10,7 +10,8 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 5. airport, and the nearest country far offshore (_nearby);
 6. parks the point is within or near, from the park packs (_within);
 7. the sea or lake a point is on, and the water beside it, when a water pack is open (_water);
-8. the Results and their labels (_results).
+8. notable places near it, when the world-notable pack is open (_notable);
+9. the Results and their labels (_results).
 
 `lookup_many` runs every spatial query for all points at once and then builds the Results;
 `lookup` is `lookup_many` with one point, so the two always agree.
@@ -24,6 +25,7 @@ import numpy as np
 from placewise.config import effective_worldview
 from placewise.constants import lookup as const
 from placewise.constants import naming as naming_const
+from placewise.constants import notable as notable_const
 from placewise.constants import parks as parks_const
 from placewise.constants import water as water_const
 from placewise.model import PlaceKind, Settings
@@ -33,6 +35,7 @@ from . import _nearby, _results
 from ._admin import Admin
 from ._cities import Cities
 from ._layers import Layers
+from ._notable import Notable
 from ._timezones import Timezones
 from ._water import Water
 from ._within import Parks
@@ -91,6 +94,11 @@ class Geocoder:
         return Water(self.packs, self.layers)
 
     @cached_property
+    def notable(self):
+        """The world-notable pack's layer (placewise.engine._notable), or None when no pack has it."""
+        return Notable(self.packs, self.layers) or None
+
+    @cached_property
     def naming(self):
         """The country packs' rules; they need the GeoNames cities beside them."""
         return Naming(self.packs, self.layers, self.admin, self.cities) if self.cities is not None else None
@@ -146,6 +154,8 @@ class Geocoder:
             a["parks"] = self.parks.answer(lat, lon, near)
         if self.water:
             self.water.answer(a, lat, lon, self.layers.layer(const.COUNTRIES))
+        if near and self.notable is not None:
+            a["notable_places"] = self.notable.answer(lat, lon)
         return a, named
 
     # -- worldview, settings, overrides -------------------------------------------------------------
@@ -178,13 +188,13 @@ class Geocoder:
 
 
 def _installed_country_packs(store):
-    """The country packs, the world-water pack and the park packs installed in the store that it
-    can open (stores without `installed()` have none)."""
+    """The country packs, the world-water pack, the park packs and the world-notable pack installed
+    in the store that it can open (stores without `installed()` have none)."""
     installed = getattr(store, "installed", None)
     if installed is None:
         return []
     names, found = installed(), []
-    for name in (*naming_const.COUNTRY_PACKS, water_const.PACK, *parks_const.PACKS):
+    for name in (*naming_const.COUNTRY_PACKS, water_const.PACK, *parks_const.PACKS, notable_const.PACK):
         if name in names:
             try:
                 found.append(store.current(name))
