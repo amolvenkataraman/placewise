@@ -134,3 +134,72 @@ def test_grouped_even_odd_matches_per_feature_even_odd():
         mine = feature == f
         want[mine] = gm.even_odd(plat[mine], plon[mine], *(a[s:e] for a in edges))
     np.testing.assert_array_equal(got, want)
+
+
+# --- the grid cut to the layer's extent --------------------------------------------------------
+
+
+def _uncrop(offsets, items, inside, meta, rows, cols):
+    """The world grid back from a cropped one."""
+    count, full_inside = np.zeros(rows * cols, dtype=np.int64), np.full(rows * cols, -1, dtype=np.int32)
+    lists = {}
+    for k in range(meta["rows"] * meta["cols"]):
+        r, c = divmod(k, meta["cols"])
+        cell = (r + meta["row0"]) * cols + (c + meta["col0"]) % cols
+        lists[cell] = items[offsets[k] : offsets[k + 1]]
+        count[cell], full_inside[cell] = len(lists[cell]), inside[k]
+    full_offsets = np.zeros(rows * cols + 1, dtype=np.int64)
+    np.cumsum(count, out=full_offsets[1:])
+    full_items = np.concatenate([np.zeros(0, items.dtype), *(lists[c] for c in sorted(lists))])
+    return full_offsets, full_items, full_inside
+
+
+def _assert_crop_keeps_everything(features, cell_deg):
+    rows, cols = gm.grid_shape(cell_deg)
+    full = _grid_index.build(_geom(features), cell_deg)
+    *cut, meta = _grid_index.crop(*full, rows, cols)
+    assert len(cut[0]) == meta["rows"] * meta["cols"] + 1 and len(cut[2]) == meta["rows"] * meta["cols"]
+    for got, want in zip(_uncrop(*cut, meta, rows, cols), full, strict=True):
+        assert got.dtype == want.dtype
+        np.testing.assert_array_equal(got, want)
+    return meta
+
+
+@pytest.mark.parametrize("cell_deg", [1.0, 0.25])
+def test_crop_keeps_every_candidate_of_random_shapes(cell_deg):
+    rng = np.random.default_rng(11)
+    features = blob_features(40, rng, radius=(0.2, 3.0), vertices=(5, 200), lat_range=(30, 50), holes=True)
+    meta = _assert_crop_keeps_everything(features, cell_deg)
+    assert meta["rows"] * meta["cols"] < gm.grid_shape(cell_deg)[0] * gm.grid_shape(cell_deg)[1] / 4
+
+
+def test_crop_wraps_round_the_antimeridian():
+    meta = _assert_crop_keeps_everything([fiji(), box_feature(-19, 175, -17, 178)], 1.0)
+    assert meta == {"rows": 4, "cols": 21, "row0": 71, "col0": 350}
+
+
+def test_crop_of_a_world_layer_is_the_world_grid():
+    wide = Feature(outlines=(Outline((_wide_ring(-89.5, -179.5, 89.5, 179.5),)),))
+    meta = _assert_crop_keeps_everything([wide], 1.0)
+    assert meta == {"rows": 180, "cols": 360, "row0": 0, "col0": 0}
+
+
+def test_crop_of_no_features_is_empty():
+    geom = _geom([box_feature(0, 0, 1, 1)])
+    empty = {k: (v[:0] if k in ("lat.npy", "lon.npy", "bbox.npy") else v[:1] * 0) for k, v in geom.items()}
+    offsets, items, inside, meta = _grid_index.crop(*_grid_index.build(empty, 1.0), 180, 360)
+    assert meta == {"rows": 0, "cols": 0, "row0": 0, "col0": 0}
+    assert offsets.tolist() == [0] and len(items) == 0 and len(inside) == 0
+
+
+def test_cells_of_a_cropped_grid_and_of_a_world_grid():
+    meta = {"cell_deg": 1.0, "rows": 4, "cols": 21, "row0": 71, "col0": 350}
+    # rows -19..-15 (world rows 71..74), columns 170..180 and -180..-169 (350..359, 0..10)
+    lat = np.array([-18.5, -18.5, -18.5, -15.5, -19.5, 90.0, -16.0, -17.0])
+    lon = np.array([175.5, -175.5, 0.5, 175.5, 179.0, 175.0, -170.0, -169.0])
+    got = _grid_index.cells(lat, lon, meta).tolist()
+    assert got == [5, 14, -1, 3 * 21 + 5, -1, -1, 3 * 21 + 20, -1]
+    world = {"cell_deg": 1.0, "rows": 180, "cols": 360}  # a grid written before grids were cut
+    assert _grid_index.cells(np.array([90.0, -90.0]), np.array([180.0, -180.0]), world).tolist() == [
+        179 * 360 + 359, 0,
+    ]  # fmt: skip

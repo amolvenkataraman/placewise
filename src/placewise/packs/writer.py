@@ -292,11 +292,12 @@ def _write_layer(layer_dir, p):
 
 
 def _write_grid(grid_dir, geom, cell_deg):
-    """Candidates per cell and the cells one feature answers outright (see _grid_index)."""
+    """Candidates per cell and the cells one feature answers outright, over the cells the layer
+    reaches (see _grid_index)."""
     rows, cols = gm.grid_shape(cell_deg)
-    offsets, items, inside = _grid_index.build(geom, cell_deg)
+    offsets, items, inside, extent = _grid_index.crop(*_grid_index.build(geom, cell_deg), rows, cols)
     grid_dir.mkdir()
-    _write_json(grid_dir / consts.GRID_META, {"cell_deg": cell_deg, "rows": rows, "cols": cols})
+    _write_json(grid_dir / consts.GRID_META, {"cell_deg": cell_deg, **extent})
     _save(grid_dir / "cell.npy", offsets)
     _save(grid_dir / "items.npy", items)
     _save(grid_dir / "inside.npy", inside)

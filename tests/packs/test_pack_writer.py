@@ -3,7 +3,7 @@ import json
 
 import numpy as np
 import pytest
-from pack_kit import CREATED, box_feature, fiji, point_layer, polygon_layer
+from pack_kit import CREATED, box_feature, fiji, point_layer, polygon_layer, world_grid
 
 from placewise.constants import packs as consts
 from placewise.model import Feature, Outline
@@ -114,8 +114,9 @@ def test_antimeridian_bbox_has_west_greater_than_east_and_both_sides_are_indexed
     bbox = _load(pack / "areas" / "geom" / "bbox.npy") / consts.E7
     assert bbox.tolist() == [[-19, 170, -16, -170]]
     meta = json.loads((pack / "areas" / "grid" / "meta.json").read_text())
-    assert meta == {"cell_deg": 1.0, "rows": 180, "cols": 360}
-    cell, items = _load(pack / "areas" / "grid" / "cell.npy"), _load(pack / "areas" / "grid" / "items.npy")
+    # cut to the cells the layer reaches: rows -19..-16, columns 170..180 then -180..-170
+    assert meta == {"cell_deg": 1.0, "rows": 4, "cols": 21, "row0": 71, "col0": 350}
+    _, cell, items, _ = world_grid(pack / "areas" / "grid")
 
     def candidates(lat, lon):
         k = int((lat + 90) // 1) * 360 + int((lon + 180) // 1)
@@ -130,9 +131,13 @@ def test_grid_candidates_ascend_and_cover_every_bbox(tmp_path):
     features = [box_feature(0, 0, 5, 5), box_feature(2, 2, 3.5, 3.5), box_feature(-1, -1, 1, 1)]
     pack = _write(tmp_path, polygon_layer(features, cell_deg=1.0))
     grid = pack / "areas" / "grid"
-    cell, items = _load(grid / "cell.npy"), _load(grid / "items.npy")
-    assert cell.dtype == np.dtype("<i8") and items.dtype == np.dtype("<i4")
-    assert cell.shape == (180 * 360 + 1,) and cell[-1] == len(items)
+    stored = _load(grid / "cell.npy")
+    assert stored.dtype == np.dtype("<i8") and _load(grid / "items.npy").dtype == np.dtype("<i4")
+    assert json.loads((grid / "meta.json").read_text()) == {
+        "cell_deg": 1.0, "rows": 7, "cols": 7, "row0": 89, "col0": 179,
+    }  # fmt: skip
+    assert stored.shape == (7 * 7 + 1,) and stored[-1] == len(_load(grid / "items.npy"))
+    _, cell, items, _ = world_grid(grid)
     k = 92 * 360 + 182  # the cell [2, 3) x [2, 3)
     assert items[cell[k] : cell[k + 1]].tolist() == [0, 1]
     for c in range(180 * 360):
@@ -140,16 +145,15 @@ def test_grid_candidates_ascend_and_cover_every_bbox(tmp_path):
 
 
 def _inside(pack, layer="areas"):
-    grid = pack / layer / "grid"
-    meta = json.loads((grid / "meta.json").read_text())
-    return _load(grid / "inside.npy").reshape(meta["rows"], meta["cols"])
+    meta, _, _, inside = world_grid(pack / layer / "grid")
+    return inside.reshape(meta["rows"], meta["cols"])
 
 
 def test_inside_cells_exclude_boundaries_and_holes(tmp_path):
     # a 0..10 square with a 3..7 hole; 1-degree cells
     pack = _write(tmp_path, polygon_layer([box_feature(0, 0, 10, 10, (3, 3, 7, 7))]))
     inside = _inside(pack)
-    assert inside.dtype == np.dtype("<i4")
+    assert _load(pack / "areas" / "grid" / "inside.npy").dtype == np.dtype("<i4")
     row, col = lambda lat: 90 + lat, lambda lon: 180 + lon
     assert inside[row(1), col(1)] == 0  # wholly inside, touching no edge
     assert inside[row(0), col(5)] == -1  # the outer edge runs along its south side

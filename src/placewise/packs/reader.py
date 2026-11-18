@@ -22,6 +22,7 @@ from placewise.geo import haversine, lines
 from placewise.model import BBox, Feature, Outline
 
 from . import _geometry as gm
+from . import _grid_index
 from ._boundary import Boundary
 from ._edges import EdgeCaps
 from ._lazy import once
@@ -288,7 +289,7 @@ class PolygonLayer(Layer):
 
     @property
     def grid_shape(self):
-        """(rows, cols) of the grid index."""
+        """(rows, cols) of the grid index (its cells: the world's, or the rectangle the layer reaches)."""
         return int(self._grid_meta["rows"]), int(self._grid_meta["cols"])
 
     @property
@@ -340,11 +341,18 @@ class PolygonLayer(Layer):
         return int(result) if result.ndim == 0 else result
 
     def _cell(self, lat, lon):
-        rows, cols = self.grid_shape
-        return gm.cell_rows(lat, self.cell_deg, rows) * cols + gm.cell_cols(lon, self.cell_deg, cols)
+        """Each point's cell of the grid, -1 outside it (no candidates there)."""
+        return _grid_index.cells(lat, lon, self._grid_meta)
 
     def _query(self, lat, lon):
+        result = np.full(len(lat), -1, dtype=np.int64)
         cell = self._cell(lat, lon)
+        on_grid = np.flatnonzero(cell >= 0)
+        lat, lon, cell = lat[on_grid], lon[on_grid], cell[on_grid]
+        result[on_grid] = self._query_cells(lat, lon, cell)
+        return result
+
+    def _query_cells(self, lat, lon, cell):
         result = np.asarray(self.grid_inside)[cell].astype(np.int64)
         offsets = self._array(f"{consts.GRID_DIR}/cell.npy")
         items = self._array(f"{consts.GRID_DIR}/items.npy")
@@ -434,6 +442,8 @@ class PolygonLayer(Layer):
         if not (np.isfinite(lat[0]) and self.count):
             return []
         cell = int(self._cell(lat, lon)[0])
+        if cell < 0:
+            return []
         offsets = self._array(f"{consts.GRID_DIR}/cell.npy")
         candidates = np.asarray(
             self._array(f"{consts.GRID_DIR}/items.npy")[offsets[cell] : offsets[cell + 1]]
@@ -451,9 +461,10 @@ class PolygonLayer(Layer):
         lat, lon = np.broadcast_arrays(np.asarray(lats, dtype=np.float64), np.asarray(lons, dtype=np.float64))
         flat_lat, flat_lon = gm.normalise(lat.ravel(), lon.ravel())
         ok = np.flatnonzero(np.isfinite(flat_lat))
-        if not (len(ok) and self.count):
+        cell = self._cell(flat_lat[ok], flat_lon[ok]) if len(ok) and self.count else np.zeros(0, np.int64)
+        ok, cell = ok[cell >= 0], cell[cell >= 0]
+        if not len(ok):
             return np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.int64)
-        cell = self._cell(flat_lat[ok], flat_lon[ok])
         offsets = self._array(f"{consts.GRID_DIR}/cell.npy")
         start, stop = (
             np.asarray(offsets[cell]).astype(np.int64),
