@@ -29,7 +29,14 @@ TABLES = {
     "world": {
         "sources": SOURCES,
         "countries": {"iso:CA": "America/Toronto", "iso:IN": "Asia/Kolkata", "ne:SOL": "Africa/Mogadishu"},
-        "shapes": [],
+        "shapes": [
+            {
+                "id": "tz:test-box",
+                "zone": "America/Winnipeg",
+                "within": "iso:CA",
+                "boxes": [[50, -98, 51, -97]],
+            }
+        ],
     },
     "usa": {
         "country": "US",

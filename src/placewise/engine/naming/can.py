@@ -37,7 +37,7 @@ class Can:
 
     def __init__(self, pack, layers, admin, cities):
         names = const.CAN_LAYERS
-        self.layers, self.admin, self.cities = layers, admin, cities
+        self.layers, self.admin, self.cities, self._pack = layers, admin, cities, pack
         self.csd = layers.add(
             pack, names["subdivision"], common.area_maker(PlaceKind.LOCALITY, "csdtype", "province")
         )
@@ -98,6 +98,16 @@ class Can:
         return out
 
     # -- the rules ----------------------------------------------------------------------------------
+
+    def tz_layers(self):
+        """The subdivisions', divisions' and provinces' keys when they carry their time zone
+        (placewise.engine._timezones)."""
+        names = const.CAN_LAYERS
+        return common.tz_layers(self.layers, self._pack, self.csd, (names["division"], const.CAN_PROVINCES))
+
+    def tz_rows(self, state):
+        """Per point of `boundaries`, the subdivision it lies inside (-1: none, or only near one)."""
+        return common.inside_rows(state["csd"], state["rule"])
 
     def boundaries(self, a, pts, lat, lon):
         csd, rule = common.polygon(self.layers.layer(self.csd), lat, lon)

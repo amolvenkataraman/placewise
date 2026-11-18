@@ -52,7 +52,8 @@
           "usa/places",
           "usa/cbsa",
           "usa/csa",
-          "usa/zcta"
+          "usa/postal_cities",
+          "usa-zip/zcta"
         ],
         "downloads": {
           "gazetteer_place": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2025_Gazetteer/2025_Gaz_place_national.zip",

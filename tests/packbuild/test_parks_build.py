@@ -1,5 +1,7 @@
 """The park pack builders (packbuild.parks) on the synthetic inputs of parks_fixtures."""
 
+import json
+
 import parks_fixtures as fx
 import pytest
 
@@ -29,7 +31,7 @@ def test_usa_parks_pack(inputs):
     path = parks.build("usa", inputs / "cache", inputs / "out", "2026.11")
     assert path.name == "usa-parks-2026.11"
     pack = open_pack(path, verify=True)
-    assert list(pack.layers) == ["parks_national", "parks_state", "parks_regional", "parks_local"]
+    assert list(pack.layers) == ["parks_national", "parks_state", "parks_regional"]  # local: usa-parks-local
     assert set(pack.sources) == {"nps-boundaries", "usfs-forests", "padus"}
     national = pack["parks_national"]
     hits = national.query_all(0.75, -139.75)
@@ -39,6 +41,16 @@ def test_usa_parks_pack(inputs):
     assert {pack.names.layers[x] for x in pack.names.codes("ALPH").layer} == {"parks_national"}
     state = pack["parks_state"]
     assert {state.value("park", i) for i in state.query_all(0.75, -139.75)} == {"usfs:0101"}
+    assert "kind" not in json.loads((path / "pack.json").read_text())  # its name says it all
+
+
+def test_usa_parks_local_pack(inputs):
+    path = parks.build("usa-local", inputs / "cache", inputs / "out", "2026.11")
+    assert path.name == "usa-parks-local-2026.11"
+    pack = open_pack(path, verify=True)
+    assert list(pack.layers) == ["parks_local"]
+    manifest = json.loads((path / "pack.json").read_text())
+    assert (manifest["kind"], manifest["covers"], manifest["requires"]) == ("parks", ["US"], ["usa-parks"])
     local = pack["parks_local"]
     rows = [local.row(i) for i in range(len(local))]
     green = [r for r in rows if r["name"] == "Central Green"]
@@ -55,7 +67,8 @@ def test_can_and_world_packs(inputs):
 
 
 def test_the_engine_reads_the_built_packs(inputs):
-    packs = [open_pack(parks.build(r, inputs / "cache", inputs / "out", "2026.11")) for r in ("usa", "world")]
+    regions = ("usa", "usa-local", "world")
+    packs = [open_pack(parks.build(r, inputs / "cache", inputs / "out", "2026.11")) for r in regions]
 
     class Layers:  # the part of engine._layers.Layers that Parks uses
         def __init__(self):
@@ -70,7 +83,7 @@ def test_the_engine_reads_the_built_packs(inputs):
         packs, layers, type("Near", (), {"park_tier1": 25.0, "park_tier2": 10.0, "park_tier3": 1.0})
     )
     assert found and layers.keys[-1] == "world-parks/park_points"
-    assert "usa-parks/parks_local" in layers.keys
+    assert "usa-parks-local/parks_local" in layers.keys
 
 
 def test_main_builds_the_named_packs(inputs, capsys):

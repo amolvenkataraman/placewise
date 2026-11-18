@@ -28,13 +28,17 @@ engine never puts them in `within` or `near`, and search never returns them.
 
 | Pack | Layers | Sources |
 |---|---|---|
-| `usa-parks` | `parks_national`, `parks_state`, `parks_regional`, `parks_local` (polygons) | NPS boundaries, USFS administrative forests, PAD-US 4.1 (all public domain) |
+| `usa-parks` | `parks_national`, `parks_state`, `parks_regional` (polygons) | NPS boundaries, USFS administrative forests, PAD-US 4.1 (all public domain) |
+| `usa-parks-local` | `parks_local` (polygons): city and county parks, optional beside usa-parks | PAD-US 4.1 (public domain) |
 | `can-parks` | the same four | CPCAD December 2025 (OGL-Canada 2.0) |
 | `world-parks` | `park_points` (points) | Wikidata (CC0) |
 
 Separate packs rather than layers in `usa`/`can`/`world`: those packs are built by other builders,
-the outline packs are large (can-parks 33 MB unpacked; usa-parks is dominated by 120k local parks),
-and parks install and update on their own. world-parks is 0.6 MB, but keeping it apart lets the world
+the outline packs are large (can-parks 33 MB unpacked), and parks install and update on their own.
+The US's 120k local parks were most of usa-parks, so they are a pack of their own, `usa-parks-local`
+(pack.json `kind` parks, `covers` US, `requires` usa-parks): with it a point in Central Park is
+`within` it, without it the national, state and regional answers are the same and local parks are
+neither within nor found by search. world-parks is 0.6 MB, but keeping it apart lets the world
 pack stay unchanged. The default Geocoder opens installed park packs.
 
 Columns: `id` (unique per row), `park` (the Place id, shared by a park's parcels or zones), `name`,

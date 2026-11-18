@@ -1,3 +1,4 @@
+import json
 import zipfile
 from pathlib import Path
 
@@ -10,16 +11,16 @@ from timezones_kit import use_timezones
 from packbuild import us
 from packbuild.sources import SOURCES, url
 
-LAYERS = ["states", "counties", "places", "cbsa", "csa", "zcta", "regions", "timezones"]
+LAYERS = ["states", "counties", "places", "cbsa", "csa", "postal_cities", "regions", "timezones"]
 COUNTS = {
     "states": 3,
     "counties": 5,
     "places": 6,
     "cbsa": 4,
     "csa": 3,
-    "zcta": 3,
+    "postal_cities": 2,  # the ZCTAs whose postal city can name a locality: not Yosemite's
     "regions": 2,
-    "timezones": 5,
+    "timezones": 1,  # the AIANNH area; the zones are the counties' tz column
 }
 
 
@@ -92,7 +93,9 @@ def test_build_us_fetches_every_registry_url_and_hands_eight_layers_to_the_write
     assert {layer.name: len(layer.columns["id"]) for layer in layers} == COUNTS
     expected = {
         "regions": ("placewise-regions", "uscensus"),
-        "zcta": ("uscensus", "geonames"),
+        "postal_cities": ("uscensus",),
+        "counties": ("uscensus", "placewise-timezones"),
+        "states": ("uscensus", "placewise-timezones"),
         "timezones": ("placewise-timezones", "uscensus"),
     }
     for layer in layers:
@@ -108,7 +111,7 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     pack = open_pack(path, verify=True)
     assert [layer.name for layer in pack] == LAYERS
     assert {layer.name: len(layer) for layer in pack} == COUNTS
-    assert set(pack.sources) == {"uscensus", "geonames", "placewise-regions", "placewise-timezones"}
+    assert set(pack.sources) == {"uscensus", "placewise-regions", "placewise-timezones"}
 
     def at(layer, lat, lon):
         i = pack[layer].query(lat, lon)
@@ -128,15 +131,11 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     strip = at("places", 36.1147, -115.1728)
     assert (strip["name"], strip["lsad"], strip["population"]) == ("Paradise", "CDP", 185913)  # ACS
     assert (strip["population_source"], strip["principal"]) == ("acs5y2024", "29820")
-    zip_ = at("zcta", 36.1147, -115.1728)
-    assert (zip_["name"], zip_["population"], zip_["postal_city"]) == ("89109", 6504, "Las Vegas")
-    assert (zip_["postal_place"], zip_["postal_source"]) == ("census:3240000", "zbp")
-    yosemite = at("zcta", 37.7456, -119.5936)  # Business Patterns has no row: GeoNames' name
-    assert (yosemite["postal_city"], yosemite["postal_place"], yosemite["postal_source"]) == (
-        "Yosemite National Park",
-        None,
-        "geonames",
-    )  # fmt: skip  ("" reads back as None)
+    zip_ = at("postal_cities", 36.1147, -115.1728)  # the ZCTA, only as far as naming needs it
+    assert (zip_["name"], zip_["postal_place"]) == ("89109", "census:3240000")
+    assert set(pack["postal_cities"].fields) == {"id", "name", "postal_place"}
+    assert at("postal_cities", 37.7456, -119.5936) is None  # Yosemite's postal city is no place
+    assert not pack.names.codes("89109").layer.size  # ZIP Codes are found through usa-zip
     reno = at("places", 39.5296, -119.8138)
     assert (reno["name"], reno["population"], reno["state"]) == ("Reno", 283621, "NV")  # SUB-EST
     assert reno["population_source"] == "sub-est2025"
@@ -160,13 +159,14 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     assert at("regions", 37.7456, -119.5936) is None  # Mariposa is in no region
     assert regions.column("area_km2")[0] < regions.column("area_km2")[1]  # smallest first
 
-    # time zones: the AIANNH area first, then the split county, then the states
+    # time zones: the AIANNH area drawn; each county carries its own zone, else its state's
     assert at("timezones", 36.6, -114.6)["id"] == "tz:test-reservation"
     assert at("timezones", 36.6, -114.6)["zone"] == "America/Denver"
-    washoe = at("timezones", 39.5296, -119.8138)
-    assert (washoe["id"], washoe["zones"]) == ("tz:census:32031", "America/Los_Angeles|America/Denver")
-    assert at("timezones", 36.1147, -115.1728)["id"] == "tz:iso:US-NV"
-    assert at("timezones", *park)["zone"] == "America/Los_Angeles"
+    assert at("timezones", 39.5296, -119.8138) is None
+    assert at("counties", 39.5296, -119.8138)["tz"] == "America/Los_Angeles|America/Denver"  # Washoe
+    assert at("counties", 36.1147, -115.1728)["tz"] == "America/Los_Angeles"  # Clark: Nevada's
+    assert at("counties", *park)["tz"] == "America/Los_Angeles"
+    assert at("states", 36.1147, -115.1728)["tz"] == "America/Los_Angeles"  # for points in no county
 
 
 def test_a_region_member_missing_from_the_counties_fails_the_build(tmp_path, offline, monkeypatch):
@@ -178,3 +178,29 @@ def test_a_region_member_missing_from_the_counties_fails_the_build(tmp_path, off
 def test_main_builds_into_the_given_directories(tmp_path, offline, capsys):
     us.main(["--cache-dir", str(tmp_path / "cache"), "--out", str(tmp_path / "out"), "--version", "2026.11"])
     assert capsys.readouterr().out.strip() == str(tmp_path / "out" / "usa-2026.11")
+
+
+def test_build_usa_zip_writes_the_zip_code_areas(tmp_path, offline):
+    from packbuild import us_zip
+    from placewise.packs import open_pack
+
+    pack = open_pack(us_zip.build(tmp_path / "cache", tmp_path / "out", "2026.11"), verify=True)
+    assert (pack.name, [layer.name for layer in pack]) == ("usa-zip", ["zcta"])
+    assert len(pack["zcta"]) == 3 and set(pack.sources) == {"uscensus", "geonames"}
+    manifest = json.loads((pack.path / "pack.json").read_text())
+    assert (manifest["kind"], manifest["covers"], manifest["requires"]) == ("postal", ["US"], ["usa"])
+
+    def at(lat, lon):
+        i = pack["zcta"].query(lat, lon)
+        return None if i < 0 else pack["zcta"].row(i)
+
+    zip_ = at(36.1147, -115.1728)
+    assert (zip_["name"], zip_["population"], zip_["postal_city"]) == ("89109", 6504, "Las Vegas")
+    assert (zip_["postal_place"], zip_["postal_source"]) == ("census:3240000", "zbp")
+    yosemite = at(37.7456, -119.5936)  # Business Patterns has no row: GeoNames' name
+    assert (yosemite["postal_city"], yosemite["postal_place"], yosemite["postal_source"]) == (
+        "Yosemite National Park",
+        None,
+        "geonames",
+    )  # fmt: skip  ("" reads back as None)
+    assert [pack.names.layers[x] for x in pack.names.codes("89109").layer] == ["zcta"]

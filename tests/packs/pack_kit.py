@@ -87,3 +87,33 @@ def point_layer(lat, lon, name="spots", **columns):
         lat=np.asarray(lat, dtype=np.float64),
         lon=np.asarray(lon, dtype=np.float64),
     )
+
+
+def world_grid(grid_dir):
+    """A layer's grid index as the world grid of its cell size: (meta, offsets, items, inside), with
+    a grid cut to the layer's extent (row0, col0) laid back into the world's rows and columns."""
+    import json
+    from pathlib import Path
+
+    from placewise.packs import _geometry as gm
+
+    grid_dir = Path(grid_dir)
+    meta = json.loads((grid_dir / "meta.json").read_text())
+    offsets, items, inside = (
+        np.load(grid_dir / f, allow_pickle=False) for f in ("cell.npy", "items.npy", "inside.npy")
+    )
+    world_rows, world_cols = gm.grid_shape(meta["cell_deg"])
+    count = np.zeros(world_rows * world_cols, dtype=np.int64)
+    full_inside = np.full(world_rows * world_cols, -1, dtype=np.int32)
+    lists = [[] for _ in range(world_rows * world_cols)]
+    for k in range(meta["rows"] * meta["cols"]):
+        r, c = divmod(k, meta["cols"])
+        cell = (r + meta.get("row0", 0)) * world_cols + (c + meta.get("col0", 0)) % world_cols
+        lists[cell] = items[offsets[k] : offsets[k + 1]].tolist()
+        count[cell] = len(lists[cell])
+        full_inside[cell] = inside[k]
+    full_offsets = np.zeros(len(count) + 1, dtype=np.int64)
+    np.cumsum(count, out=full_offsets[1:])
+    full_items = np.array([i for cell in lists for i in cell], dtype=items.dtype)
+    world = {"cell_deg": meta["cell_deg"], "rows": world_rows, "cols": world_cols}
+    return world, full_offsets, full_items, full_inside

@@ -68,6 +68,21 @@ class Named:
         return found
 
 
+def tz_layers(layers, pack, finest, coarser):
+    """The keys of the layers carrying the time-zone column (placewise.engine._timezones), finest
+    first: `finest` (a key) and the `coarser` layers of `pack` (names) that it lies in; [] when the
+    finest units carry no zone (packs built before the column)."""
+    if lookup_const.TZ_FIELD not in layers.layer(finest).fields:
+        return []
+    found = [layers.add(pack, name) for name in coarser if name in pack]
+    return [finest, *(k for k in found if lookup_const.TZ_FIELD in layers.layer(k).fields)]
+
+
+def inside_rows(rows, rule):
+    """`rows` (features per point, as `polygon` gives them) where the point is inside, else -1."""
+    return np.where(rule == lookup_const.POLYGON, rows, -1)
+
+
 def polygon(layer, lat, lon, snap_km=const.SHORE_KM):
     """(feature or -1, rule) per point: the containing feature ("polygon"), else the one whose
     boundary is nearest within snap_km ("nearest"), for shapes clipped to the shoreline."""

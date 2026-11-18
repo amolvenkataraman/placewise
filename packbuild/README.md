@@ -28,7 +28,7 @@ committed.
 | `admin1` | polygon | Natural Earth 1:10m admin-1 states/provinces | public domain |
 | `cities` | point | GeoNames cities1000 + admin1CodesASCII + countryInfo | CC BY 4.0 |
 | `airports` | point | OurAirports airports.csv (large, medium, scheduled small) | public domain |
-| `timezones` | polygon | `datasets/timezones/world.json` drawn with the Natural Earth units (see [Time zones](#time-zones)) | CC BY 4.0 + public domain |
+| `timezones` | polygon | the hand-drawn shapes of `datasets/timezones/world.json`; every unit's zone is the `tz` column of `countries` and `admin1` (see [Time zones](#time-zones)) | CC BY 4.0 + public domain |
 | `country_facts` | point | one row per country (`iso:XX`, at its capital, else Natural Earth's label point): GeoNames countryInfo, timeZones and capitals; CLDR currency, conventions and date patterns; Wikidata driving side (`packbuild.country_profiles`) | CC BY 4.0, Unicode-3.0, CC0 |
 
 **Names people type** (`packbuild.world_aliases`, for forward search's name index): `cities`,
@@ -65,33 +65,42 @@ are the `worldviews` polygon layer (0.95 MB); see `docs/worldviews.md`.
 
 ## Time zones
 
-Every pack can carry a `timezones` polygon layer (`packbuild/timezones.py`), drawn from the
-curated tables in placewise-data's `datasets/timezones/` (CC BY 4.0; registry id
-`placewise-timezones`), so `Result.tz` doesn't need the share-alike timezone-boundary-builder data.
-216 of tzdb's 247 countries have one zone: the country polygon is the zone. The rest follow admin
-lines, so `world.json` maps Natural Earth countries and admin-1 units to IANA zones, `usa.json`
-states and Census counties (plus the Navajo Nation and Annette Island from Census AIANNH,
-`uscensus` download `aiannh`), `can.json` provinces, census divisions and subdivisions; each entry
-cites tzdb or the law it follows, and a few hand-drawn boxes cover what no unit fits (Eucla, the
-western Aleutians, research stations, remote islands).
+Packs carry time zones as a **`tz` column on the admin layers they already have**
+(`packbuild/timezones.py`), drawn from the curated tables in placewise-data's
+`datasets/timezones/` (CC BY 4.0; registry id `placewise-timezones`), so `Result.tz` doesn't need
+the share-alike timezone-boundary-builder data. 216 of tzdb's 247 countries have one zone: the
+country is the zone. The rest follow admin lines, so `world.json` maps Natural Earth countries and
+admin-1 units to IANA zones, `usa.json` states and Census counties (plus the Navajo Nation and
+Annette Island from Census AIANNH, `uscensus` download `aiannh`), `can.json` provinces, census
+divisions and subdivisions; each entry cites tzdb or the law it follows, and a few hand-drawn
+boxes cover what no unit fits (Eucla, the western Aleutians, research stations, remote islands).
 
-| Column | |
+| Where | `tz` |
 |---|---|
-| `zone` | the IANA zone; "" where tzdb records none (the nearest-city rule answers) |
-| `zones` | for a unit split along a line no pack draws: all its zones, `|`-separated; the nearest GeoNames city inside the unit whose zone is listed decides |
-| `basis` | `shape`, `part` (county, CD, CSD), `admin1`, `country` |
-| `unit`, `within`, `country` | the unit drawn, the unit a shape applies in, the countries-layer id |
+| world `countries`, `admin1` | the unit's own entry: a zone; `-` an entry with no zone (tzdb records none: the nearest-city rule answers); `""` no entry (an admin-1 unit takes its country's; a country split by its admin-1 units has none) |
+| usa `counties`, can `csd` | the unit's resolved zone: its own entry, else its census division's (Canada), else its state's or province's |
 
-Rows are in priority order (shapes, then finer parts, then admin-1, then countries); units keep
-their own outlines (nothing dissolved). The build fails, listing every problem, on a zone missing
-from `zoneinfo.available_timezones()`, a unit of the layer without an entry (full coverage), an
-entry naming a unit the layer lacks or one of another country, an unknown source or a bad shape.
+A unit split along a line no pack draws has its zones joined by `|` (the first is the default):
+the nearest GeoNames city inside the unit whose zone is listed decides. A split zone is never
+passed down to a finer unit (the build fails), since the nearest-town rule searches the unit it
+was given to. The **`timezones` layer** holds only the hand-drawn shapes and AIANNH areas (columns
+`zone`, `zones`, `basis` = `shape`, `unit`, `within`, `country`); a pack whose table has none (can)
+has no such layer. Nothing else copies a unit's outline (the old layer did: 19 MB in can, 7 MB in
+world, 4 MB in usa). The build fails, listing every problem, on a zone missing from
+`zoneinfo.available_timezones()`, a unit of the layer without an entry (full coverage), an entry
+naming a unit the layer lacks or one of another country, an unknown source or a bad shape.
 
-The engine (`placewise.engine._timezones`): the worldview's country's zone where it reports a
-disputed area in a one-zone country; else the finest country pack's polygon (on agreed ground in
-its country); else the world unit the admin answer already found; else the nearest city of the
-same country (as before). At sea beyond the territorial sea: none. India is one zone
-(Asia/Kolkata); with the de facto polygons it covers India-administered ground.
+The engine (`placewise.engine._timezones`) reads the zone of the units it has already found, with
+no polygon query of its own beyond the small shapes layer: the worldview's country's zone where it
+reports a disputed area in a one-zone country; else, on agreed ground in a country pack's country,
+a shape of that pack containing the point, else the `tz` of the county or subdivision the naming
+rules found the point inside (not one it was only snapped to); else the world unit the admin answer
+found (a shape of its country, else its admin-1 unit's entry, else its country's); else the nearest
+city of the same country (as before). At sea beyond the territorial sea: none. Packs built before
+the column (whose `timezones` layer copies every unit) are still read (`engine/_tz_legacy.py`).
+India is one zone (Asia/Kolkata); with the de facto polygons it covers India-administered ground.
+On the 2026.11 packs the column answers exactly as the copied polygons did (see the proof under
+[Pack sizes](#pack-sizes)).
 
 Known gaps (the unit is split, so the nearest city decides): Mexico's US-border municipios and
 Bahía de Banderas, Pará (east/west), Sakha's districts, Broken Hill (Yancowinna). Not drawn:
@@ -113,8 +122,28 @@ postal city names of the ZIP Codes the Census files lack (GeoNames, `geonames`, 
 | `places` | polygon | CB 2025 place 1:500k + 2025 gazetteer + SUB-EST2025 + ACS 2020-2024 B01003 + delineation list 2 | `lsad`, `class` (incorporated / cdp), `funcstat`, `state`, `population`, `population_source`, `principal`, `intpt_lat/lon` |
 | `cbsa` | polygon | CB 2025 CBSA 1:500k + delineation lists 1 and 2 | `type` (metro / micro), `csa`, `counties`, `principal_cities` |
 | `csa` | polygon | CB 2025 CSA 1:500k + delineation list 1 | `cbsas`, `counties` |
-| `zcta` | polygon | CB 2020 ZCTA5 1:500k + 2025 gazetteer + ACS B01003 + ZIP Code Business Patterns 2023 + GeoNames US postal codes + 2020 ZCTA-to-place relationship | `aland`, `intpt_lat/lon`, `population`, `postal_city`, `postal_place`, `postal_source` |
+| `postal_cities` | polygon | the ZCTAs (below) whose postal city can name a locality | `postal_place` |
 | `regions` | polygon | curated regions as unions of counties (see [Regions layer](#regions-layer-us-canada-and-india-packs)) | `kind`, `members`, `aliases`, `area_km2` |
+
+The time zones are a `tz` column on `counties` (each county's zone, else its state's: [Time
+zones](#time-zones)), and `timezones` holds the few areas no county fits (Navajo Nation, Annette
+Island, the western Aleutians).
+
+The ZIP Code areas themselves are the optional **`usa-zip`** pack (`python -m packbuild.us_zip
+--version 2026.11`; pack.json `kind` postal, `covers` US, `requires` usa):
+
+| Layer | Kind | Source | Key columns |
+|---|---|---|---|
+| `zcta` | polygon | CB 2020 ZCTA5 1:500k + 2025 gazetteer + ACS B01003 + ZIP Code Business Patterns 2023 + GeoNames US postal codes + 2020 ZCTA-to-place relationship | `aland`, `intpt_lat/lon`, `population`, `postal_city`, `postal_place`, `postal_source` |
+
+With usa-zip installed a US lookup has `postal` and search finds ZIP Codes; without it `postal`
+is empty for US points and everything else answers the same. The naming rules let a ZIP Code's
+postal city stand for a CDP or unincorporated land in a metro county, so `usa` keeps
+`postal_cities` (`packbuild/us_zip.py`): the ZCTAs, outlines unchanged, whose `postal_place` is a
+place of the pack and whose box meets a metro county's box widened by 0.05° (past the rules' 1 km
+shore snap); anywhere else the postal city never applies. 19,495 of 33,791 ZCTAs, 3.5 of 5.9 M
+vertices, with only `id`, `name` and `postal_place`. On the 2026.11 packs, lookups without
+usa-zip equal lookups with the old usa (ZCTAs inside) on 30,000 US points apart from `postal`.
 
 Ids: `census:<GEOID>` for places and counties; `census:cbsa:<code>`, `census:csa:<code>` and
 `census:zcta:<zcta>` for the rest, because those GEOIDs collide with each other and with county
@@ -159,11 +188,11 @@ same id as the world pack's admin1. Member lists (`counties`, `cbsas`) are comma
   punctuation and with Saint/Mount/Fort as St/Mt/Ft ("MC LEAN" is McLean). 27,038 ZCTAs match a
   place; a matched name is shown in the place's spelling, else GeoNames' or title case.
   `postal_source` says which file named it. The `zcta` layer's sources are `uscensus` and
-  `geonames`.
+  `geonames` (`postal_cities`: `uscensus`, plus `geonames` should a kept ZCTA's name come from it).
 - **ZCTAs** are the Census Bureau's areal approximation of USPS ZIP Codes. USPS publishes ZIP Codes
   as delivery routes, not areas; most addresses' ZIP matches their ZCTA but not all, PO-box-only
   ZIPs have no ZCTA, and unpopulated land is in none. ZCTAs are defined once a decade, so the
-  2020 file is current. Polygons cost about 52 MB of the pack (26 MB of the archive); gazetteer
+  2020 file is current. Polygons cost about 52 MB (26 MB of the archive; hence usa-zip); gazetteer
   points would be 2 MB, but the nearest internal point names the containing ZCTA only ~70% of
   the time near populated places, so the pack ships polygons (`uscensus.zcta_points` is the
   alternative).
@@ -182,7 +211,7 @@ uv run python -m packbuild.ca --version 2026.11 --via service   # writes ~/.plac
 |---|---|---|---|
 | `provinces` | polygon | StatCan 2021 cartographic boundary file, provinces/territories (`lpr_000b21a_e`) | StatCan Open Licence |
 | `cd` | polygon | ... census divisions (`lcd_000b21a_e`): counties, regional municipalities (Halton, Peel) | StatCan Open Licence |
-| `csd` | polygon | ... census subdivisions (`lcsd000b21a_e`): municipalities (Milton, Toronto), reserves, unorganised areas | StatCan Open Licence |
+| `csd` | polygon | ... census subdivisions (`lcsd000b21a_e`): municipalities (Milton, Toronto), reserves, unorganised areas; `tz` each one's time zone ([Time zones](#time-zones)) | StatCan Open Licence (+ CC BY 4.0 for `tz`) |
 | `cma` | polygon | ... census metropolitan areas and agglomerations (`lcma000b21a_e`) | StatCan Open Licence |
 | `fsa` | polygon | 2021 Census forward sortation area boundary file (`lfsa000b21a_e`) | StatCan Open Licence, with Canada Post's notice |
 | `populated_places` | point | Canadian Geographical Names Database (NRCan), generic category "Populated Place" | OGL-Canada 2.0 |
@@ -436,14 +465,16 @@ Sources live in `packbuild/sources/water/` (registry `sources/water.json`).
 - **Rejected:** Marine Regions IHO Sea Areas (CC BY-NC-SA 4.0) and HydroRIVERS (HydroSHEDS v1
   licence); both ids are in `constants.licences.DENIED_SOURCES`. See `docs/water.md`.
 
-## Park packs (`usa-parks`, `can-parks`, `world-parks`)
+## Park packs (`usa-parks`, `usa-parks-local`, `can-parks`, `world-parks`)
 
 ```
-uv run python -m packbuild.parks usa can world --version 2026.11
+uv run python -m packbuild.parks usa usa-local can world --version 2026.11
 ```
 
 NPS, USFS and PAD-US 4.1 (US), CPCAD (Canada) as one polygon layer per tier, Wikidata points
-elsewhere; tiers, ids, sources and gaps in `docs/parks.md`.
+elsewhere; the US's local parks (`parks_local`, tier 4) are the optional `usa-parks-local` pack,
+whose pack.json says `kind` parks, `covers` US, `requires` usa-parks. Tiers, ids, sources and gaps
+in `docs/parks.md`.
 
 ## Notable pack (`world-notable`)
 
@@ -493,6 +524,42 @@ Registry `sources/notable.json` (`wikidata`, `qrank`).
   labels; Wikidata's `mul` labels are not read); India's universities without coordinates (only
   4,756 of 24,285 Wikidata items with an AISHE code have one); outlines (campuses, airports and
   stadiums are points); station complexes are merged only when their names match.
+
+## Pack sizes
+
+Installed size on disk (`du`, MB) of the 2026.11 packs built from the same sources before and after
+grids were cut to each layer's extent, time zones moved onto the admin layers, and the ZIP Code
+areas and US local parks became optional packs:
+
+| Pack | Before | After | |
+|---|---|---|---|
+| `world` (the base install) | 56.8 | 49.6 | timezones 7.0 -> 0.1, grids 3.5 -> 2.3 |
+| `usa` | 101.2 | 70.5 | zcta 52.4 -> postal_cities 30.9, timezones 4.0 -> 0.2, grids 6.6 -> 1.0 |
+| `usa-zip` (optional) | - | 53.3 | the ZCTAs and their name index |
+| `can` | 113.8 | 89.6 | timezones 19.8 -> 0 (the `tz` column on csd, cd, provinces), grids 5.5 -> 0.4 |
+| `usa-parks` | 121.1 | 63.6 | parks_local moved out; grids 17.6 -> 1.0 (+1.5 in usa-parks-local) |
+| `usa-parks-local` (optional) | - | 42.7 | parks_local and its name index |
+
+world + usa + can + ind: 348 -> 286 MB (ind unchanged at 76.5 here; rebuilt with cut grids it loses
+about 4 MB more). The grid index was the fixed cost of every polygon layer: a world-wide grid of
+1° cells is 0.78 MB whatever the layer holds (0.5°: 3.1 MB, 0.25°: 12.4 MB). A grid now spans the
+layer's extent, so a one-feature layer's is 0.5 KB, and the whole fixed cost of a small pack (one
+polygon layer, name index, pack.json; 37 files) is 10 KB of data, 188 KB on disk with 4 KB blocks
+(it was 0.94 MB at 1°, 12.3 MB at 0.25°). Across the 2026.11 packs grids went from 57 to 10 MB.
+
+**Same answers.** 32,816 points (9,000 near US and 6,000 near Canadian GeoNames places, 7,800
+uniform over the US, Alaska and Canada, 8,000 near other places, 2,000 anywhere, and the time-zone
+e2e points) were looked up with the old code on the old packs and the new code on the new ones
+(`ind` the same pack for both, read through the new reader's old-grid path):
+
+- world alone: every field identical (28,980 points with a zone).
+- world + usa + usa-zip + can + ind: identical, `Result.sources` naming `usa-zip/zcta` for
+  `postal`, except that on 7 Canadian coastal points the zone (the same zone) is credited to
+  `can/timezones:polygon` instead of `world/timezones:split`: they lie in a subdivision but outside
+  the province's outline (the layers are simplified apart), which the copied polygons missed.
+- without usa-zip: the same, less `postal`.
+- world + usa + usa-zip + usa-parks + usa-parks-local: identical (`usa-parks-local/parks_local`
+  in sources); without usa-parks-local the same less the local parks in `within`.
 
 ## Name index (every pack)
 

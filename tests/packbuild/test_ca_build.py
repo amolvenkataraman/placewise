@@ -18,7 +18,7 @@ from packbuild.sources.can import cgndb
 from placewise.packs import open_pack
 
 BASE = ["provinces", "cd", "csd", "cma", "fsa"]
-LAYERS = [*BASE, "populated_places", "regions", "timezones"]
+LAYERS = [*BASE, "populated_places", "regions"]  # can.json draws no shapes: no timezones layer
 COUNTS = {
     "provinces": 3,
     "cd": 6,
@@ -27,7 +27,6 @@ COUNTS = {
     "fsa": 6,
     "populated_places": 5,
     "regions": 3,
-    "timezones": 5,
 }
 BOUNDARY_DOWNLOADS = [
     (statcan.BOUNDARIES, "provinces"),
@@ -163,15 +162,21 @@ def _region_ids(pack, lat, lon):
     return [layer.value("id", int(i)) for i in layer.query_all(lat, lon)]
 
 
-def test_build_ca_draws_time_zones_finest_unit_first(tmp_path, offline):
-    zones = open_pack(ca.build_ca(tmp_path / "cache", tmp_path / "out", "2026.11"))["timezones"]
+def test_build_ca_puts_each_subdivisions_zone_on_it(tmp_path, offline):
+    csd = open_pack(ca.build_ca(tmp_path / "cache", tmp_path / "out", "2026.11"))["csd"]
 
     def at(point):
-        return zones.value("id", zones.query(*point)), zones.value("zone", zones.query(*point))
+        return csd.value("tz", csd.query(*point))
 
-    assert at(fx.MILTON_GO) == ("tz:statcan:3524009", "America/Atikokan")  # the subdivision, inside Halton
-    assert at(fx.CN_TOWER) == ("tz:statcan:35", "America/Toronto")
-    assert at(fx.BANFF) == ("tz:statcan:48", "America/Edmonton")
+    assert at(fx.MILTON_GO) == "America/Atikokan"  # the subdivision's own, inside Halton's
+    assert at(fx.CN_TOWER) == "America/Toronto"  # Ontario's
+    assert at(fx.BANFF) == "America/Edmonton"
+    pack = open_pack(csd_path := next((tmp_path / "out").glob("can-*")))
+    cd, provinces = pack["cd"], pack["provinces"]
+    assert cd.value("tz", cd.query(*fx.MILTON_GO)) == "America/Winnipeg"  # Halton's own entry
+    assert cd.value("tz", cd.query(*fx.CN_TOWER)) is None  # Toronto division: no entry ("")
+    assert provinces.value("tz", provinces.query(*fx.CN_TOWER)) == "America/Toronto"
+    assert csd_path.name == "can-2026.11"
 
 
 def test_build_ca_draws_regions_from_divisions_subdivisions_and_cmas(tmp_path, offline):

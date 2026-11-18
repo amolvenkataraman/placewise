@@ -10,6 +10,10 @@ Everything is vectorised across features: the cells each edge touches, the cells
 touches, and one even-odd test of the free cells' centres against their own feature's edges. The
 arithmetic is that of `_geometry.edge_cell_pairs`, `bbox_cells` and `even_odd_rows`, element by
 element, so the index is the one a per-feature loop over those functions builds.
+
+`crop` keeps only the rectangle of cells that have candidates (rows `row0`.., columns `col0`..,
+wrapping at the antimeridian), so a layer covering one country doesn't store the whole world's
+empty cells; a point outside it has no candidate, as in the world grid.
 """
 
 import numpy as np
@@ -58,6 +62,47 @@ def build(geom, cell_deg):
     first_cells, first = np.unique(cell, return_index=True)
     inside[first_cells] = np.where(stat[first] == 1, feat[first], -1)
     return offsets, feat.astype(np.int32), inside
+
+
+def crop(offsets, items, inside, rows, cols):
+    """The world grid (offsets, items, inside) of rows x cols cells cut to the smallest rectangle
+    holding every cell with a candidate: (offsets, items, inside, {"rows", "cols", "row0",
+    "col0"}). Its columns may wrap round the antimeridian (col0 + cols > the world's columns): the
+    narrowest run of columns, going east, that holds every non-empty one."""
+    count = np.diff(np.asarray(offsets, dtype=np.int64)).reshape(rows, cols)
+    full_rows, full_cols = np.flatnonzero(count.any(axis=1)), np.flatnonzero(count.any(axis=0))
+    if not len(full_rows):
+        empty = {"rows": 0, "cols": 0, "row0": 0, "col0": 0}
+        return np.zeros(1, dtype=np.int64), np.asarray(items)[:0], np.zeros(0, dtype=np.int32), empty
+    row0, height = int(full_rows[0]), int(full_rows[-1] - full_rows[0] + 1)
+    # the widest gap between consecutive non-empty columns (round the world) is left out
+    gaps = np.diff(np.append(full_cols, full_cols[0] + cols))
+    widest = int(np.argmax(gaps))
+    col0 = int(full_cols[(widest + 1) % len(full_cols)])
+    width = int(cols - gaps[widest] + 1)
+    if width == cols:
+        col0 = 0  # every column: the world grid's own layout
+    keep_rows = np.arange(row0, row0 + height)
+    keep_cols = (col0 + np.arange(width)) % cols
+    cells = (keep_rows[:, None] * cols + keep_cols[None, :]).ravel()
+    start, stop = np.asarray(offsets)[cells], np.asarray(offsets)[cells + 1]
+    new_offsets = np.zeros(len(cells) + 1, dtype=np.int64)
+    np.cumsum(stop - start, out=new_offsets[1:])
+    owner, k = _expand(np.zeros(len(cells), dtype=np.int64), stop - start)
+    new_items = np.asarray(items)[start[owner] + k]
+    meta = {"rows": height, "cols": width, "row0": row0, "col0": col0}
+    return new_offsets, new_items, np.asarray(inside)[cells], meta
+
+
+def cells(lat, lon, meta):
+    """Each point's cell of the grid that grid/meta.json describes, -1 outside it: the world grid's
+    row and column (docs/pack-format.md) less row0 and col0. Grids written before they were cut to
+    the layer's extent have no row0 or col0, and the world's rows and columns."""
+    cell_deg, rows, cols = float(meta["cell_deg"]), int(meta["rows"]), int(meta["cols"])
+    world_rows, world_cols = gm.grid_shape(cell_deg)
+    row = gm.cell_rows(lat, cell_deg, world_rows) - int(meta.get("row0", 0))
+    col = (gm.cell_cols(lon, cell_deg, world_cols) - int(meta.get("col0", 0))) % world_cols
+    return np.where((row >= 0) & (row < rows) & (col < cols), row * cols + col, -1)
 
 
 def _edge_keys(edges, edge_feature, cell_deg, rows, cols, ncell):

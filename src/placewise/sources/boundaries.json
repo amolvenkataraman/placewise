@@ -35,7 +35,8 @@
           "usa/places",
           "usa/cbsa",
           "usa/csa",
-          "usa/zcta"
+          "usa/postal_cities",
+          "usa-zip/zcta"
         ],
         "downloads": {
           "state": "https://www2.census.gov/geo/tiger/GENZ2025/shp/cb_2025_us_state_500k.zip",

@@ -129,16 +129,33 @@ used for `query_all`.
 
 | File | dtype | Shape | Meaning |
 |---|---|---|---|
-| `grid/meta.json` | — | — | `{"cell_deg": 1.0, "rows": 180, "cols": 360}`: rows = ceil(180 / cell_deg), cols = ceil(360 / cell_deg); row 0 starts at −90°, col 0 at −180° |
+| `grid/meta.json` | — | — | `{"cell_deg": 0.25, "rows": 230, "cols": 470, "row0": 430, "col0": 140}`: the rectangle of cells stored (below) |
 | `grid/cell.npy` | int64 | `(rows * cols + 1,)` | offsets into `items` per cell |
 | `grid/items.npy` | int32 | `(k,)` | candidate feature indexes, ascending within each cell |
 | `grid/inside.npy` | int32 | `(rows * cols,)` | feature that wholly covers the cell, or −1 |
 
-A point's row is floor((lat + 90) / cell_deg) clamped to [0, rows − 1], likewise for columns, so a
-point on a cell edge belongs to the cell to its north-east and lat 90 / lon 180 fall in the last row
-or column (180 is not wrapped to −180). Features earlier in the layer win
-when several contain a point; builders order features so the most specific comes first when that
-matters.
+The cells are those of the **world grid** of `cell_deg`: R = ceil(180 / cell_deg) rows from −90°
+and C = ceil(360 / cell_deg) columns from −180°. A point's world row is floor((lat + 90) /
+cell_deg) clamped to [0, R − 1], likewise its column in [0, C − 1], so a point on a cell edge
+belongs to the cell to its north-east and lat 90 / lon 180 fall in the last row or column (180 is
+not wrapped to −180).
+
+A grid stores only the rectangle of world cells that hold a candidate: `rows` rows from world row
+`row0` and `cols` columns from world column `col0`, going east and wrapping past the antimeridian
+(column `(col0 + j) mod C`), so a layer of one country doesn't pay for the whole world's empty
+cells (a 0.25° world grid is 12 MB). Stored cell k = r × cols + j is world row `row0 + r`, world
+column `(col0 + j) mod C`. A point lies on the grid when 0 ≤ world row − row0 < rows and (world
+column − col0) mod C < cols; a point off the grid has no candidates, and lies in no feature. A
+layer with no features has `rows` = `cols` = 0. Builders cut the grid to the narrowest such
+rectangle (columns: leaving out the widest run of empty columns round the world); a world-wide
+layer keeps the whole world (`row0` = `col0` = 0).
+
+Packs written before grids were cut (2026-11) have no `row0` / `col0` and `rows` = R, `cols` =
+C; readers take `row0` = `col0` = 0 when they're absent, which is the same grid. A reader that
+ignores `row0` / `col0` misreads a cut grid, so they're required reading from now on.
+
+Features earlier in the layer win when several contain a point; builders order features so the
+most specific comes first when that matters.
 
 ## Name index
 

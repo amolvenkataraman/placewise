@@ -14,10 +14,12 @@ from placewise.model import PlaceKind
 PACKS = (
     "world",
     "usa",
+    "usa-zip",
     "can",
     "ind",
     "world-water",
     "usa-parks",
+    "usa-parks-local",
     "can-parks",
     "world-parks",
     "world-notable",

@@ -89,10 +89,13 @@ USA = (
     LayerNames("places", "locality", rank=_CITY, point=("intpt_lat", "intpt_lon")),
     LayerNames("cbsa", "region", names=("name", "title"), codes=("code",), rank=Rank(base=0.55)),
     LayerNames("csa", "region", names=("name", "title"), codes=("code",), rank=Rank(base=0.55)),
+    _REGIONS,
+)
+
+USA_ZIP = (
     LayerNames(
         "zcta", "postal_code", names=(), codes=("name",), rank=_POSTAL, point=("intpt_lat", "intpt_lon")
     ),
-    _REGIONS,
 )
 
 CAN = (
@@ -204,6 +207,7 @@ NOTABLE = (
 SPECS = {
     "world": WORLD,
     "usa": USA,
+    "usa-zip": USA_ZIP,
     "can": CAN,
     "ind": IND,
     "world-water": WATER,

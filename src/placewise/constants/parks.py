@@ -1,7 +1,7 @@
 """Parks and protected areas (placewise.engine._within, packbuild.parks, docs/parks.md)."""
 
 # the packs that carry parks; the default Geocoder opens them when they are installed
-PACKS = ("usa-parks", "can-parks", "world-parks")
+PACKS = ("usa-parks", "usa-parks-local", "can-parks", "world-parks")  # usa-parks-local: city and county parks
 
 # polygon layers whose name starts with this are park outlines (parks_national, parks_state ...);
 # the point layer of parks known only by a point and an approximate radius

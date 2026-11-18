@@ -10,6 +10,13 @@ ADMIN1 = "admin1"
 CITIES = "cities"
 AIRPORTS = "airports"
 TIMEZONES = "timezones"  # time-zone polygons, in the world pack and country packs (packbuild/timezones.py)
+# the zone column of the admin layers (world countries and admin1, US counties, Canadian
+# subdivisions; packbuild/timezones.py): "" no entry for the unit (the containing unit's zone
+# applies), TZ_NONE an entry with no zone (tzdb records none), else a zone, or zones joined by
+# TZ_SEPARATOR for a unit split along a line no pack draws (the first is the default)
+TZ_FIELD = "tz"
+TZ_NONE = "-"
+TZ_SEPARATOR = "|"
 DEFAULT_PACK = "world"  # what Geocoder() opens through the store when no packs are given
 # the packs a store-backed Geocoder opens beside it when installed, in this order; auto mode fetches
 # only these (a pack this placewise doesn't read is never downloaded for it)

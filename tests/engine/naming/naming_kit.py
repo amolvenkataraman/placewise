@@ -11,6 +11,8 @@ lat 10.5 ---------------------------------- Mateo |---------| Banff ID  |-------
 lat 10  Henderson                                 |         |           |        |
 """
 
+import dataclasses
+
 import numpy as np
 
 from placewise.model import Feature, Outline
@@ -76,7 +78,18 @@ CITIES = [
 ]
 
 
-def write_world(out):
+def with_tz(layer, zones):
+    """`layer` with a time-zone column (packbuild.timezones): zones {id: tz}, "" for the others."""
+    if zones is None:
+        return layer
+    column = [zones.get(i, "") for i in layer.columns["id"]]
+    return dataclasses.replace(
+        layer, columns={**layer.columns, "tz": column}, types={**layer.types, "tz": "str"}
+    )
+
+
+def write_world(out, tz=None):
+    """tz: {country or admin1 id: zone} for packs that carry zones on their units."""
     countries = LayerData(
         "countries", "polygon",
         {"id": [c[1] for c in COUNTRIES], "name": [c[2] for c in COUNTRIES],
@@ -97,7 +110,8 @@ def write_world(out):
          "feature_code": [c[6] for c in CITIES], "timezone": [c[7] for c in CITIES]},
         ("synthetic",), lat=np.array([c[2] for c in CITIES]), lon=np.array([c[3] for c in CITIES]),
     )  # fmt: skip
-    return write_pack(out / "world", "world", VERSION, [countries, admin1, cities], created=CREATED)
+    layers = [with_tz(countries, tz), with_tz(admin1, tz), cities]
+    return write_pack(out / "world", "world", VERSION, layers, created=CREATED)
 
 
 # -- United States -------------------------------------------------------------------------------
@@ -145,8 +159,11 @@ US_CBSA = [
 US_CSA = [(CLARK, "census:csa:332", "Las Vegas-Henderson, NV CSA", "Las Vegas-Henderson, NV", "332")]
 
 
-def write_us(out, regions=None):
+def write_us(out, regions=None, tz=None, extra=(), zip_pack=False):
+    """tz: {county id: zone}; extra: more layers (a shapes-only `timezones` layer); zip_pack: the
+    ZIP Code areas go to a pack of their own (write_us_zip), the usa pack keeping `postal_cities`."""
     counties = polygons("counties", US_COUNTIES, ("id", "name", "state", "cbsa", "csa"), "uscensus")
+    counties = with_tz(counties, tz)
     places = polygons(
         "places",
         US_PLACES,
@@ -156,8 +173,17 @@ def write_us(out, regions=None):
     zcta = polygons("zcta", US_ZCTA, ("id", "name", "postal_city", "postal_place"), "uscensus")
     cbsa = polygons("cbsa", US_CBSA, ("id", "name", "title", "code", "type", "principal_cities"), "uscensus")
     csa = polygons("csa", US_CSA, ("id", "name", "title", "code"), "uscensus")
-    layers = [counties, places, zcta, cbsa, csa, *([regions] if regions else [])]
+    if zip_pack:  # the areas whose postal city is a place of the pack, as packbuild.us_zip keeps them
+        kept = [(r[0], r[1], r[2], r[4]) for r in US_ZCTA if r[4]]
+        zcta = polygons("postal_cities", kept, ("id", "name", "postal_place"), "uscensus")
+    layers = [counties, places, zcta, cbsa, csa, *([regions] if regions else []), *extra]
     return write_pack(out / "us", "us", VERSION, layers, created=CREATED)
+
+
+def write_us_zip(out):
+    """The ZIP Code areas as the usa-zip pack has them."""
+    zcta = polygons("zcta", US_ZCTA, ("id", "name", "postal_city", "postal_place"), "uscensus")
+    return write_pack(out / "us-zip", "usa-zip", VERSION, [zcta], created=CREATED)
 
 
 # -- Canada --------------------------------------------------------------------------------------
@@ -207,12 +233,14 @@ def named_places(rows=CA_NAMED):
     )  # fmt: skip
 
 
-def write_ca(out, regions=None):
+def write_ca(out, regions=None, tz=None):
+    """tz: {province, division or subdivision id: zone} (the `tz` column on all three)."""
     provinces = polygons(
         "provinces", [((10, -149, 11, -148), "statcan:35", "Ontario", "ON")], ("id", "name", "code")
     )
-    cd = polygons("cd", CA_CD, ("id", "name", "cdtype", "province", "population"))
-    csd = polygons("csd", CA_CSD, ("id", "name", "csdtype", "province", "population"))
+    provinces = with_tz(provinces, tz)
+    cd = with_tz(polygons("cd", CA_CD, ("id", "name", "cdtype", "province", "population")), tz)
+    csd = with_tz(polygons("csd", CA_CSD, ("id", "name", "csdtype", "province", "population")), tz)
     cma = polygons("cma", CA_CMA, ("id", "name", "kind", "province", "population"))
     fsa = polygons(
         "fsa", [((10, -149, 10.5, -148.75), "statcan:L4T", "L4T", "ON")], ("id", "name", "province")

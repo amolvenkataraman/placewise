@@ -179,11 +179,13 @@ def test_inside_cells_never_change_an_answer(tmp_path, kind):
 
     # and every point of a marked cell really is in that feature first
     _, cols = layer.grid_shape
+    meta = layer._grid_meta  # the grid covers the layer's extent: rows from row0, columns from col0
     rng = np.random.default_rng(4)
     marked = np.flatnonzero(inside >= 0)
     cells = rng.choice(marked, min(len(marked), 400), replace=False)
-    lat = -90 + (cells // cols + rng.uniform(0, 1, len(cells))) * layer.cell_deg
-    lon = -180 + (cells % cols + rng.uniform(0, 1, len(cells))) * layer.cell_deg
+    row, col = meta["row0"] + cells // cols, (meta["col0"] + cells % cols) % round(360 / layer.cell_deg)
+    lat = -90 + (row + rng.uniform(0, 1, len(cells))) * layer.cell_deg
+    lon = -180 + (col + rng.uniform(0, 1, len(cells))) * layer.cell_deg
     np.testing.assert_array_equal(brute_force(features, lat, lon), inside[cells])
 
 
@@ -284,3 +286,47 @@ def test_query_work_is_vectorised_across_features(tmp_path, monkeypatch, refine_
     hit = len(np.unique(got[got >= 0]))
     assert hit > 100  # most features get points
     assert len(calls) < 40, f"{len(calls)} even-odd calls for {hit} features"
+
+
+def _write_world_grid(path, layer_name):
+    """Lay a layer's grid back into the world's rows and columns, without row0 and col0, as packs
+    written before grids were cut to the layer's extent have it (pack.json's hashes go stale)."""
+    import json
+
+    from pack_kit import world_grid
+
+    grid = path / layer_name / "grid"
+    meta, offsets, items, inside = world_grid(grid)
+    (grid / "meta.json").write_text(json.dumps(meta))
+    for name, array in (("cell.npy", offsets), ("items.npy", items), ("inside.npy", inside)):
+        np.save(grid / name, array)
+
+
+@pytest.mark.parametrize("kind", ["sparse", "antimeridian", "holes_and_islands"])
+def test_a_world_grid_and_a_cropped_grid_answer_alike(tmp_path, kind):
+    features = LAYERS[kind]
+    cropped = _open(tmp_path / "new", features, cell_deg=0.5)
+    path = write_pack(
+        tmp_path / "old", "test", "2026.11", [polygon_layer(features, cell_deg=0.5)], created=CREATED
+    )
+    _write_world_grid(path, "areas")
+    world = open_pack(path)["areas"]
+    assert world.grid_shape == (360, 720) and cropped.grid_shape[0] * cropped.grid_shape[1] < 360 * 720
+    rng = np.random.default_rng(8)
+    lats, lons = _random_points(features, rng, 20_000)
+    lats = np.concatenate([lats, rng.uniform(-90, 90, 2000), [90.0, -90.0, 0.0]])
+    lons = np.concatenate([lons, rng.uniform(-180, 180, 2000), [180.0, -180.0, 180.0]])
+    np.testing.assert_array_equal(cropped.query(lats, lons), world.query(lats, lons))
+    np.testing.assert_array_equal(cropped.query(lats, lons), brute_force(features, lats, lons))
+    for got, want in zip(cropped.query_every(lats, lons), world.query_every(lats, lons), strict=True):
+        np.testing.assert_array_equal(got, want)
+    for lat, lon in zip(lats[::500].tolist(), lons[::500].tolist(), strict=True):
+        assert cropped.query_all(lat, lon) == world.query_all(lat, lon)
+
+
+def test_points_outside_a_cropped_grid_are_in_nothing(tmp_path):
+    layer = _open(tmp_path, [box_feature(40, -80, 45, -75)])
+    assert layer.grid_shape == (6, 6)
+    assert layer.query(10, 10) == -1 and layer.query_all(-60, 170) == []
+    point, feature = layer.query_every([42.0, 10.0, 46.5], [-77.0, 10.0, -77.0])
+    assert point.tolist() == [0] and feature.tolist() == [0]

@@ -1,8 +1,8 @@
 """The Canada pack: provinces, census divisions, census subdivisions (municipalities), CMAs/CAs and
 forward sortation areas from Statistics Canada's 2021 Census, with 2021 populations, the populated
 places of the Canadian Geographical Names Database (hamlets, communities, neighbourhoods), the
-curated regions (GTA, GTHA ...) as unions of those units, and time-zone polygons by province,
-division and subdivision (datasets/timezones/can.json: packbuild.timezones).
+curated regions (GTA, GTHA ...) as unions of those units, and each subdivision's time zone (a `tz`
+column from datasets/timezones/can.json's provinces, divisions and subdivisions: packbuild.timezones).
 
     uv run python -m packbuild.ca --version 2026.11
     uv run python -m packbuild.ca --version 2026.11 --via service   # StatCan's map service instead
@@ -44,7 +44,8 @@ def build_layers(
     cache_dir, refresh=False, via="files", tolerance_m=statcan.DEFAULT_TOLERANCE_M, regions=None
 ):
     """The Canada layers, fetching (or reusing) the source files in `cache_dir`: the five StatCan
-    layers, CGNDB's `populated_places`, then `regions` and `timezones`. via="files" reads the zipped
+    layers (the subdivisions with their `tz` column), CGNDB's `populated_places`, then `regions` (and
+    `timezones`, should can.json draw shapes). via="files" reads the zipped
     shapefiles; via="service" the same
     boundaries from StatCan's map service."""
     if via not in VIAS:
@@ -88,20 +89,31 @@ def build_layers(
         for layer, (_, _, loader) in LAYERS.items()
     ]
     named = cgndb.populated_places(get(url(cgndb.SOURCE, "populated_places")))
-    return [*layers, named, regions_layer_of(layers, curated, raw, tolerance_m), timezones_layer(layers)]
+    regions = regions_layer_of(layers, curated, raw, tolerance_m)
+    zoned, shapes = timezones_layer(layers)
+    zoned = {layer.name: layer for layer in zoned}
+    layers = [zoned.get(layer.name, layer) for layer in layers]
+    return [*layers, named, regions, *([shapes] if shapes else [])]
 
 
 def timezones_layer(layers):
-    """The `timezones` layer: can.json's provinces, census divisions and subdivisions, each drawn
-    with its own (simplified) boundary."""
+    """The census subdivisions, divisions and provinces with their `tz` column (a subdivision's:
+    its own zone, else its division's, else its province's) and the `timezones` layer of can.json's
+    shapes, None when it has none: ([csd, cd, provinces], shapes)."""
     by_name = {layer.name: layer for layer in layers}
-    return timezones.country_layer(
+
+    def division(pid, row):
+        digits = pid.removeprefix("statcan:")
+        return f"statcan:{digits[:4]}" if len(digits) == 7 else None
+
+    return timezones.country_tables(
         timezones.load("can"),
         by_name["provinces"],
         [by_name["cd"], by_name["csd"]],
         lambda pid, row: f"statcan:{pid.removeprefix('statcan:')[:2]}",
         {},
         (statcan.BOUNDARIES,),
+        container=division,
     )
 
 

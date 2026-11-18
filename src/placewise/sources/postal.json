@@ -15,7 +15,8 @@
           "usa/places",
           "usa/cbsa",
           "usa/csa",
-          "usa/zcta"
+          "usa-zip/zcta",
+          "usa/postal_cities"
         ],
         "downloads": {
           "zcta": "https://www2.census.gov/geo/tiger/GENZ2020/shp/cb_2020_us_zcta520_500k.zip",
@@ -32,7 +33,7 @@
         "licence": "CC-BY-4.0",
         "credit": "GeoNames (geonames.org), CC BY 4.0",
         "used_in": [
-          "usa/zcta"
+          "usa-zip/zcta"
         ],
         "downloads": {
           "postal_us": "https://download.geonames.org/export/zip/US.zip"

@@ -1,4 +1,5 @@
-"""packbuild.timezones: the curated zone tables checked and drawn as the packs' `timezones` layers.
+"""packbuild.timezones: the curated zone tables checked and written as the admin layers' `tz` column
+and the packs' `timezones` layer of hand-drawn shapes.
 
 Synthetic units in open Pacific water (lookup_kit's Alphaland and Betaland); zone names are real
 IANA zones because the build checks them against the tz database.
@@ -78,35 +79,45 @@ def rows(layer):
     ]
 
 
-# --- the world layer ----------------------------------------------------------------------------
+# --- the world pack ----------------------------------------------------------------------------
 
 
-def test_world_layer_draws_shapes_then_admin1_units_then_whole_countries():
+def test_world_tables_put_each_units_zone_on_its_row_and_draw_only_the_shapes():
     countries, admin1 = world_layers()
-    layer = timezones.world_layer(world_doc(), countries, admin1)
-    assert layer.name == "timezones" and layer.kind == "polygon"
-    assert layer.sources == ("placewise-timezones", "naturalearth")
+    countries, admin1, shapes = timezones.world_tables(world_doc(), countries, admin1)
+    # Alphaland is split by its admin-1 units; Gamma Rock has no zone; Deltaland has a default
+    assert countries.columns["tz"] == ["", "Asia/Tokyo", "-", "Europe/Lisbon"]
+    assert admin1.columns["tz"] == [
+        "Europe/Paris",
+        "Europe/Madrid|Atlantic/Canary",
+        "",
+        "",
+        "Atlantic/Azores",
+    ]
+    assert countries.types["tz"] == admin1.types["tz"] == "str"
+    assert countries.sources == admin1.sources == ("synthetic", "placewise-timezones")
+    assert shapes.name == "timezones" and shapes.kind == "polygon"
+    assert shapes.sources == ("placewise-timezones", "naturalearth")
     got = [
-        (r["id"], r["zone"], r["zones"], r["basis"], r["unit"], r["within"], r["country"])
-        for r in rows(layer)
+        (r["id"], r["name"], r["zone"], r["zones"], r["basis"], r["unit"], r["within"], r["country"])
+        for r in rows(shapes)
     ]
-    assert got == [
-        ("tz:north-tip", "Pacific/Fiji", "", "shape", "", "iso:XA-N", "iso:XA"),
-        ("tz:iso:XA-N", "Europe/Paris", "", "admin1", "iso:XA-N", "", "iso:XA"),
-        ("tz:iso:XA-S", "Europe/Madrid", "Europe/Madrid|Atlantic/Canary", "admin1", "iso:XA-S", "", "iso:XA"),
-        ("tz:iso:XD-I", "Atlantic/Azores", "", "admin1", "iso:XD-I", "", "iso:XD"),
-        ("tz:iso:XB", "Asia/Tokyo", "", "country", "iso:XB", "", "iso:XB"),
-        ("tz:ne:XC", "", "", "country", "ne:XC", "", "ne:XC"),  # no zone: the nearest-city rule answers
-        ("tz:iso:XD", "Europe/Lisbon", "", "country", "iso:XD", "", "iso:XD"),
-    ]
-    assert [r["name"] for r in rows(layer)][:3] == ["North tip", "North Province", "South Province"]
-    assert set(layer.columns) == set(layer.types)
-    # each unit keeps its own outline; a shape is its boxes
-    by_id = dict(zip(layer.columns["id"], layer.features, strict=True))
-    assert by_id["tz:iso:XB"].outlines == countries.features[1].outlines
-    assert by_id["tz:iso:XA-N"].outlines == admin1.features[0].outlines
-    (ring,) = by_id["tz:north-tip"].outlines[0].rings
+    assert got == [("tz:north-tip", "North tip", "Pacific/Fiji", "", "shape", "", "iso:XA-N", "iso:XA")]
+    assert set(shapes.columns) == set(shapes.types)
+    assert shapes.cell_deg == 10.0  # a coarse grid for a few small shapes
+    (ring,) = shapes.features[0].outlines[0].rings
     assert sorted(set(ring)) == [(0.9, -140.0), (0.9, -139.9), (1.0, -140.0), (1.0, -139.9)]
+
+
+def test_a_null_admin1_entry_is_no_zone_not_its_countrys():
+    doc = world_doc()
+    doc["countries"]["iso:XD"]["admin1"]["iso:XD-I"] = None
+    _, admin1, _ = timezones.world_tables(doc, *world_layers())
+    assert admin1.columns["tz"][-2:] == ["", "-"]  # Mainland takes Deltaland's zone; Islands have none
+
+
+def test_no_shapes_no_timezones_layer():
+    assert timezones.world_tables(world_doc(shapes=[]), *world_layers())[2] is None
 
 
 def test_a_shape_can_be_a_polygon_or_several_boxes():
@@ -126,7 +137,7 @@ def test_a_shape_can_be_a_polygon_or_several_boxes():
             },
         ]
     )
-    layer = timezones.world_layer(doc, *world_layers())
+    layer = timezones.world_tables(doc, *world_layers())[2]
     tri, two = layer.features[:2]
     assert tri.outlines[0].rings == (((0.0, -140.0), (1.0, -140.0), (0.0, -139.0)),)
     assert len(two.outlines) == 2
@@ -171,7 +182,7 @@ def test_every_problem_in_the_table_fails_the_build_and_names_the_entry(change, 
     doc = json.loads(json.dumps(world_doc()))
     change(doc)
     with pytest.raises(ValueError, match="datasets/timezones") as err:
-        timezones.world_layer(doc, *world_layers())
+        timezones.world_tables(doc, *world_layers())
     assert problem in str(err.value)
 
 
@@ -180,7 +191,7 @@ def test_problems_are_listed_together():
     doc["countries"]["iso:XB"] = "Mars/Olympus"
     doc["countries"].pop("iso:XD")
     with pytest.raises(ValueError) as err:
-        timezones.world_layer(doc, *world_layers())
+        timezones.world_tables(doc, *world_layers())
     assert "Mars/Olympus" in str(err.value) and "iso:XD: no entry" in str(err.value)
 
 
@@ -232,10 +243,10 @@ def parent(layer, field="statefp"):
     return lambda part, row: by_code[row[field]]
 
 
-def test_country_layer_draws_shapes_then_parts_then_admin1_units():
+def test_country_tables_put_the_zone_on_the_finest_units_and_draw_only_the_shapes():
     states, counties = country_layers()
     navajo = box(35.5, -111.5, 37, -109)
-    layer = timezones.country_layer(
+    (finest, zoned_states), shapes = timezones.country_tables(
         country_doc(),
         states,
         [counties],
@@ -243,46 +254,67 @@ def test_country_layer_draws_shapes_then_parts_then_admin1_units():
         {"tz:navajo-nation": navajo},
         sources=("uscensus",),
     )
-    assert layer.sources == ("placewise-timezones", "uscensus")
-    got = [(r["id"], r["zone"], r["zones"], r["basis"], r["unit"], r["country"]) for r in rows(layer)]
+    assert finest.name == "counties" and finest.sources == ("synthetic", "placewise-timezones")
+    assert zoned_states.columns["tz"] == ["America/Los_Angeles", "America/Phoenix"]  # outside every county
+    # Elko County is split (its own list); Apache County takes Arizona's zone
+    assert finest.columns["tz"] == ["America/Los_Angeles|America/Denver", "America/Phoenix"]
+    assert shapes.sources == ("placewise-timezones", "uscensus")
+    got = [(r["id"], r["zone"], r["basis"], r["country"]) for r in rows(shapes)]
     assert got == [
-        ("tz:navajo-nation", "America/Denver", "", "shape", "", "iso:US"),
-        ("tz:corner", "America/Denver", "", "shape", "", "iso:US"),
-        (
-            "tz:census:32007",
-            "America/Los_Angeles",
-            "America/Los_Angeles|America/Denver",
-            "part",
-            "census:32007",
-            "iso:US",
-        ),
-        ("tz:iso:US-NV", "America/Los_Angeles", "", "admin1", "iso:US-NV", "iso:US"),
-        ("tz:iso:US-AZ", "America/Phoenix", "", "admin1", "iso:US-AZ", "iso:US"),
+        ("tz:navajo-nation", "America/Denver", "shape", "iso:US"),
+        ("tz:corner", "America/Denver", "shape", "iso:US"),
     ]
-    assert layer.features[0].outlines == navajo.outlines
+    assert shapes.features[0].outlines == navajo.outlines
 
 
-def test_finer_parts_come_before_the_parts_they_lie_in():
+def _saskatchewan(parts):
     provinces = polygon_layer(
         "provinces", [("statcan:47", "Saskatchewan", {"pruid": "47"}, box(49, -110, 60, -102))]
     )
     cd = polygon_layer("cd", [("statcan:4717", "Division No. 17", {"pruid": "47"}, box(53, -110, 54, -108))])
     csd = polygon_layer(
-        "csd", [("statcan:4717029", "Lloydminster (Part)", {"pruid": "47"}, box(53.2, -110, 53.4, -109.9))]
+        "csd",
+        [
+            ("statcan:4717029", "Lloydminster (Part)", {"pruid": "47"}, box(53.2, -110, 53.4, -109.9)),
+            ("statcan:4717001", "Rural 1", {"pruid": "47"}, box(53.5, -109, 53.6, -108.9)),
+            ("statcan:4706027", "Regina", {"pruid": "47"}, box(50.4, -104.7, 50.5, -104.5)),
+        ],
     )
     doc = {
         "country": "CA",
         "sources": SOURCES,
-        "admin1": {
-            "statcan:47": {
-                "zone": "America/Regina",
-                "parts": {"statcan:4717": "America/Swift_Current", "statcan:4717029": "America/Edmonton"},
-            }
-        },
+        "admin1": {"statcan:47": {"zone": "America/Regina", "parts": parts}},
         "shapes": [],
     }
-    layer = timezones.country_layer(doc, provinces, [cd, csd], parent(provinces, "pruid"), {}, ("statcan",))
-    assert layer.columns["id"] == ["tz:statcan:4717029", "tz:statcan:4717", "tz:statcan:47"]
+    return doc, provinces, cd, csd
+
+
+def _division(pid, row):
+    digits = pid.removeprefix("statcan:")
+    return f"statcan:{digits[:4]}" if len(digits) == 7 else None
+
+
+def test_a_subdivision_takes_its_own_zone_else_its_divisions_else_its_provinces():
+    doc, provinces, cd, csd = _saskatchewan(
+        {"statcan:4717": "America/Swift_Current", "statcan:4717029": "America/Edmonton"}
+    )
+    layers, shapes = timezones.country_tables(
+        doc, provinces, [cd, csd], parent(provinces, "pruid"), {}, ("statcan",), container=_division
+    )
+    assert [layer.name for layer in layers] == ["csd", "cd", "provinces"] and shapes is None
+    assert layers[0].columns["tz"] == ["America/Edmonton", "America/Swift_Current", "America/Regina"]
+    # for points in no subdivision: each division's own entry, each province's zone
+    assert layers[1].columns["tz"] == ["America/Swift_Current"] and layers[2].columns["tz"] == [
+        "America/Regina"
+    ]
+
+
+def test_a_split_zone_is_never_passed_down():
+    doc, provinces, cd, csd = _saskatchewan({"statcan:4717": ["America/Swift_Current", "America/Edmonton"]})
+    with pytest.raises(ValueError, match="statcan:4717: a split zone"):
+        timezones.country_tables(
+            doc, provinces, [cd, csd], parent(provinces, "pruid"), {}, ("statcan",), container=_division
+        )
 
 
 @pytest.mark.parametrize(
@@ -312,7 +344,7 @@ def test_every_problem_in_a_country_table_fails_the_build(change, problem):
     states, counties = country_layers()
     shapes = {"tz:navajo-nation": box(35.5, -111.5, 37, -109)} if doc["shapes"][0]["aiannh"] == "2430" else {}
     with pytest.raises(ValueError, match="datasets/timezones") as err:
-        timezones.country_layer(doc, states, [counties], parent(states), shapes, ("uscensus",))
+        timezones.country_tables(doc, states, [counties], parent(states), shapes, ("uscensus",))
     assert problem in str(err.value)
 
 

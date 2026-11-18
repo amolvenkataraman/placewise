@@ -4,7 +4,7 @@ Skipped when a pack isn't built (`uv run python -m packbuild.parks usa can world
 """
 
 import pytest
-from e2e_kit import geocoder
+from e2e_kit import geocoder, us_parks
 
 from placewise.model import PlaceKind
 
@@ -36,7 +36,7 @@ def near_parks(packs, lat, lon):
     ],
 )
 def test_within(pack, point, park):
-    found = within(("world", pack), *point)
+    found = within(("world", *(us_parks() if pack == "usa-parks" else (pack,))), *point)
     assert found and found[0] == park if pack == "can-parks" else park in found
 
 
