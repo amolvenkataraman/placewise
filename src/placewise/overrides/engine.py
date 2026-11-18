@@ -96,7 +96,7 @@ class OverrideEngine:
         fields = dict(state.fields)
         for name in (*LIST_FIELDS, "near"):
             fields[name] = tuple(fields[name])
-        out = dataclasses.replace(result, **fields, sources=state.sources)
+        out = dataclasses.replace(result, **fields, sources=state.sources, matches=_kept(result, fields))
         if relabel is not None and state.names_changed is not None and not state.label_set:
             label = relabel(out)
             if label != out.label:
@@ -134,3 +134,19 @@ class OverrideEngine:
                 }
             )
         return rows
+
+
+def _kept(result, fields):
+    """Result.matches for the fields still holding the same place (a renamed place keeps its
+    Match; a rule that put another place in a field leaves that field without one)."""
+    if not result.matches:
+        return result.matches
+    return {
+        k: m
+        for k, m in result.matches.items()
+        if k not in fields or _same(getattr(result, k, None), fields[k])
+    }
+
+
+def _same(a, b):
+    return a is b or (a is not None and b is not None and getattr(a, "id", None) == getattr(b, "id", None))

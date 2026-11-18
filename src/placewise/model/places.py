@@ -11,7 +11,38 @@ from ._base import Model, set_field
 from .geometry import BBox, Outline, Point
 
 
-class PlaceKind(str, Enum):
+class _Named:
+    """repr as Python reads it back (`PlaceKind.PARK`), so a Result's repr round-trips through eval."""
+
+    __slots__ = ()
+
+    def __repr__(self):
+        return f"{type(self).__name__}.{self.name}"
+
+
+class _Card:
+    """`str()` is the readable card, always plain text (placewise.model.display); `card()` colours
+    it on a terminal; `repr` stays the dataclass's."""
+
+    __slots__ = ()
+
+    def __str__(self):
+        return self.card(color=False)
+
+    def card(self, color=None, width=None):
+        """The text card. color: True, False, or None for colour only when stdout is a terminal
+        (NO_COLOR unset); width: at most this many columns (default 100)."""
+        from .display import text
+
+        return text.card(self, color, width or text.const.WIDTH)
+
+    def _repr_html_(self):
+        from .display import html
+
+        return html.card(self)
+
+
+class PlaceKind(_Named, str, Enum):
     COUNTRY = "country"
     ADMIN1 = "admin1"  # state, province, region
     ADMIN2 = "admin2"  # county, district
@@ -38,7 +69,7 @@ class PlaceKind(str, Enum):
     CUSTOM = "custom"  # added by an override or the calling app
 
 
-class Relation(str, Enum):
+class Relation(_Named, str, Enum):
     """How a point relates to a place."""
 
     AT = "at"  # airports, stations, buildings
@@ -87,6 +118,23 @@ class Nearby(Model):
 
 
 @dataclass(frozen=True, slots=True)
+class Match(Model):
+    """How a Result field's place was found for the point: `within` it (its outline holds the
+    point; distance 0), or `near` it, a fallback chosen by distance or score (the nearest town,
+    a metro's principal city, a postal city, the polygon beside a shore), with the great-circle km
+    to the place's point, or to its box where it has no point; `offshore` for a country whose
+    territorial sea holds the point. distance_km is None where it can't be known."""
+
+    relation: Relation
+    distance_km: float | None = None
+
+    def __post_init__(self):
+        set_field(self, "relation", Relation(self.relation))
+        if self.distance_km is not None and self.distance_km < 0:
+            raise ValueError("distance can't be negative")
+
+
+@dataclass(frozen=True, slots=True)
 class Disputed(Model):
     """A point inside a disputed area: who claims it, who runs it, and which view was applied."""
 
@@ -129,7 +177,7 @@ class AppPlace(Model):
 
 
 @dataclass(frozen=True, slots=True)
-class Entity(Model):
+class Entity(_Card, Model):
     """What `find` returns: a place with a point guaranteed inside it, its extent and its context.
     `city`, `region` (state, province) and `country` (ISO alpha-2) say where it is, for telling
     places of one name apart; `alternates` are the same place as found in other data (a city's
@@ -161,8 +209,10 @@ class Entity(Model):
 
 
 @dataclass(frozen=True, slots=True)
-class Result(Model):
-    """What `lookup` returns for a point. `sources` maps each field to the layer or rule that set it.
+class Result(_Card, Model):
+    """What `lookup` returns for a point. `sources` maps each field to the layer or rule that set it;
+    `matches` says for each place field whether the point is inside that place or it was the
+    nearest fallback, and how far (Match).
 
     Three names per point (docs/naming.md): `sublocality` (what a local adds: Mission District),
     `locality` (the municipality, corrected for how people talk) and `city` (what you'd tell someone
@@ -188,12 +238,32 @@ class Result(Model):
     disputed: Disputed | None = None
     relative: Relative | None = None
     sources: dict[str, str] = field(default_factory=dict)
+    matches: dict[str, Match] = field(default_factory=dict)  # place field -> how it was found
     data_version: str | None = None
 
     def __post_init__(self):
         Point(self.lat, self.lon)  # validates
 
     @property
+    def city_within(self):
+        """Whether the point lies inside the city (not a nearest-town or metro fallback)."""
+        return _within(self.matches.get("city"))
+
+    @property
+    def locality_within(self):
+        return _within(self.matches.get("locality"))
+
+    @property
+    def city_km(self):
+        """km from the point to the city: 0.0 inside it, None when unknown or no city."""
+        m = self.matches.get("city")
+        return m.distance_km if m is not None else None
+
+    @property
     def cc(self):
         """ISO 3166-1 alpha-2 code of the country, if known."""
         return self.country.codes.get("iso2") if self.country else None
+
+
+def _within(match):
+    return match is not None and match.relation == Relation.WITHIN

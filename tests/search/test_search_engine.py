@@ -181,3 +181,37 @@ def test_a_trailing_city_word_reads_as_the_comma_context(tmp_path):
     # no place is called "Union Pier Tinyville": it reads as "Union Pier, Tinyville"
     assert ids(geo.find("Union Pier Tinyville"))[0] == "wikidata:Q902"
     assert ids(geo.find("Union Pier, Tinyville"))[0] == "wikidata:Q902"
+
+
+def test_generic_park_names_are_never_found(tmp_path):
+    """Packs built before the park build dropped them still index "Open Space" rows."""
+    import numpy as np
+    from search_kit import CREATED, FakeNameIndex, _real_index, box_feature, world_layers, world_names
+
+    from placewise.engine import Geocoder
+    from placewise.packs import LayerData, NameData, open_pack, write_pack
+
+    columns = {
+        "id": ["pad-us:a", "pad-us:b"],
+        "park": ["pad-us:a", "pad-us:b"],
+        "name": ["Open Space", "Willow Park"],
+        "tier": np.array([4, 4], dtype=np.uint8),
+    }
+    boxes = [box_feature(0.30, -139.9, 0.31, -139.89), box_feature(0.32, -139.9, 0.33, -139.89)]
+    parks = LayerData("parks_local", "polygon", columns, ("synthetic",), features=boxes)
+    rows = [
+        ("Open Space", "parks_local", 0, "park", 0.5, "official"),
+        ("Willow Park", "parks_local", 1, "park", 0.5, "official"),
+    ]
+    packs = []
+    for name, layers, names in (("world", world_layers(), None), ("usa-parks", [parks], rows)):
+        names = names if names is not None else world_names(layers)
+        path = write_pack(tmp_path, name, "2026.11", layers, created=CREATED, names=NameData.from_rows(names))
+        pack = open_pack(path)
+        if _real_index(pack) is None:
+            pack.__dict__["names"] = FakeNameIndex(pack, names)
+        packs.append(pack)
+    geo = Geocoder(packs=packs)
+    assert ids(geo.find("Willow Park")) == ["pad-us:b"]
+    assert "pad-us:a" not in ids(geo.find("Open Space"))
+    assert "pad-us:a" not in ids(geo.find("Open Space", prefix=True))

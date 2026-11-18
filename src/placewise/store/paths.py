@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from placewise.constants import store as const
+from placewise.constants.lookup import DEFAULT_PACK
 
 _NAME = re.compile(const.PACK_NAME_PATTERN)
 _VERSION = re.compile(const.PACK_VERSION_PATTERN)
@@ -43,6 +44,30 @@ def parse_pack_dir(dirname):
     """("us-nature", "2026.11") for "us-nature-2026.11"; None for anything that isn't a pack directory."""
     match = _PACK_DIR.fullmatch(dirname)
     return (match.group(1), match.group(2)) if match else None
+
+
+def pack_dirs(paths):
+    """The pack directories `paths` name: a pack directory (it has a pack.json) is itself; a folder
+    of `<name>-<version>` packs gives the newest version of each, in name order; the world pack
+    comes first. A path that is neither is a ValueError."""
+    out = []
+    for path in map(Path, paths):
+        if (path / const.PACK_MANIFEST).is_file():
+            out.append(path)
+            continue
+        newest = {}
+        for child in sorted(path.iterdir()) if path.is_dir() else ():
+            parsed = parse_pack_dir(child.name)
+            if parsed and (child / const.PACK_MANIFEST).is_file():
+                name, version = parsed
+                if name not in newest or version_key(version) > version_key(newest[name][0]):
+                    newest[name] = (version, child)
+        if not newest:
+            raise ValueError(f"no packs at {path}: expected a pack directory or a folder of them")
+        out += [newest[name][1] for name in sorted(newest)]
+    # the world pack first: a Geocoder reads each world layer (cities, admin1 ...) from the first
+    # pack that has one, and country packs have layers of those names too
+    return sorted(out, key=lambda p: (parse_pack_dir(p.name) or (p.name,))[0] != DEFAULT_PACK)
 
 
 class Layout:

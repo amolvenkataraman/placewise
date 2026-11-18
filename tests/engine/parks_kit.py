@@ -7,6 +7,7 @@ Alphaland (lat 0 - 1, lon -140 .. -139):
         Alpha Preserve    tier 1   0.70 - 0.80, -139.80 .. -139.70   (smaller: listed first)
     Marsh Conservation    tier 3   0.20 - 0.25, -139.10 .. -139.05
     Town Green            tier 4   two parcels of one park: 0.10 - 0.11 and 0.12 - 0.13, -139.30 .. -139.29
+    "Open Space"          tier 3   0.30 - 0.31, -139.20 .. -139.19   (a generic name, as old packs have)
 
 Gammaland (lat 2 - 2.5, lon -140 .. -139.5): Gamma National Park, a point at (2.25, -139.6) with a
 5 km radius (world-parks/park_points), and Gamma Sanctuary, a point without an area (radius 0).
@@ -31,12 +32,15 @@ POLYGONS = [
      2.4, (0.10, -139.30, 0.11, -139.29)),
     ("parks_local", "pad-us:xa:lp:town-green#2", "pad-us:xa:lp:town-green", "Town Green", 4, "Local Park",
      2.4, (0.12, -139.30, 0.13, -139.29)),
+    ("parks_regional", "pad-us:xa:lca:open-space", "pad-us:xa:lca:open-space", "Open Space", 3,
+     "Local Conservation Area", 1.2, (0.30, -139.20, 0.31, -139.19)),
 ]  # fmt: skip
 
 # id, name, tier, designation, area_km2, radius_km, lat, lon
 POINTS = [
     ("wikidata:Q1", "Gamma National Park", 1, "national park", 78.5, 5.0, 2.25, -139.6),
     ("wikidata:Q2", "Gamma Sanctuary", 2, "wildlife sanctuary", float("nan"), 0.0, 2.4, -139.9),
+    ("wikidata:Q3", "Unknown Park", 2, "wildlife sanctuary", float("nan"), 0.0, 2.1, -139.9),
 ]
 
 

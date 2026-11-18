@@ -13,6 +13,24 @@ Beside them: `admin2` (county, census division), `borough` (New York City), `pos
 area, forward sortation area, PIN code area) and `regions` (smallest first). `Result.sources` names
 the layer and rule behind every field (`"usa/places:metro"`, `"can/csd:nearest"`).
 
+## How each name was found
+
+`Result.matches` says, for every place field (`country`, `admin1`, `admin2`, `city`, `locality`,
+`sublocality`, `borough`, `postal`), how its place relates to the point, so an app needn't parse
+`sources`:
+
+| `Match.relation` | Meaning | `distance_km` | Rules (`sources`) |
+|---|---|---|---|
+| `within` | the place's outline holds the point | 0.0 | `polygon`, `state`, `name`, `worldview` |
+| `near` | a fallback chosen by distance or score: the nearest well-known town, a metro's principal city, a postal city, a GeoNames or CGNDB place standing for a rural subdivision, the polygon beside a shore gap | great-circle km to the place's point; to its bounding box where it has none or was taken across a shore gap (within the 1 km margin that is the distance to the polygon) | `score`, `metro`, `postal`, `inside`, `nearest` ... |
+| `offshore` | a country or state whose territorial sea (12 nmi) holds the point | km to its box | `offshore` |
+
+`distance_km` is None where it can't be known (a box holding the point but not the outline).
+`r.city_within`, `r.locality_within` and `r.city_km` are shortcuts: at the CN Tower the city is
+Toronto, `within`, 0 km; on the Alberta prairie it is the nearest town, `near`, tens of km away.
+A field an override rule filled with another place has no match; a renamed place keeps its own.
+The card (`print(r)`) adds "· 21 km away, not inside" to such lines.
+
 ## Regions
 
 `regions` lists every region containing the point, smallest first by area: the pack's curated
@@ -129,7 +147,22 @@ back to the PIN areas alone.
 the city ("San Francisco, California, United States" at SFO); `"city"` leads with the city.
 Consecutive repeats drop ("New York, United States"). `label.template` can use `{sublocality}`,
 `{locality}`, `{city}`, `{borough}`, `{admin2}`, `{postal}`, `{region}`, `{admin1}`, `{country}`,
-`{airport}` and `{water}`. Country names are the ISO short names ("United States"); Natural
+`{within}`, `{airport}` and `{water}`.
+
+Rules on top of that, in order:
+
+1. **Parks.** Inside a national or state-level park (tier 1 or 2, docs/parks.md) the park says more
+   than the state and country, so the label is "<locality>, <park>" ("Yosemite Valley, Yosemite
+   National Park", "Lake Louise, Banff National Park"). Without a locality the city leads only
+   when its point lies in the park's box (the GeoNames place "Yosemite Valley"), else the park
+   stands alone ("Yosemite National Park" in the backcountry): a city found 30 km away would name
+   a town outside the park. With `label.style = "city"` the city leads instead. The park is the
+   most significant one the point is in (`within[0]`). National forests and grasslands don't
+   count: their administrative boundaries take in whole towns (South Lake Tahoe lies in the Lake
+   Tahoe Basin Management Unit). Turn the rule off with `label.parks = false`; a template ignores it.
+2. **Water.** On a sea or lake the label names the water ("On Lake Tahoe", "Over Lake Ontario",
+   docs/water.md), park or not.
+3. **Offshore.** Far from land: "Offshore, 15 km S of Toronto". Country names are the ISO short names ("United States"); Natural
 Earth's longer form stays in `country.aliases`.
 
 ## Known gaps

@@ -4,6 +4,7 @@
 WORLDVIEW = ("de_facto",)
 NAMES_PREFER = "official"  # Bengaluru, not Bangalore (aliases still parse)
 LABEL_STYLE = "locality"  # "Emeryville, Bay Area" rather than "San Francisco area"
+LABEL_PARKS = True  # "Yosemite Valley, Yosemite National Park" rather than "..., California, United States"
 
 # what counts as "near", km
 NEAR_KM = {

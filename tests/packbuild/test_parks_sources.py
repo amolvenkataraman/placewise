@@ -59,6 +59,10 @@ def test_padus_parcels_become_parks_by_name_and_place(tmp_path):
     # closed to the public, an owner's name, a private designation, an NPS unit (from nps instead)
     assert not names & {"Closed Yard", "City of Nowhere", "Private Woods", "Agency Monument"}
     assert "Mesa Monument" in names  # a BLM national monument
+    # generic or placeholder names give way to the parcel's own local name, or the parcel goes
+    assert {"Heron Ridge Open Space", "Willow Bend Park"} <= names
+    assert not names & {"Open Space", "Open  space", "Unknown Park", "Unknown"}
+    assert any(r.park.startswith("pad-us:xx:lp:heron-ridge-open-space:") for r in rows)
 
 
 def test_padus_ids_are_stable_across_reads(tmp_path):
@@ -71,7 +75,7 @@ def test_cpcad_keeps_public_protected_areas_grouped_by_parent(tmp_path):
     parks = {}
     for r in rows:
         parks.setdefault(r.park, []).append(r)
-    assert set(parks) == {"cpcad:100", "cpcad:200", "cpcad:400"}
+    assert set(parks) == {"cpcad:100", "cpcad:200", "cpcad:400"}  # not 800: "Natural Area" is no name
     pine = parks["cpcad:100"][0]
     assert (pine.name, pine.tier, pine.designation) == ("Pine Lake National Park", NATIONAL, "National Park")
     assert pine.aliases == ("Pine Lake National Park of Canada", "Pine Lake")

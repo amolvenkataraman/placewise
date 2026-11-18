@@ -107,7 +107,8 @@ by name and by `get`. See `docs/overrides.md`.
 ## Surfaces
 
 - CLI: `placewise find "Lake Tahoe" [--limit --country --state --near LAT,LON --radius-km --bbox S,W,N,E
-  --within --kind --loose --prefix --worldview --json --geometry]`, printing a result card per place.
+  --within --kind --loose --prefix --worldview --json --geometry --packs DIR]`, printing each
+  Entity's card (`str(entity)`: name and context, kind, point, extent, id, score, alternates).
 - Server and local service: `GET /v1/find?q=...` with the same arguments (`near=lat,lon`,
   `bbox=s,w,n,e`, lists comma-separated, `prefix=1`, `strict=0`, `geometry=1`), `POST /v1/find` with
   them as JSON (keeps `near` out of URLs), `GET /v1/get?id=...`; `placewise.Client.find/get`.

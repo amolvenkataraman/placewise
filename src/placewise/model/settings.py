@@ -50,6 +50,7 @@ class NameSettings(Model):
 class LabelSettings(Model):
     style: str = defaults.LABEL_STYLE
     template: str | None = None  # e.g. "{within}, {city}"; overrides style
+    parks: bool = defaults.LABEL_PARKS  # in a national or state park: "<locality>, <park>"
 
     def __post_init__(self):
         _check_choice("label.style", self.style, {"locality", "city"})

@@ -65,3 +65,19 @@ def test_explain_lists_rules_with_origins():
         ("local", "hide", "local:local.toml#1"),
     ]
     assert rows[0]["rule"] == {"text": "GTA", "means": "region:gta"}
+
+
+def test_matches_follow_the_place_not_its_name():
+    """A rename keeps the field's Match (same place); a rule putting another place there drops it."""
+    import dataclasses
+
+    from placewise.model import Match, Relation
+
+    near = Match(Relation.NEAR, 12.0)
+    before = dataclasses.replace(
+        toronto_result(), matches={"locality": Match(Relation.WITHIN, 0.0), "city": near}
+    )
+    out = apply(engine(repo={"rename": [{"id": TORONTO.id, "name": "The Six"}]}), before)
+    assert out.locality.name == "The Six" and out.matches == before.matches
+    out = apply(engine(repo={"city": [{"locality": TORONTO.id, "city": "Golden Horseshoe"}]}), before)
+    assert out.city.name == "Golden Horseshoe" and "city" not in out.matches and "locality" in out.matches

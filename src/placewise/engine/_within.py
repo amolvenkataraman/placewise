@@ -10,6 +10,8 @@ Park packs (usa-parks, can-parks, world-parks: docs/parks.md) carry two kinds of
 
 Rules (constants: placewise.constants.parks; distances: NearSettings.park_tier1..3):
 
+- names: rows named only by a kind of land ("Open Space", "Unknown Park": GENERIC_NAMES) are never
+  within or near; the build leaves them out, packs built before it still have them.
 - within: every park whose outline contains the point, most significant first: lower tier first,
   then the smaller park (a preserve inside a national park comes before it).
 - near: parks the point is not inside whose outline comes within their tier's near distance
@@ -26,6 +28,7 @@ from placewise.geo import compass, initial_bearing
 from placewise.model import Nearby, Place, PlaceKind, Point, Relation
 
 from ._layers import codes, source_of
+from .naming.rules import fold
 
 RADIUS = "radius"  # rule name in Result.sources: within a point park's circle plus its near distance
 
@@ -60,6 +63,7 @@ class Parks:
             "near_km": self._near[np.clip(tier, 0, len(self._near) - 1)],
             "area": np.nan_to_num(np.asarray(layer.column("area_km2"), dtype=np.float64), nan=np.inf),
             "park": layer.column("park").tolist() if "park" in layer.fields else layer.column("id").tolist(),
+            "named": _named(layer.column("name")),
         }
         if layer.kind == "point":
             info["radius"] = np.asarray(layer.column("radius_km"), dtype=np.float64)
@@ -72,13 +76,15 @@ class Parks:
         close = [{} for _ in range(n)]  # park id -> (km, tier, key, row, bearing, word)
         for o in self.outlines:
             p, f = o["layer"].query_every(lat, lon)
+            keep = o["named"][f]
+            p, f = p[keep], f[keep]
             tier, area, park = o["tier"], o["area"], o["park"]
             for q, row in zip(p.tolist(), f.tolist(), strict=True):
                 inside[q].setdefault(park[row], (int(tier[row]), float(area[row]), o["key"], row))
             radius = float(o["near_km"].max()) if len(o["near_km"]) else 0.0
             if near and radius > 0:
                 p, f, km = o["layer"].near_boundary(lat, lon, radius)
-                keep = km <= o["near_km"][f]
+                keep = (km <= o["near_km"][f]) & o["named"][f]
                 for q, row, d in zip(p[keep].tolist(), f[keep].tolist(), km[keep].tolist(), strict=True):
                     _closest(close[q], o["park"][row], (d, int(o["tier"][row]), o["key"], row, None, None))
         if near:
@@ -97,7 +103,7 @@ class Parks:
         q, j = np.nonzero(idx >= 0)
         rows, d = idx[q, j], dist[q, j]
         edge = np.maximum(d - pt["radius"][rows], 0.0)
-        keep = edge <= pt["near_km"][rows]
+        keep = (edge <= pt["near_km"][rows]) & pt["named"][rows]
         q, rows, edge = q[keep], rows[keep], edge[keep]
         if not len(q):
             return
@@ -125,6 +131,30 @@ class Parks:
             first = nearby[0]
             sources["near"] = self.layers.source(first[2], POLYGON if first[4] is None else RADIUS)
         return within, out, sources
+
+
+def generic_name(name):
+    """Whether a park name only says what kind of land it is ("Open Space", "Unknown Park"):
+    placewise.constants.parks.GENERIC_NAMES."""
+    text = name if name.isascii() else fold(name)  # accents only matter outside ASCII
+    return " ".join(text.split()).casefold() in const.GENERIC_NAMES
+
+
+def label_park(within):
+    """The park a label names (docs/naming.md): the most significant park the point is in, if it
+    is national or state level and not a national forest or grassland; else None."""
+    for park in within:
+        if park.tier is None or park.tier > const.LABEL_MAX_TIER:
+            return None  # within is most significant first: nothing later qualifies
+        if park.codes.get("designation") not in const.LABEL_SKIP_DESIGNATIONS:
+            return park
+    return None
+
+
+def _named(names):
+    """Per row: whether its name is a name, not generic (generic_name)."""
+    names = names.tolist() if hasattr(names, "tolist") else list(names)
+    return np.fromiter((not generic_name(n or "") for n in names), dtype=bool, count=len(names))
 
 
 def _closest(found, pid, value):

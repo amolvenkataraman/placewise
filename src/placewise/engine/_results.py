@@ -2,9 +2,10 @@
 
 The label is "<name>, <admin1>, <country>", consecutive repeats dropped ("New York, United States"),
 where <name> is the locality (label.style "locality", the default) or the city (style "city"),
-each falling back to the other; label.template formats any field instead. Far offshore, the label
-names a reference place: "Offshore, 15 km S of Toronto". On a sea or lake, the label names it
-("Over Lake Ontario"; placewise.engine._water).
+each falling back to the other; in a national or state park (_within.label_park) it is "<name>,
+<park>", or the park alone without one (label.parks, on by default); label.template formats any
+field instead. Far offshore, the label names a reference place: "Offshore, 15 km S of Toronto".
+On a sea or lake, the label names it ("Over Lake Ontario"; placewise.engine._water).
 """
 
 import numpy as np
@@ -14,7 +15,10 @@ from placewise.constants.worldviews import WORLDVIEW_RULE
 from placewise.model import Nearby, PlaceKind, Relation, Result
 
 from . import _nearby as nearby
+from ._matches import matches
 from ._notable import RADIUS
+from ._within import label_park
+from .naming.rules import same_name
 
 NAMED = ("sublocality", "locality", "city", "borough", "admin2", "postal")
 
@@ -69,7 +73,9 @@ def build(geo, lat, lon, a, named, order, locked):
     notable = a.get("notable_places")  # (near, layer key) per point (placewise.engine._notable)
     label_settings, data_version = geo.settings.label, geo.data_version
     by_locality, template = label_settings.style == "locality", label_settings.template
-    labels = {}  # (id(name), id(admin1), id(country)) -> label: the Places outlive the loop
+    park_labels = label_settings.parks and not template
+    # (id(name), id(admin1), id(country)) or (id(name), id(park)) -> label: Places outlive the loop
+    labels = {}
     results = []
     for i in range(n):
         ci = cidx[i]
@@ -135,7 +141,11 @@ def build(geo, lat, lon, a, named, order, locked):
                 label = compose(label_settings, fields)
             else:
                 first, second = (locality, city_place) if by_locality else (city_place, locality)
-                key = (id(first if first is not None else second), id(admin1), id(country))
+                park = label_park(within) if park_labels else None
+                if park is None:
+                    key = (id(first if first is not None else second), id(admin1), id(country))
+                else:
+                    key = (id(first), id(second), id(park))
                 label = labels.get(key)
                 if label is None:
                     label = labels[key] = compose(label_settings, fields)
@@ -153,7 +163,7 @@ def build(geo, lat, lon, a, named, order, locked):
         results.append(
             Result(
                 lat=lats[i], lon=lons[i], label=label, tz=tz, near=near, disputed=disputed, sources=sources,
-                data_version=data_version, **fields,
+                matches=matches(fields, sources, lats[i], lons[i]), data_version=data_version, **fields,
             )
         )  # fmt: skip
     return results
@@ -201,6 +211,12 @@ def compose(label_settings, fields):
     name = next((p for p in first if p is not None), None)
     template = label_settings.template
     if not template:
+        park = label_park(get("within") or ()) if label_settings.parks else None
+        if park is not None:  # "Yosemite Valley, Yosemite National Park"
+            local = _park_local(first, park)
+            if local is None or same_name(local.name, park.name):
+                return park.name
+            return f"{local.name}, {park.name}"
         parts = []
         for p in (name, get("admin1"), get("country")):
             if p is not None and p.name and (not parts or parts[-1] != p.name):
@@ -222,6 +238,20 @@ def compose(label_settings, fields):
     text = template.format_map(_Blank(names))
     parts = [p.strip() for p in text.split(",")]
     return ", ".join(p for p in parts if p)
+
+
+def _park_local(names, park):
+    """The place a park label leads with: the style's own field (locality or city), else the other
+    one when its point lies in the park's box (the GeoNames city "Yosemite Valley"; a town far
+    outside the park would mislead); None: the park alone."""
+    first, second = names
+    if first is not None and first.name:
+        return first
+    inside = (
+        second is not None and second.name and second.point is not None and park.bbox is not None
+        and park.bbox.contains(second.point.lat, second.point.lon)
+    )  # fmt: skip
+    return second if inside else None
 
 
 class _Blank(dict):

@@ -1,6 +1,7 @@
 """Point lookup (placewise.engine): how far, how big and how the answer is scored."""
 
 from .distance import METRES_PER
+from .naming import NAME, STATE
 
 # layers the lookup reads from a pack, by name (docs/pack-format.md, packbuild/README.md)
 COUNTRIES = "countries"
@@ -17,6 +18,9 @@ NEAREST = "nearest"  # inside the country, outside its admin1 polygons (sliver b
 SCORE = "score"  # the provisional city score below
 SPLIT = "split"  # a time-zone unit split along a line no pack draws: its nearest town's zone decided
 WORLDVIEW = "worldview"  # the zone of the country the worldview reports, not the administering one's
+# Result.matches (placewise.engine._matches): the rules that put the point inside the field's place;
+# OFFSHORE is "offshore", every other rule a fallback ("near")
+MATCH_WITHIN_RULES = frozenset({POLYGON, WORLDVIEW, STATE, NAME})
 
 # 12 nautical miles, the territorial sea (UNCLOS art. 3). Natural Earth's 1:10m coastline misses
 # some coastal points (piers, harbours, whole city centres like Sevastopol's) by hundreds of

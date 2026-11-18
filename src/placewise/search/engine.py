@@ -6,8 +6,9 @@
    dropped, a trailing context word, and typo-tolerant (fuzzy) matches when nothing prominent
    matched exactly.
 3. Score them (rank): match x prior x the text's context x the caller's context (context).
-4. Drop hidden places, put an airport code's served city first, merge one place found in several
-   packs (dedupe), and build the Entities with their context, all at once (entities).
+4. Drop hidden places and generically named parks, put an airport code's served city first, merge
+   one place found in several packs (dedupe), and build the Entities with their context, all at
+   once (entities).
 """
 
 import numpy as np
@@ -16,6 +17,7 @@ from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
 from placewise.constants.countries.conventions import ALPHA3_ANY_CASE
 from placewise.constants.names import CODE, PLACE_KINDS
+from placewise.engine._within import generic_name
 from placewise.geo.distances import haversine
 from placewise.model import Add, BBox, Entity, Hide, Place, Point, RegionRule, Rename
 
@@ -25,6 +27,7 @@ from .gather import Gatherer
 from .query import parse_query
 
 _AIRPORT = PLACE_KINDS.index("airport")
+_PARK = PLACE_KINDS.index("park")
 _COUNTRY = PLACE_KINDS.index("country")
 _SETTLEMENTS = frozenset(PLACE_KINDS.index(k) for k in const.SETTLEMENT_PREFERENCE)
 
@@ -262,9 +265,23 @@ class Search:
         return cities.value("id", c), cities.value("name", c), float(cities.lat[c]), float(cities.lon[c])
 
     def _visible(self, pool, order):
-        if not self.hidden:
+        """Without hidden places and parks named only by a kind of land ("Open Space", in packs
+        built before the park build dropped them: placewise.engine._within.generic_name)."""
+        parks = pool.kind[order] == _PARK
+        if not self.hidden and not parks.any():
             return order
-        return np.array([i for i in order if self._id(pool, i) not in self.hidden], dtype=np.int64)
+        keep = []
+        for i, park in zip(order.tolist(), parks.tolist(), strict=True):
+            if park and self._generic(pool, i):
+                continue
+            if self.hidden and self._id(pool, i) in self.hidden:
+                continue
+            keep.append(i)
+        return np.array(keep, dtype=np.int64)
+
+    def _generic(self, pool, i):
+        pack = self.packs[int(pool.pack[i])]
+        return generic_name(pack[pack.names.layers[int(pool.layer[i])]].value("name", int(pool.row[i])) or "")
 
     def _id(self, pool, i):
         pack = self.packs[int(pool.pack[i])]

@@ -70,3 +70,27 @@ def test_parse_pack_dir_name():
     assert paths.parse_pack_dir(".tmp-abc") is None
     assert paths.parse_pack_dir("world") is None
     assert isinstance(paths.Layout("rel").root, Path)
+
+
+def test_pack_dirs_takes_packs_and_folders_of_packs(tmp_path):
+    def pack(name):
+        d = tmp_path / "packs" / name
+        d.mkdir(parents=True)
+        (d / "pack.json").write_text("{}")
+        return d
+
+    world_old, world, usa = pack("world-2026.9"), pack("world-2026.11"), pack("usa-2026.11")
+    water = pack("world-water-2026.11")
+    (tmp_path / "packs" / "notes").mkdir()  # not a pack: ignored
+    one = tmp_path / "loose" / "can-2026.11"
+    one.mkdir(parents=True)
+    (one / "pack.json").write_text("{}")
+    # a folder gives the newest version of each pack, by name; a pack directory is itself; the world
+    # pack leads (a Geocoder reads world layers from the first pack that has them)
+    assert paths.pack_dirs([tmp_path / "packs", one]) == [world, usa, water, one]
+    assert paths.pack_dirs([one, usa, world]) == [world, one, usa]  # the world pack first
+    assert world_old not in paths.pack_dirs([tmp_path / "packs"])
+    with pytest.raises(ValueError, match="no packs"):
+        paths.pack_dirs([tmp_path / "loose" / "missing"])
+    with pytest.raises(ValueError, match="no packs"):
+        paths.pack_dirs([tmp_path / "packs" / "notes"])

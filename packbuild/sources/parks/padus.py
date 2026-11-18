@@ -11,8 +11,9 @@ designation type, name), each group split into clusters of parcels whose boundin
 within CLUSTER_GAP_M of each other, and each cluster is one park, with the id
 `pad-us:<state>:<des_tp>:<name slug>:<geohash>` (lower case; the geohash, GEOHASH_CHARS long, is
 that of the centre of the cluster's largest parcel), stable as long as the park keeps its name and
-its largest parcel stays put. Parcels closed to the public (Pub_Access "XA") and names that don't
-label a place (tiers.usable_name) are left out.
+its largest parcel stays put. Parcels closed to the public (Pub_Access "XA") are left out, and so
+are parcels whose unit name doesn't label a place (a placeholder, an owner, or generic like "Open
+Space" and "Unknown Park": tiers.place_name) unless their local name (Loc_Nm) does.
 """
 
 import logging
@@ -88,14 +89,14 @@ def _parcels(folder, refuges):
     dropped = defaultdict(int)
     for attrs, rings in read_pages(folder):
         des_tp = "NWR" if refuges else (attrs.get("Des_Tp") or "").strip()
-        name = " ".join((attrs.get("Unit_Nm") or "").split())
+        name = tiers.place_name(attrs.get("Unit_Nm"), attrs.get("Loc_Nm"))
         if des_tp not in tiers.PADUS_TYPES or (des_tp in ("NM", "NRA") and attrs.get("Mang_Name") == "NPS"):
             dropped["designation"] += 1
             continue
         if attrs.get("Pub_Access") == tiers.PADUS_CLOSED:
             dropped["closed"] += 1
             continue
-        if not tiers.usable_name(name):
+        if not name:  # a placeholder, generic or owner-only name, and no local name either
             dropped["name"] += 1
             continue
         tolerance = UNGENERALISED_TOLERANCE_M if attrs.get("OBJECTID") in full else 0.0

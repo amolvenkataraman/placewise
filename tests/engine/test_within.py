@@ -7,8 +7,8 @@ import pytest
 from lookup_kit import write_world
 from parks_kit import write_parks
 
-from placewise.engine import Geocoder
-from placewise.model import LabelSettings, PlaceKind, Relation, Settings
+from placewise.engine import Geocoder, _results
+from placewise.model import LabelSettings, PlaceKind, Point, Relation, Settings
 
 
 @pytest.fixture(scope="module")
@@ -44,6 +44,13 @@ def test_parcels_of_one_park_are_one_place(geo):
         assert [p.id for p in r.within] == ["pad-us:xa:lp:town-green"]
     r = geo.lookup(0.115, -139.295)  # between the parcels: local parks are named only inside
     assert r.within == () and parks_near(r) == []
+
+
+def test_generic_names_are_never_within_or_near(geo):
+    """Packs built before the build dropped them still have "Open Space" and "Unknown Park" rows."""
+    assert geo.lookup(0.305, -139.195).within == ()
+    assert parks_near(geo.lookup(0.315, -139.195)) == []  # 0.5 km from it: near, were it a name
+    assert parks_near(geo.lookup(2.11, -139.9)) == []  # 1.1 km from a generic point park
 
 
 def test_near_reaches_by_tier(geo):
@@ -89,8 +96,40 @@ def test_label_template_can_name_the_park(packs):
     settings = Settings(label=LabelSettings(template="{within}, {admin1}"))
     r = Geocoder(packs=list(packs), settings=settings).lookup(0.75, -139.75)
     assert r.label == "Alpha Preserve, North Province"
-    plain = Geocoder(packs=[packs[0]]).lookup(0.75, -139.75).label
-    assert Geocoder(packs=list(packs)).lookup(0.75, -139.75).label == plain  # the default label is unchanged
+
+
+def test_label_names_a_national_or_state_park_instead_of_state_and_country(geo, packs):
+    r = geo.lookup(0.75, -139.75)  # Alpha City's locality, in the preserve (tier 1)
+    assert r.label == "Alpha City, Alpha Preserve"
+    plain = Geocoder(packs=[packs[0]]).lookup(0.75, -139.75)
+    assert plain.label == "Alpha City, North Province, Alphaland"
+    off = Geocoder(packs=list(packs), settings=Settings(label=LabelSettings(parks=False)))
+    assert off.lookup(0.75, -139.75).label == plain.label  # label.parks = false: the plain rule
+
+
+def test_label_park_rule_skips_local_parks_and_national_forests(geo, packs):
+    plain = Geocoder(packs=[packs[0]])
+    for point in [(0.105, -139.295), (0.225, -139.075), (0.57, -139.75)]:  # local, regional, forest only
+        assert geo.lookup(*point).within
+        assert geo.lookup(*point).label == plain.lookup(*point).label
+
+
+def test_label_park_alone_without_a_locality(geo):
+    r = geo.lookup(0.75, -139.75)
+    bare = dataclasses.replace(r, locality=None, city=None)
+    assert _results.compose(geo.settings.label, bare) == "Alpha Preserve"
+    # no locality: the city leads only when its point lies in the park's box, else it would name a
+    # town outside the park (Alpha City's point is 22 km east of the preserve)
+    far = dataclasses.replace(r, locality=None)
+    assert _results.compose(geo.settings.label, far) == "Alpha Preserve"
+    inside = dataclasses.replace(r.city, name="Preserve Village", point=Point(0.75, -139.75))
+    assert _results.compose(geo.settings.label, dataclasses.replace(far, city=inside)) == (
+        "Preserve Village, Alpha Preserve"
+    )
+    city_style = LabelSettings(style="city")
+    assert _results.compose(city_style, dataclasses.replace(r, locality=None)) == "Alpha City, Alpha Preserve"
+    same = dataclasses.replace(r, locality=dataclasses.replace(r.locality, name="Alpha Preserve"))
+    assert _results.compose(geo.settings.label, same) == "Alpha Preserve"  # no "X, X"
 
 
 def test_without_park_packs_nothing_changes(packs, geo):
@@ -98,7 +137,8 @@ def test_without_park_packs_nothing_changes(packs, geo):
     for point in [(0.75, -139.75), (0.97, -139.75), (2.25, -139.62)]:
         a, b = plain.lookup(*point), geo.lookup(*point)
         assert a.within == () and "within" not in a.sources
-        assert b.label == a.label and b.city == a.city
+        assert b.city == a.city
+        assert b.label == a.label or (b.within and b.within[0].tier <= 2)  # the park label rule
         assert [n for n in b.near if n.place.kind != PlaceKind.PARK] == list(a.near)
 
 

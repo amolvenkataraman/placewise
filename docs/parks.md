@@ -3,8 +3,9 @@
 `Result.within` lists every park whose outline contains the point, most significant first (lower
 tier first, then the smaller park); `Result.near` lists, after the notable cities, up to 3 parks the
 point is not inside, nearest first. Engine: `placewise.engine._within`; constants:
-`placewise.constants.parks`; distances: `NearSettings.park_tier1..3`. Label templates get `{within}`;
-the default label is unchanged.
+`placewise.constants.parks`; distances: `NearSettings.park_tier1..3`. Inside a tier 1 or 2 park
+(not a national forest or grassland) the default label names it: "Yosemite Valley, Yosemite
+National Park" (docs/naming.md, `label.parks`); label templates get `{within}`.
 
 | Tier | Meaning | Near | US | Canada | Elsewhere (points) |
 |---|---|---|---|---|---|
@@ -15,6 +16,13 @@ the default label is unchanged.
 
 Crosswalks: `packbuild/sources/parks/tiers.py`; anything unlisted is dropped (easements, private
 and NGO land, habitat designations, OECMs, military and tribal land, PAD-US land closed to the public).
+
+Names that only say what kind of land a parcel is ("Unknown Park", "Open Space", "Conservation
+Easement", "Natural Area": `placewise.constants.parks.GENERIC_NAMES`) are never a park's name. The
+build takes PAD-US's local name (`Loc_Nm`) instead when that is a real name, else leaves the parcel
+out (`tiers.place_name`; the managing agency is only a code such as `CITY`, so it can't stand in);
+CPCAD has none today but gets the same rule. Packs built before this still carry such rows: the
+engine never puts them in `within` or `near`, and search never returns them.
 
 ## Packs
 
