@@ -229,15 +229,21 @@ def test_archive_that_is_not_a_tar_xz(data_dir, release):
     assert_refused(data_dir, release, "archive")
 
 
-def test_index_schema_2_is_refused_before_downloading(data_dir, release):
-    release.add("world", "2026.11", schema=2)
+def test_pack_schema_3_is_refused_before_downloading(data_dir, release):
+    release.add("world", "2026.11", schema=3)
     (release.root / "world-2026.11.tar.xz").unlink()
-    assert_refused(data_dir, release, "schema 2", exc=UnsupportedSchemaError)
+    assert_refused(data_dir, release, "schema 3", exc=UnsupportedSchemaError)
 
 
-def test_pack_json_schema_2_is_refused(data_dir, release):
-    release.add("world", "2026.11", schema=1, entries=pack_entries("world", "2026.11", schema=2))
+def test_pack_json_schema_3_is_refused(data_dir, release):
+    release.add("world", "2026.11", schema=1, entries=pack_entries("world", "2026.11", schema=3))
     assert_refused(data_dir, release, "schema", exc=StoreError)
+
+
+@pytest.mark.parametrize("schema", [1, 2])
+def test_schema_1_and_2_packs_install(data_dir, release, schema):
+    release.add("world", "2026.11", schema=schema, entries=pack_entries("world", "2026.11", schema=schema))
+    assert make_store(data_dir, release).install("world").name == "world-2026.11"
 
 
 @pytest.mark.parametrize(("name", "version"), [("can", "2026.11"), ("world", "2026.10")])

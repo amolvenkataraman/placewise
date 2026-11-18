@@ -1,6 +1,8 @@
-"""Pack format, schema 1 (docs/pack-format.md): names, numbers and limits shared by writer and reader."""
+"""Pack format, schema 2 (docs/pack-format.md): names, numbers and limits shared by writer and reader."""
 
-SCHEMA = 1  # the pack format version this code reads and writes
+SCHEMA = 2  # the pack format version this code writes (2: grids cover only each layer's extent)
+READABLE_SCHEMAS = frozenset({1, 2})  # what this code reads; schema-1 packs have full-world grids
+INDEX_SCHEMA = 1  # index.json layout, unchanged by pack schema 2
 E7 = 10_000_000  # coordinates are stored as int32 degrees x 10^7 (~1 cm)
 COORDS = "e7"
 DEFAULT_CELL_DEG = 1.0  # polygon grid cell; ~64 800 cells covers the world in ~0.5 MB of offsets

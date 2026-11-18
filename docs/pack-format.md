@@ -1,4 +1,4 @@
-# Pack format, schema 1
+# Pack format, schema 2
 
 A **pack** is a versioned bundle of geographic data that placewise downloads on demand: `world`,
 `usa`, `can`, `ind`, later `usa-nature` and so on (a country pack is named by the country's
@@ -150,9 +150,12 @@ layer with no features has `rows` = `cols` = 0. Builders cut the grid to the nar
 rectangle (columns: leaving out the widest run of empty columns round the world); a world-wide
 layer keeps the whole world (`row0` = `col0` = 0).
 
-Packs written before grids were cut (2026-11) have no `row0` / `col0` and `rows` = R, `cols` =
-C; readers take `row0` = `col0` = 0 when they're absent, which is the same grid. A reader that
-ignores `row0` / `col0` misreads a cut grid, so they're required reading from now on.
+**Schema history.** Schema 2 (2026-11) introduced cut grids: `row0` / `col0` are required
+reading, so a schema-1 reader would misread a schema-2 pack and must refuse it (it does: it checks
+`pack.json`'s `schema`). Schema-1 packs have no `row0` / `col0` and `rows` = R, `cols` = C; current
+readers accept schemas 1 and 2 and take `row0` = `col0` = 0 when the fields are absent, which is
+the same grid. Writers produce schema 2. The index layout (`index.json` `schema`) is unchanged at 1,
+so older placewise versions can still read the index and report that a pack needs an upgrade.
 
 Features earlier in the layer win when several contain a point; builders order features so the
 most specific comes first when that matters.

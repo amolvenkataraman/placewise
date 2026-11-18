@@ -84,7 +84,7 @@ def prepare_release(pack_dirs, out_dir) -> ReleasePlan:
         if m["schema"] != consts.SCHEMA:
             raise ValueError(
                 f"{path}: pack {m['name']!r} has schema {m['schema']}; "
-                f"an index of schema {consts.SCHEMA} takes only schema-{consts.SCHEMA} packs"
+                f"a release takes only schema-{consts.SCHEMA} packs (rebuild it with this packbuild)"
             )
         expected = f"{m['name']}-{m['version']}"
         if path.name != expected:

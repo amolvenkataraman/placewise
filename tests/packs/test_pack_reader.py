@@ -165,9 +165,16 @@ def _rewrite_manifest(path, **changes):
 
 def test_unknown_schema_is_refused(tmp_path):
     path = write_pack(tmp_path, "test", "2026.11", [point_layer([1.0], [2.0])], created=CREATED)
-    _rewrite_manifest(path, schema=2)
-    with pytest.raises(PackFormatError, match="schema 2"):
+    _rewrite_manifest(path, schema=3)
+    with pytest.raises(PackFormatError, match="schema 3"):
         open_pack(path)
+
+
+def test_schema_1_packs_still_open(tmp_path):
+    # packs installed before schema 2 (full-world grids, no row0/col0) keep working
+    path = write_pack(tmp_path, "test", "2026.11", [point_layer([1.0], [2.0])], created=CREATED)
+    _rewrite_manifest(path, schema=1)
+    assert open_pack(path).name == "test"
 
 
 def test_not_a_pack(tmp_path):

@@ -53,9 +53,10 @@ def open_pack(path, verify=False):
     path = Path(path)
     manifest = _read_json(path / consts.PACK_JSON, consts.PACK_JSON)
     schema = manifest.get("schema")
-    if schema != consts.SCHEMA:
+    if schema not in consts.READABLE_SCHEMAS:
         raise PackFormatError(
-            f"{path}: pack schema {schema} is not supported; this placewise reads schema {consts.SCHEMA} "
+            f"{path}: pack schema {schema} is not supported; this placewise reads schemas "
+            f"{sorted(consts.READABLE_SCHEMAS)} "
             "(update placewise, or download a pack built for it)"
         )
     for key in ("name", "version", "layers", "files"):

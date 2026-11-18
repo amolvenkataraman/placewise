@@ -78,7 +78,8 @@ SEARCH_KIND_PACKS = {
 INDEX_PLAN_MAX_AGE_S = 7 * 24 * 3600
 
 INDEX_SCHEMA = 1  # index.json layout
-PACK_SCHEMA = 1  # pack.json / pack layout this code reads (docs/pack-format.md)
+PACK_SCHEMA = 2  # pack.json / pack layout this code writes (docs/pack-format.md)
+PACK_SCHEMAS = frozenset({1, 2})  # pack schemas this code reads and installs
 PACK_MANIFEST = "pack.json"
 
 # Pack names become directory names, so they are restricted to what's safe on every platform.

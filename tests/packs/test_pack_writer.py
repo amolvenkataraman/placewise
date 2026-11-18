@@ -23,7 +23,7 @@ def test_pack_json_lists_every_file_with_its_hash_and_size(tmp_path):
     pack = _write(tmp_path, point_layer([1.0, 2.0], [3.0, 4.0]), polygon_layer([box_feature(0, 0, 1, 1)]))
     assert pack == tmp_path / "test-2026.11"
     manifest = json.loads((pack / "pack.json").read_text())
-    assert manifest["schema"] == consts.SCHEMA == 1
+    assert manifest["schema"] == consts.SCHEMA == 2  # schema 2: grids cut to each layer's extent
     assert (manifest["name"], manifest["version"], manifest["created"]) == ("test", "2026.11", CREATED)
     assert manifest["layers"] == ["spots", "areas"]
     assert manifest["sources"] == ["synthetic"]

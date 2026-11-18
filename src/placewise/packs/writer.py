@@ -191,7 +191,7 @@ def write_index(out_dir, packs):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / consts.INDEX_JSON
-    _atomic_write_bytes(target, _json_bytes({"schema": consts.SCHEMA, "packs": entries}))
+    _atomic_write_bytes(target, _json_bytes({"schema": consts.INDEX_SCHEMA, "packs": entries}))
     return target
 
 

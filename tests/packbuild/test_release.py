@@ -126,8 +126,8 @@ def test_refuses_two_packs_with_one_name(tmp_path):
 def test_refuses_a_pack_of_another_schema(tmp_path, built):
     manifest = built[1] / "pack.json"
     doc = json.loads(manifest.read_text())
-    manifest.write_text(json.dumps({**doc, "schema": 2}))
-    with pytest.raises(ValueError, match=r"us.*schema 2"):
+    manifest.write_text(json.dumps({**doc, "schema": 1}))  # an old pack: releases take only schema 2
+    with pytest.raises(ValueError, match=r"us.*schema 1"):
         release.prepare_release(built, tmp_path / "release")
     assert not (tmp_path / "release" / "index.json").exists()
 

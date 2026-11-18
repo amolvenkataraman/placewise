@@ -41,7 +41,7 @@ def test_pack_info_hashes_the_archive(tmp_path):
     tar_path = archive(_build(tmp_path))
     info = pack_info(tar_path)
     assert isinstance(info, PackInfo)
-    assert (info.name, info.version, info.schema, info.sources) == ("test", "2026.11", 1, ("synthetic",))
+    assert (info.name, info.version, info.schema, info.sources) == ("test", "2026.11", 2, ("synthetic",))
     data = tar_path.read_bytes()
     assert info.sha256 == hashlib.sha256(data).hexdigest() and info.size_bytes == len(data)
 
@@ -56,7 +56,7 @@ def test_write_index(tmp_path):
     entry = index["packs"]["world"]
     assert entry == {
         "version": "2026.11",
-        "schema": 1,
+        "schema": 2,  # the pack's own schema; the index layout stays at 1
         "url": "world-2026.11.tar.xz",
         "sha256": infos[0].sha256,
         "size_bytes": infos[0].size_bytes,

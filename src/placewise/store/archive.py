@@ -130,10 +130,11 @@ def check_pack_dir(root, name, version, expected_from):
     if not isinstance(manifest, dict):
         return [f"{const.PACK_MANIFEST} is not a JSON object"]
     schema = manifest.get("schema")
-    if schema != const.PACK_SCHEMA:
+    if schema not in const.PACK_SCHEMAS:
         # a different schema may lay files out differently, so nothing else can be judged
         return [
-            f"{const.PACK_MANIFEST} has schema {schema!r}; this placewise reads schema {const.PACK_SCHEMA}"
+            f"{const.PACK_MANIFEST} has schema {schema!r}; "
+            f"this placewise reads schemas {sorted(const.PACK_SCHEMAS)}"
         ]
     problems = []
     said = (manifest.get("name"), manifest.get("version"))

@@ -47,10 +47,10 @@ class InstallMixin:
             raise StoreError(f"the index has no pack named {name!r} (available: {offered})")
         if version is not None and version != info.version:
             raise StoreError(f"the index offers {name} {info.version}, not {version}")
-        if info.schema != const.PACK_SCHEMA:
+        if info.schema not in const.PACK_SCHEMAS:
             raise UnsupportedSchemaError(
-                f"{name} {info.version} uses pack schema {info.schema}, but this placewise reads schema "
-                f"{const.PACK_SCHEMA}; upgrade placewise to use it"
+                f"{name} {info.version} uses pack schema {info.schema}, but this placewise reads schemas "
+                f"{sorted(const.PACK_SCHEMAS)}; upgrade placewise to use it"
             )
         coverage = index.coverage.get(name)
         for required in coverage.requires if coverage is not None else ():
