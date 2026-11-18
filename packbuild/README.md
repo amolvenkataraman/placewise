@@ -7,11 +7,12 @@ the wheel. Tests live in `tests/packbuild/` and never touch the network.
 uv run python -m packbuild.world --version 2026.11     # writes ~/.placewise/packbuild/out/world-2026.11/
 ```
 
-**Curated datasets** (country groups, regions, city aliases) live in the
+**Curated datasets** (country groups, regions, names and aliases, airports' cities) live in the
 [placewise-data](https://github.com/amolvenkataraman/placewise-data) repository's `datasets/`
 folder (CC BY 4.0). Clone it beside this repository (`../placewise-data`) or point
 `$PACKBUILD_DATASETS` at its `datasets/` folder; `packbuild/datasets.py` resolves the path. The
-generators (`python -m packbuild.country_groups`, `packbuild.regions`, `packbuild.cities`) write the
+generators (`python -m packbuild.country_groups`, `packbuild.regions`, `packbuild.cities` (cities and
+`datasets/names/aliases.json`)) write the
 offline copies the package ships into `src/placewise/constants/countries/`.
 
 Downloads are cached once in `~/.placewise/packbuild/` (`packbuild.fetch.DEFAULT_CACHE`; set
@@ -29,6 +30,25 @@ committed.
 | `airports` | point | OurAirports airports.csv (large, medium, scheduled small) | public domain |
 | `timezones` | polygon | `datasets/timezones/world.json` drawn with the Natural Earth units (see [Time zones](#time-zones)) | CC BY 4.0 + public domain |
 | `country_facts` | point | one row per country (`iso:XX`, at its capital, else Natural Earth's label point): GeoNames countryInfo, timeZones and capitals; CLDR currency, conventions and date patterns; Wikidata driving side (`packbuild.country_profiles`) | CC BY 4.0, Unicode-3.0, CC0 |
+
+**Names people type** (`packbuild.world_aliases`, for forward search's name index): `cities`,
+`admin1` and `countries` carry pipe-separated `aliases` (English names, exonyms, nicknames, short
+forms), `abbreviations` ("NYC", "Ont.", "U.S."), `former_names` ("Bombay", "Orissa", "Zaire") and,
+on cities, `airport_codes` ("YYZ|YTO"), at most 12 per feature and none equal to its own name. They
+come from placewise-data's `datasets/names/aliases.json` (curated: codes, short forms, nicknames,
+former names, and GeoNames names to suppress; it also generates
+`constants/countries/city_aliases.py`), India's former state and city names in
+`datasets/names/ind.json`, and GeoNames alternateNamesV2 (streamed from the 205 MB zip): English
+names that aren't nicknames, `abbr`, IATA codes attached to cities and English short names;
+historic names only for cities of 100,000+ people and only where a curated dataset lists them, and
+never a name another city of the same country has. `admin1` also gets `geonames`, Natural Earth's
+GeoNames id for the unit.
+
+**City served** (`packbuild.served`): `airports.served_city` is the `cities` id of the city an
+airport serves (YYZ -> Toronto, not Mississauga), from `datasets/airports/served.json` (curated, every
+large airport and the medium scheduled ones in India, the US and Canada; the build checks each id,
+name, country and that the city is within 100 km), else the nearby rule for any airport with an
+IATA code: of the cities of its country within 60 km, the highest population / (km + 10)².
 
 Attribution records (`placewise.model.Source`) are in `packbuild/sources/__init__.py`; building
 them checks each licence against `placewise.constants.licences`.
