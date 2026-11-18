@@ -1,7 +1,7 @@
 """Which layers of each pack the name index covers, and how (packbuild.names.LayerNames).
 
 Ranks land on one scale across packs, so the query engine can compare them: countries 0.85-1,
-first-level divisions ~0.75-0.85, a 3M city ~0.8, a 100k town ~0.55, a hamlet ~0.2, national
+first-level divisions ~0.5-0.85 (by population), a 3M city ~0.8, a 100k town ~0.55, a hamlet ~0.2, national
 parks ~0.8, metro regions ~0.75, postal codes 0.2, a pocket park ~0.1.
 """
 
@@ -15,6 +15,22 @@ _CITY = Rank(base=0.1, span=0.85, **_PEOPLE)
 _ALIASES = ("aliases",)
 _WORLD_ALIASES = ("aliases", "abbreviations")  # packbuild.world_aliases
 _FORMER = ("former_names",)
+# counties and census divisions by population: 1,000 people -> base, 3M -> base + span
+_COUNTY = Rank(base=0.45, span=0.25, column="population", lo=3, hi=6.5)
+_COMMUNITIES = (
+    "Community",
+    "Urban Community",
+    "Suburban Community",
+    "Neighbourhood",
+    "Administrative Sector",
+)
+_CGNDB = Rank(
+    base=0.15,
+    terms=(
+        Term("scale", 0.2, lo=5.2, hi=6.1),
+        Term("generic", 0.15, scale="values", values=dict.fromkeys(_COMMUNITIES, 1.0)),
+    ),
+)
 _REGION = Rank(base=0.72, terms=(Term("area_km2", 0.1, lo=3, hi=5),))
 _POSTAL = Rank(base=0.2, terms=(Term("population", 0.05, lo=2, hi=5),))
 _PARK = Rank(
@@ -38,7 +54,9 @@ WORLD = (
         aliases=("name_alt", *_WORLD_ALIASES),
         former=_FORMER,
         id_codes=("iso:",),
-        rank=Rank(base=0.75),
+        # by the people of its cities (packbuild.world.admin1_population): 100k -> base, 100M ->
+        # base + span, so a city outranks the same-named unit around it unless that is far bigger
+        rank=Rank(base=0.5, span=0.3, column="population", lo=5, hi=8),
     ),
     LayerNames(
         "cities",
@@ -67,7 +85,7 @@ _REGIONS = LayerNames("regions", "region", aliases=("short_name", "aliases"), ra
 
 USA = (
     LayerNames("states", "admin1", codes=("usps",), id_codes=("iso:",), rank=Rank(base=0.8)),
-    LayerNames("counties", "admin2", rank=Rank(base=0.5)),
+    LayerNames("counties", "admin2", rank=_COUNTY),
     LayerNames("places", "locality", rank=_CITY, point=("intpt_lat", "intpt_lon")),
     LayerNames("cbsa", "region", names=("name", "title"), codes=("code",), rank=Rank(base=0.55)),
     LayerNames("csa", "region", names=("name", "title"), codes=("code",), rank=Rank(base=0.55)),
@@ -85,7 +103,7 @@ CAN = (
         codes=("code", "CA-{code}"),
         rank=Rank(base=0.75, span=0.1, column="population", lo=4.5, hi=7.2),
     ),
-    LayerNames("cd", "admin2", rank=Rank(base=0.45, span=0.25, column="population", lo=3, hi=6.5)),
+    LayerNames("cd", "admin2", rank=_COUNTY),
     LayerNames("csd", "locality", rank=_CITY),
     LayerNames(
         "cma",
@@ -95,7 +113,11 @@ CAN = (
         rank=Rank(base=0.5, span=0.35, column="population", lo=4, hi=7),
     ),
     LayerNames("fsa", "postal_code", names=(), codes=("name",), rank=_POSTAL),
-    LayerNames("populated_places", "locality", rank=Rank(base=0.15)),
+    # by the map scale CGNDB shows each at (relevance at scale: 1:160,000 -> 0, 1:1.25M and up -> full)
+    # and its kind (a community or neighbourhood, not a locality: sparse maps show remote localities
+    # at small scales too), so Scarborough (a community inside Toronto at 1:1.2M) ranks like a town
+    # and a hamlet stays near the base; no city ranks above its census subdivision's population
+    LayerNames("populated_places", "locality", rank=_CGNDB),
     _REGIONS,
 )
 

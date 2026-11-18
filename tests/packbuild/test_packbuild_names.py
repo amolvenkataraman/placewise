@@ -182,3 +182,27 @@ def test_india_specs_index_the_lgd_layers():
     assert layers["states"].kind == "admin1" and layers["districts"].kind == "admin2"
     assert layers["cities"].kind == "locality" and layers["neighbourhoods"].kind == "sublocality"
     assert all(layers[k].skip == "india_view_only" for k in ("states", "districts", "cities"))
+
+
+def test_usa_counties_rank_by_population_below_cities_of_their_size():
+    layers = {spec.layer: spec for spec in name_specs.SPECS["usa"]}
+    people = {"population": np.array([10_000_000, 2_300_000, 900, -1])}
+    county = rank_of(layers["counties"].rank, people, 4).tolist()
+    assert county[0] > county[1] > county[2] == county[3]  # no population: the base
+    city = rank_of(layers["places"].rank, people, 4).tolist()
+    assert county[0] < city[0] and county[1] < city[1]
+
+
+def test_canada_populated_places_rank_by_the_map_scale_they_show_at_and_their_kind():
+    # CGNDB's relevance at scale: Scarborough (a community, once a city, inside Toronto) shows at
+    # 1:1.2M, so does a remote locality (sparse maps show small places); a hamlet at 1:250,000
+    layers = {spec.layer: spec for spec in name_specs.SPECS["can"]}
+    columns = {
+        "scale": np.array([1_200_000, 1_200_000, 250_000, -1]),
+        "generic": ["Community", "Locality", "Community", None],
+    }
+    rank = rank_of(layers["populated_places"].rank, columns, 4).tolist()
+    scarborough, remote, hamlet, unknown = rank
+    assert scarborough > 0.45 > remote > hamlet > unknown == layers["populated_places"].rank.base
+    # cities rank by their census subdivision's population, not by this
+    assert rank_of(layers["populated_places"].rank, {"scale": [30_000_000], "generic": ["City"]}, 1)[0] <= 0.5

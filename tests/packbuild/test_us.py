@@ -121,6 +121,7 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     places = sf.layer == pack.names.layers.index("places")
     assert pack["places"].contains(sf.lat[places][0], sf.lon[places][0], int(sf.row[places][0]))
     assert at("counties", *park)["name"] == "San Francisco County"
+    assert at("counties", *park)["population"] == 830235  # ACS 5-year
     assert at("csa", *park)["name"] == "San Jose-San Francisco-Oakland, CA CSA"
     assert at("cbsa", *park)["type"] == "metro"
     assert at("states", *park)["usps"] == "CA"
@@ -144,6 +145,10 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     assert at("cbsa", *park)["principal_cities"] == "census:0667000,census:0653000"
     assert at("places", 37.7456, -119.5936) is None  # Yosemite Valley: no incorporated place or CDP
     assert at("counties", 37.7456, -119.5936)["name"] == "Mariposa County"
+    assert at("counties", 37.7456, -119.5936)["population"] is None  # no ACS row in the fixture
+    clark = pack.names.exact("Clark County")
+    mariposa = pack.names.exact("Mariposa County")
+    assert clark.rank[0] > mariposa.rank[0]  # counties rank by population
 
     regions = pack["regions"]
     bay = at("regions", *park)

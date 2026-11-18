@@ -11,7 +11,8 @@ Downloads land once in ~/.placewise/packbuild/ (packbuild.fetch.DEFAULT_CACHE, $
 the pack is written to --out.
 
 Beside the boundaries, the naming rules (placewise.engine.naming.usa) read: every place's
-population (SUB-EST for incorporated places, ACS 5-year for CDPs), each CBSA's principal cities
+population (SUB-EST for incorporated places, ACS 5-year for CDPs; counties' ACS 5-year population
+ranks them in the name index), each CBSA's principal cities
 (OMB list 2, largest first) and each ZCTA's postal city (ZIP Code Business Patterns, then
 GeoNames), matched to the census place it names.
 """
@@ -63,7 +64,7 @@ def build_layers(cache_dir, refresh=False, regions=None):
     year = uscensus.population_year(population_csv)
     acs_path = get("acs_population")
     log.info("population estimates: July %d; ACS 5-year to %d", year, acs.vintage(acs_path))
-    estimates = acs.read_population(acs_path)
+    estimates = acs.read_population(acs_path, (acs.PLACE, acs.ZCTA, acs.COUNTY))
     population = merged_population(
         uscensus.read_population(population_csv),
         f"sub-est{year}",
@@ -77,7 +78,7 @@ def build_layers(cache_dir, refresh=False, regions=None):
     places = place_columns(places, population, principals)
     layers = [
         uscensus.states(shapefile("state")),
-        uscensus.counties(shapefile("county"), delineation),
+        county_columns(uscensus.counties(shapefile("county"), delineation), estimates[acs.COUNTY]),
         places,
         cbsa_columns(uscensus.cbsa(shapefile("cbsa"), delineation), places, principals),
         uscensus.csa(shapefile("csa"), delineation),
@@ -143,6 +144,13 @@ def place_columns(places, population, principals):
         "principal": [of.get(g, "") for g in geoids],
     }
     return with_columns(places, columns, {"population_source": "str", "principal": "str"})
+
+
+def county_columns(counties, population):
+    """counties + population (ACS 5-year, {GEOID: estimate}; null where it has none): the name
+    index ranks counties by it, so Clark County means the one in Nevada."""
+    columns = {"population": [population.get(g) for g in _geoids(counties)]}
+    return with_columns(counties, columns, {"population": "i8"}, {"population": POPULATION_NULL})
 
 
 def cbsa_columns(cbsa, places, principals):

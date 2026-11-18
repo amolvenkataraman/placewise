@@ -9,6 +9,7 @@ DAT = """\
 GEO_ID|B01003_E001|B01003_M001
 0100000US|334922499|-555555555
 0400000US32|3214363|-555555555
+0500000US32003|2329548|-555555555
 1600000US0620802|111647|3509
 1600000US3240000|660400|126
 1600000US3254600|185913|4513
@@ -34,6 +35,10 @@ def test_places_and_zctas_by_geoid(dat):
 
 def test_other_summary_levels_on_request(dat):
     assert acs.read_population(dat, (acs.COUSUB,)) == {acs.COUSUB: {"2500107000": 50101}}
+
+
+def test_counties_on_request(dat):
+    assert acs.read_population(dat, (acs.COUNTY,)) == {acs.COUNTY: {"32003": 2329548}}
 
 
 def test_vintage_is_the_last_year_in_the_file_name(dat):
