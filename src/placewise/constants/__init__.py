@@ -29,6 +29,7 @@ __all__ = [
     "plus_codes",
     "polylines",
     "privacy",
+    "search",
     "server",
     "speed",
     "store",

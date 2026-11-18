@@ -48,6 +48,23 @@ def test_outline_contains_and_area():
         Outline((((0, 0), (0, 1)),))  # a ring needs at least three corners
 
 
+def test_outline_of_several_parts_is_even_odd_over_all_rings():
+    # an island state as one outline: two parts, the second with a lake (a hole)
+    rings = (
+        ((0, 0), (0, 1), (1, 1), (1, 0)),
+        ((5, 5), (5, 8), (8, 8), (8, 5)),
+        ((6, 6), (6, 7), (7, 7), (7, 6)),
+    )
+    two = Outline(rings)
+    assert two.bbox == BBox(0, 0, 8, 8)
+    assert list(two.contains(np.array([0.5, 5.5, 6.5, 3.0]), np.array([0.5, 5.5, 6.5, 3.0]))) == [
+        True,
+        True,
+        False,
+        False,
+    ]
+
+
 def test_place_kind_is_coerced_and_required_fields_checked():
     park = Place("wikidata:Q180402", "Yosemite National Park", "park", tier=1)
     assert park.kind is PlaceKind.PARK
@@ -123,6 +140,11 @@ def test_disputed_relative_and_entity_shapes():
     assert Entity.from_dict(e.to_dict()) == e
     with pytest.raises(ValueError):
         Entity(e.place, point=e.point, bbox=e.bbox, radius_km=-1)
+    # the same place found in other data: listed, not repeated
+    point = Place("wikidata:Q180402", "Yosemite National Park", PlaceKind.PARK, point=Point(37.8, -119.5))
+    merged = Entity(e.place, point=e.point, bbox=e.bbox, radius_km=50.0, alternates=[point])
+    assert merged.alternates == (point,)
+    assert Entity.from_dict(merged.to_dict()) == merged
 
 
 def test_feature_contains_bbox_and_round_trip():
