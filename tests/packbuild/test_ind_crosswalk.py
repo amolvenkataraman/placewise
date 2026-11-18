@@ -168,3 +168,23 @@ def test_unlisted_areas_join_a_city_whose_pin_block_they_share_first():
     district = ["482", "483", "483", "497"]
     ulb, _ = cw.ulbs(pins, d, ["29"] * 4, [1.2] * 4, cw.adjacency(rings), district_of=district)
     assert ulb == ["900", "900", "900", "902"]
+
+
+def test_a_citys_own_pin_block_comes_before_a_neighbour_in_its_district():
+    # Kochi (6820xx, listed for one PIN code) and Aluva (6831xx) are both in Ernakulam district;
+    # Kochi's unlisted areas are its own block, so they don't join Aluva
+    d = directory(ulbs={"902": Unit("902", "Aluva", "29", "IN-KA")})
+    d.pin_ulbs["682001"] = {"900"}
+    d.pin_ulbs["683101"] = {"902"}
+    pins = ["682001", "682011", "682031", "683101"]
+    rings = [cell(0, 0), cell(1, 0), cell(2, 0), cell(3, 0)]
+    ulb, _ = cw.ulbs(pins, d, ["29"] * 4, [1.2] * 4, cw.adjacency(rings), district_of=["573"] * 4)
+    assert ulb == ["900", "900", "900", "902"]
+
+
+def test_unlisted_areas_join_no_city_outside_its_district_and_block():
+    d = directory()
+    d.pin_ulbs["560001"] = {"900"}
+    pins, rings = ["560001", "400703"], [cell(0, 0), cell(1, 0)]
+    ulb, _ = cw.ulbs(pins, d, ["29"] * 2, [1.2] * 2, cw.adjacency(rings), district_of=["572", "497"])
+    assert ulb == ["900", ""]

@@ -132,6 +132,32 @@ def test_a_union_covers_exactly_its_members(pack, rid, member_layer):
     assert _area(pack, rid) == pytest.approx(total, rel=0.002)  # Canada: simplified once, not per member
 
 
+def _require_lgd_regions():
+    [path] = require_packs("ind")
+    if "states" not in open_pack(path):
+        pytest.skip(f"{path.name} predates the LGD layers and the MMR's 2019 extension: rebuild it")
+
+
+@pytest.mark.parametrize(
+    ("point", "inside"),
+    [
+        ((19.4559, 72.8114), True),  # Virar (Vasai taluka, 2019 extension)
+        ((18.9894, 73.1175), True),  # Panvel (Raigad)
+        ((18.6414, 72.8722), True),  # Alibag (Raigad, 2019 extension)
+        ((19.9975, 73.7898), False),  # Nashik
+    ],
+)
+def test_the_mmr_since_its_2019_extension(point, inside):
+    _require_lgd_regions()
+    assert ("region:mumbai-metro-region" in regions_at("ind", *point)) is inside
+
+
+def test_the_mmr_is_drawn_at_taluka_level():
+    # MMRDA's 6,355 km2 since 2019; whole talukas (scheduled areas included) make it bigger
+    _require_lgd_regions()
+    assert 6_000 < _area("ind", "region:mumbai-metro-region") < 7_800
+
+
 def test_the_ncr_has_about_the_area_its_planning_board_gives():
     # about 55,083 km² (NCRPB); PIN areas approximate the districts
     assert _area("ind", "region:delhi-ncr") == pytest.approx(55_083, rel=0.03)

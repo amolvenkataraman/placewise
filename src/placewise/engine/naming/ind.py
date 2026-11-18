@@ -132,7 +132,7 @@ class Ind:
         """The nearest neighbourhood of the point's city, else the PIN area's office name."""
         found = np.full(len(lat), -1, dtype=np.int64)
         if self.hoods is not None and (city >= 0).any():
-            found = self._neighbourhoods(out, lat, lon, city)
+            found = self._neighbourhoods(out, lat, lon, city, pin)
             has = np.flatnonzero(found >= 0)
             out.put("sublocality", has, self.hoods, found[has], lookup_const.NEAREST)
         for i in np.flatnonzero((pin >= 0) & (found < 0)).tolist():
@@ -144,22 +144,30 @@ class Ind:
                 out.sublocality[i] = area
                 out.sources[i]["sublocality"] = f"{self.pin}:{const.NAME}"
 
-    def _neighbourhoods(self, out, lat, lon, city):
-        """Per point, the nearest neighbourhood row within IND_NEIGHBOURHOOD_KM whose city is the
-        point's own and whose name isn't the locality's; -1 for none."""
+    def _neighbourhoods(self, out, lat, lon, city, pin):
+        """Per point, the nearest neighbourhood row within IND_NEIGHBOURHOOD_KM of the point's own
+        city, preferring one of its own PIN area (a city office is often named after a landmark
+        farther off: "Elephanta Caves S.O" sits in Mumbai's Fort), whose name isn't the
+        locality's; -1 for none."""
         layer = self.layers.layer(self.hoods)
         k = min(const.IND_NEIGHBOURHOOD_CANDIDATES, max(layer.count, 1))
         rows, _ = layer.nearest(lat, lon, k=k, max_km=const.IND_NEIGHBOURHOOD_KM)
         rows = np.asarray(rows).reshape(len(lat), -1)
         city_ids = self.layers.column(self.city, "id")
         hood_city, names = self.layers.column(self.hoods, "city"), self.layers.column(self.hoods, "name")
+        hood_pin = self.layers.column(self.hoods, "pincode") or [""] * layer.count
+        pin_codes = self.layers.column(self.pin, "pincode") or [""] * self.layers.layer(self.pin).count
         found = np.full(len(lat), -1, dtype=np.int64)
         for i in np.flatnonzero(city >= 0).tolist():
             own = city_ids[city[i]].partition("#")[0]
-            for r in rows[i].tolist():
-                if r >= 0 and hood_city[r] == own and not rules.same_name(names[r], out.locality[i].name):
-                    found[i] = r
-                    break
+            code = pin_codes[pin[i]] if pin[i] >= 0 else None
+            usable = [
+                r for r in rows[i].tolist()
+                if r >= 0 and hood_city[r] == own and not rules.same_name(names[r], out.locality[i].name)
+            ]  # fmt: skip
+            same_pin = [r for r in usable if hood_pin[r] == code]
+            if same_pin or usable:
+                found[i] = (same_pin or usable)[0]
         return found
 
     def _area(self, row):

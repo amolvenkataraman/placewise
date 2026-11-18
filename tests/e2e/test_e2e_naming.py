@@ -130,7 +130,7 @@ def test_rouge_park_is_in_toronto(geo):
 def test_gurugram_is_in_haryana(geo):
     r = geo.lookup(28.495, 77.089)
     assert (r.admin1.id, r.city.name, r.locality.name) == ("iso:IN-HR", "Gurugram", "Gurugram")
-    assert r.sources["admin1"] == "ind/pincodes:state"
+    assert r.sources["admin1"] == "ind/states:polygon" and r.admin2.name == "Gurugram"
     assert [p.name for p in r.regions] == ["Delhi NCR (core)", "National Capital Region (India)"]
     assert r.label == "Gurugram, Haryana, India"
 
@@ -139,6 +139,7 @@ def test_whitefield_bengaluru(geo):
     r = geo.lookup(12.9958, 77.7608)
     assert (r.sublocality.name, r.city.name, r.admin1.name) == ("Whitefield", "Bengaluru", "Karnataka")
     assert r.postal.name == "560066"
+    assert r.admin2.name == "Bengaluru Urban" and r.sources["city"] == "ind/cities:polygon"
     assert [p.name for p in r.regions] == ["Bengaluru", "Bengaluru Metropolitan Region"]
 
 
@@ -183,3 +184,17 @@ def test_lookup_many_agrees_with_lookup(geo):
     ]
     many = geo.lookup_many([p[0] for p in points], [p[1] for p in points])
     assert [r.to_dict() for r in many] == [geo.lookup(*p).to_dict() for p in points]
+
+
+@pytest.mark.parametrize(
+    ("point", "sublocality", "city"),
+    [
+        ((12.9352, 77.6245), "Koramangala VI Bk", "Bengaluru"),  # post-office neighbourhoods
+        ((28.6315, 77.2167), "Connaught Place", "New Delhi"),
+        ((13.0339, 80.2696), "Mylapore", "Chennai"),
+    ],
+)
+def test_india_neighbourhoods(geo, point, sublocality, city):
+    r = geo.lookup(*point)
+    assert (r.sublocality.name, r.city.name) == (sublocality, city)
+    assert r.sources["sublocality"] == "ind/neighbourhoods:nearest"

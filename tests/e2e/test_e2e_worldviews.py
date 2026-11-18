@@ -58,6 +58,9 @@ def test_india_view_with_the_india_pack(name, point, admin1, area):
     r = _geo("world", "ind").lookup(*point, worldview=("IN", "de_facto"))
     assert r.cc == "IN" and r.admin1.id == admin1
     assert r.postal is not None and r.postal.id.startswith("pin:")  # the PIN layer agrees
+    if "states" in open_pack(require_packs("ind")[0]):  # the LGD layers agree too
+        assert r.sources["admin1"] == "ind/states:polygon"
+        assert r.admin2 is not None and r.admin2.id.startswith("lgd:district:")
     assert r.label.endswith(f"{r.admin1.name}, India")
 
 

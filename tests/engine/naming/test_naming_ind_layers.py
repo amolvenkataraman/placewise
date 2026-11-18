@@ -141,12 +141,24 @@ def _india(out):
     hoods = [
         ("indiapost:560066:Whitefield S.O", "Whitefield", "lgd:ulb:276600", 10.755, -147.225),
         ("indiapost:560034:Koramangala S.O", "Koramangala", "lgd:ulb:276600", 10.85, -147.3),
-        ("indiapost:562114:Kolathur S.O", "Kolathur", "lgd:ulb:999", 10.762, -147.232),
-    ]  # another city's
+        ("indiapost:562114:Kolathur S.O", "Kolathur", "lgd:ulb:999", 10.762, -147.232),  # another city's
+        (
+            "indiapost:560067:Tajmahal S.O",
+            "Tajmahal",
+            "lgd:ulb:276600",
+            10.759,
+            -147.229,
+        ),  # another PIN area's
+    ]
     neighbourhoods = LayerData(
         "neighbourhoods",
         "point",
-        {"id": [h[0] for h in hoods], "name": [h[1] for h in hoods], "city": [h[2] for h in hoods]},
+        {
+            "id": [h[0] for h in hoods],
+            "name": [h[1] for h in hoods],
+            "city": [h[2] for h in hoods],
+            "pincode": [h[0].split(":")[1] for h in hoods],
+        },
         ("synthetic",),
         lat=np.array([h[3] for h in hoods]),
         lon=np.array([h[4] for h in hoods]),
@@ -175,7 +187,8 @@ def test_a_point_in_a_city(geo):
         "ind/cities:polygon",
     )
     assert r.locality.id == "lgd:ulb:276600"
-    # the nearest neighbourhood of its own city (Kolathur is nearer but another city's)
+    # the nearest neighbourhood of its own city and PIN area (Kolathur is nearer but another
+    # city's, Tajmahal nearer but another PIN area's)
     assert (r.sublocality.name, r.sources["sublocality"]) == ("Whitefield", "ind/neighbourhoods:nearest")
     assert r.postal.name == "560066"
 

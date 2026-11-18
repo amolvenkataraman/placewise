@@ -16,7 +16,8 @@ holds most of the area by a proxy, and the derived layers are postal approximati
      some rows give one office's PIN code for every ULB of a state), in the same state; several
      ULBs: the one with most member areas, then the higher type (corporation first);
   3. "neighbours": it isn't rural, has no ULB and shares the longest border with a member of
-     a ULB of its state, repeated until nothing changes (Gurugram's unlisted PIN codes). Rural:
+     a ULB of its state whose listed areas share its PIN block (then its district), repeated
+     until nothing changes (Gurugram's unlisted PIN codes). Rural:
      LGD lists villages for it and India Post runs a branch office (B.O) there; branch offices
      are rural, while LGD lists revenue villages in city PIN areas too (Mumbai Suburban,
      Ahmedabad);
@@ -180,9 +181,10 @@ def ulbs(
     `seed_states` {ULB code: LGD state code} for seeded cities LGD no longer lists (BBMP) and
     `branch_offices` {pin: number of India Post branch offices} (None: every PIN code with
     villages counts as rural) and `district_of[i]` the PIN area's LGD district: unlisted areas
-    join a city with listed areas in their own district or PIN block first (Mulund, 400080 in
-    Mumbai Suburban, joins Mumbai, listed for 4000xx, not neighbouring Thane), then any of
-    their state."""
+    join a neighbouring city with listed areas in their own PIN block first (Mulund, 400080 in
+    Mumbai Suburban, joins Mumbai, listed for 4000xx, not neighbouring Thane; Kochi's 6820xx
+    areas don't join Aluva, 6831xx, of the same district), then one with listed areas in their
+    district; never a city with neither."""
     n = len(pins)
     ulb_state = {code: u.state for code, u in directory.ulbs.items()} | dict(seed_states or {})
     urban = np.asarray(area_km2, dtype=np.float64) <= URBAN_PIN_KM2
@@ -208,14 +210,17 @@ def ulbs(
     rural = np.array([bool(directory.pin_villages.get(p)) and (bo is None or bo.get(p, 0) > 0) for p in pins])
     nb = _neighbours(adj, n)
     same_state = lambda i, u: ulb_state.get(u) == state_of[i]  # noqa: E731
+    blocks, districts_of = defaultdict(set), defaultdict(set)  # from each city's listed areas
+    for i, u in enumerate(ulb):
+        if u:
+            blocks[u].add(pins[i][:PIN_BLOCK])
+            if district_of is not None:
+                districts_of[u].add(district_of[i])
+    in_block = lambda i, u: same_state(i, u) and pins[i][:PIN_BLOCK] in blocks[u]  # noqa: E731
+    _spread(ulb, how, nb, urban & ~rural, "neighbours", same=in_block)
     if district_of is not None:
-        home = defaultdict(set)  # each city's districts and PIN blocks, from its listed areas
-        for i, u in enumerate(ulb):
-            if u:
-                home[u] |= {district_of[i], pins[i][:PIN_BLOCK]}
-        at_home = lambda i, u: same_state(i, u) and bool(home[u] & {district_of[i], pins[i][:PIN_BLOCK]})  # noqa: E731
-        _spread(ulb, how, nb, urban & ~rural, "neighbours", same=at_home)
-    _spread(ulb, how, nb, urban & ~rural, "neighbours", same=same_state)
+        in_district = lambda i, u: same_state(i, u) and district_of[i] in districts_of[u]  # noqa: E731
+        _spread(ulb, how, nb, urban & ~rural, "neighbours", same=in_district)
     if perimeter is not None:
         _enclosed(ulb, how, nb, urban & rural, perimeter, same_state)
     return ulb, how

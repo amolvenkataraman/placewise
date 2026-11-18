@@ -56,6 +56,7 @@ def require_packs(*names):
 NAMING_DATA = {
     "usa": [("zcta", "postal_place"), ("cbsa", "principal_cities")],
     "can": [("populated_places", None)],
+    "ind": [("states", None), ("districts", None), ("cities", None), ("neighbourhoods", None)],
 }
 
 
