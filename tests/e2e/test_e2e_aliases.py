@@ -25,7 +25,7 @@ def _row(layer, ident):
 
 
 def _names(row, column):
-    return set(filter(None, row[column].split("|")))
+    return set(filter(None, (row[column] or "").split("|")))
 
 
 @pytest.mark.parametrize(
@@ -54,7 +54,7 @@ def test_suppressed_and_noisy_names_stay_out():
 
 
 def test_admin1_and_country_aliases():
-    assert "Orissa" in _names(_row("admin1", "iso:IN-OD"), "former_names")
+    assert "Orissa" in _names(_row("admin1", "iso:IN-OR"), "former_names")  # Natural Earth: IN-OR
     assert "Ont." in _names(_row("admin1", "iso:CA-ON"), "abbreviations")
     assert {"UK", "Britain"} <= _names(_row("countries", "iso:GB"), "abbreviations") | _names(
         _row("countries", "iso:GB"), "aliases"
