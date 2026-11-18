@@ -9,6 +9,7 @@ import re
 import unicodedata
 
 from placewise.constants.parks import LOCAL, NATIONAL, REGIONAL, STATE
+from placewise.engine._within import generic_name  # the name rule the engine shares
 
 # NPS UNIT_TYPE (plural, as the service has it) -> (tier, designation). Flagship types are
 # national; the rest (historic sites, memorials, battlefields) are small sites a person names only
@@ -154,6 +155,16 @@ def usable_name(name):
     owner ("City of Newport")."""
     name = (name or "").strip()
     return not (name.lower() in _PLACEHOLDER or _GENERATED.search(name) or _OWNER_ONLY.match(name))
+
+
+def place_name(name, *fallbacks):
+    """The first of a name and its fallbacks (a parcel's local name) that labels a place: usable
+    and not generic ("Open Space", placewise.constants.parks.GENERIC_NAMES); "" when none does."""
+    for candidate in (name, *fallbacks):
+        candidate = " ".join((candidate or "").split())
+        if usable_name(candidate) and not generic_name(candidate):
+            return candidate
+    return ""
 
 
 def cpcad_name(name):

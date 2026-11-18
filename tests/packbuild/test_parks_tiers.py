@@ -39,6 +39,17 @@ def test_usable_names(name, usable):
     assert tiers.usable_name(name) is usable
 
 
+@pytest.mark.parametrize(
+    ("name", "generic"),
+    [("Open Space", True), ("open  SPACE", True), ("Unknown Park", True), ("Park", True),
+     ("Conservation Easement", True), ("Natural Area", True), ("Municipal Open Space", True),
+     ("Heron Ridge Open Space", False), ("Central Park", False), ("City Park", False),
+     ("Yosemite National Park", False), ("", False)],
+)  # fmt: skip
+def test_generic_names(name, generic):
+    assert tiers.generic_name(name) is generic
+
+
 def test_cpcad_names_lose_their_suffixes():
     assert tiers.cpcad_name("Banff National Park Of Canada") == (
         "Banff National Park", "Banff National Park of Canada"

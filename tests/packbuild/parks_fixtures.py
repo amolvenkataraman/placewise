@@ -53,9 +53,9 @@ def nps_pages(folder):
 
 
 def padus_fee_pages(folder):
-    def parcel(oid, name, des_tp, box, access="OA", manager="CITY", state="XX"):
+    def parcel(oid, name, des_tp, box, access="OA", manager="CITY", state="XX", local=""):
         attrs = {"OBJECTID": oid, "Unit_Nm": name, "Des_Tp": des_tp, "Pub_Access": access, "Mang_Name": manager,  # noqa: E501
-                 "State_Nm": state}  # fmt: skip
+                 "State_Nm": state, "Loc_Nm": local}  # fmt: skip
         return attrs, [mercator_box(*box)]
 
     return write_pages(folder, [
@@ -68,6 +68,11 @@ def padus_fee_pages(folder):
         parcel(7, "Private Woods", "PCON", (0.34, -139.30, 0.35, -139.29)),
         parcel(8, "Agency Monument", "NM", (0.36, -139.30, 0.37, -139.29), manager="NPS"),
         parcel(9, "Mesa Monument", "NM", (0.38, -139.30, 0.39, -139.29), manager="BLM"),
+        # generic names: the parcel's local name when it has a real one, else nothing
+        parcel(10, "Open Space", "LP", (0.40, -139.30, 0.41, -139.29), local="Heron Ridge Open Space"),
+        parcel(11, "Unknown Park", "LP", (0.42, -139.30, 0.43, -139.29), local="Unknown Park"),
+        parcel(12, "Open  space", "LCA", (0.44, -139.30, 0.45, -139.29)),
+        parcel(13, "Unknown", "LP", (0.46, -139.30, 0.47, -139.29), local="Willow Bend Park"),
     ])  # fmt: skip
 
 
@@ -94,6 +99,7 @@ def cpcad_pages(folder):
         zone(500, 500, "Fen Land Trust Area", "Conservation Area", (45.7, -80.0, 45.8, -79.9), owner=8, gov=8),  # noqa: E501
         zone(600, 600, "Delisted Park", "Provincial Park", (45.8, -80.0, 45.9, -79.9), owner=2, gov=2, status=0),  # noqa: E501
         zone(700, 700, "Shore OECM", "National Park", (45.9, -80.0, 46.0, -79.9), pa=2),
+        zone(800, 800, "Natural Area", "Municipal Park", (46.0, -80.0, 46.1, -79.9), owner=3, gov=3),
     ])  # fmt: skip
 
 

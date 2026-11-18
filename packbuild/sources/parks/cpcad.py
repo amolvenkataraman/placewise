@@ -72,7 +72,7 @@ def parks(folder):
         head = next((a for a, _ in members if a.get("ZONE_ID") == parent), None)
         head = head or max(members, key=lambda m: m[0].get("O_AREA_HA") or 0)[0]
         name, official = tiers.cpcad_name(head.get("NAME_E"))
-        if not tiers.usable_name(name):
+        if not tiers.place_name(name):  # a placeholder, an owner or a kind of land: not a name
             continue
         tier, designation = min((tiers.CPCAD_TYPES[a["TYPE_E"]], a["TYPE_E"]) for a, _ in members)
         designation = _designation(designation)
