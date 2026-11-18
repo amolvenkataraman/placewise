@@ -11,6 +11,7 @@ from placewise.constants import store as const
 from placewise.model import PackInfo
 
 from . import net
+from .coverage import from_entry
 from .errors import DownloadError, OfflineError, StoreError
 from .paths import check_name, check_version
 
@@ -20,6 +21,7 @@ class _Index:
     packs: dict = field(default_factory=dict)  # name -> PackInfo
     urls: dict = field(default_factory=dict)  # name -> absolute archive URL
     source: str = ""  # where the index came from
+    coverage: dict = field(default_factory=dict)  # name -> Coverage
 
 
 class IndexMixin:
@@ -28,7 +30,7 @@ class IndexMixin:
     def fetch_index(self) -> dict[str, PackInfo]:
         """Download index.json from index_url, then each mirror in turn, and cache it. Offline, the
         cache is the only source."""
-        if self.settings.offline:
+        if self.settings.locked:
             self._index = self._cached_index()
             return dict(self._index.packs)
         failures = []
@@ -53,6 +55,10 @@ class IndexMixin:
         """The packs the index offers, by name."""
         return dict(self._get_index().packs)
 
+    def coverage(self) -> dict:
+        """What each pack the index offers covers (placewise.store.coverage.Coverage), by name."""
+        return dict(self._get_index().coverage)
+
     def _get_index(self):
         if self._index is None:
             self.fetch_index()
@@ -62,7 +68,7 @@ class IndexMixin:
         path = self.layout.index
         if not path.is_file():
             raise OfflineError(
-                f"offline mode is on and there's no cached pack index at {path}; "
+                f"data mode is locked (offline) and there's no cached pack index at {path}; "
                 "fetch it once while online (placewise data list)"
             )
         try:
@@ -76,7 +82,12 @@ class IndexMixin:
             "schema": const.INDEX_SCHEMA,
             "source": index.source,
             "packs": {
-                name: {**info.to_dict(), "sources": list(info.sources), "url": index.urls[name]}
+                name: {
+                    **info.to_dict(),
+                    "sources": list(info.sources),
+                    "url": index.urls[name],
+                    **index.coverage[name].to_entry(),
+                }
                 for name, info in index.packs.items()
             },
         }
@@ -100,7 +111,7 @@ def parse_index(data, source):
     entries = doc.get("packs")
     if not isinstance(entries, dict):
         raise StoreError("index has no packs table")
-    packs, urls = {}, {}
+    packs, urls, coverage = {}, {}, {}
     for name, entry in entries.items():
         try:
             check_name(name)
@@ -119,11 +130,12 @@ def parse_index(data, source):
                 size_bytes=_field(entry, "size_bytes", int),
                 sources=tuple(sources),
             )
+            coverage[name] = from_entry(name, entry)
         except ValueError as e:
             raise StoreError(f"index entry {name!r} is invalid: {e}") from None
         packs[name] = info
         urls[name] = net.resolve(source, url)
-    return _Index(packs, urls, source)
+    return _Index(packs, urls, source, coverage)
 
 
 def _field(entry, key, kind):

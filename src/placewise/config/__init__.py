@@ -5,6 +5,7 @@ shipped defaults. See `load_settings`, and the loader module for the full preced
 from .errors import ConfigError
 from .loader import config_dir, explain_settings, find_config, load_settings
 from .worldview import WorldviewLockedError, effective_worldview
+from .write import set_setting, user_config_path
 
 __all__ = [
     "ConfigError",
@@ -14,4 +15,6 @@ __all__ = [
     "explain_settings",
     "find_config",
     "load_settings",
+    "set_setting",
+    "user_config_path",
 ]

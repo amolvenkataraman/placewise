@@ -61,3 +61,11 @@ def test_unknown_env_and_kwargs_are_errors():
 
 def test_aliases_carry_the_prefix_from_env_filters_on():
     assert all(name.startswith(const.ENV_PREFIX) for name in const.ENV_ALIASES)
+
+
+def test_data_mode_and_auto_packs_come_from_the_environment():
+    env = {"PLACEWISE_DATA_MODE": "manual", "PLACEWISE_DATA_AUTO_PACKS": "country, parks"}
+    s = load_settings(path=False, env=env)
+    assert s.data.mode == "manual" and s.data.auto_packs == ("country", "parks")
+    with pytest.raises(ConfigError, match="PLACEWISE_DATA_MODE"):
+        load_settings(path=False, env={"PLACEWISE_DATA_MODE": "sometimes"})

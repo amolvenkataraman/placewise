@@ -19,19 +19,16 @@ in a batch is looked up once, and its Result (frozen) is shared by every positio
 """
 
 import inspect
+import threading
 
 import numpy as np
 
 from placewise.config import effective_worldview
 from placewise.constants import lookup as const
-from placewise.constants import naming as naming_const
-from placewise.constants import notable as notable_const
-from placewise.constants import parks as parks_const
-from placewise.constants import water as water_const
 from placewise.model import CityRule, PlaceKind, Settings
 from placewise.packs import Pack, once, open_pack
 
-from . import _nearby, _results
+from . import _nearby, _ondemand, _results
 from ._admin import Admin
 from ._cities import Cities
 from ._layers import Layers
@@ -48,27 +45,41 @@ class Geocoder:
     Country packs (us, ca, in) name the points in their country (placewise.engine.naming).
 
     packs: opened Pack objects or pack directories; default: the "world" pack from the store
-    (downloaded on first use unless settings.data.offline) and the country packs installed beside
-    it. overrides: any object with `apply(result, lat, lon) -> Result`, applied last to every
-    answer."""
+    (downloaded on first use unless the data mode is locked) and the country packs installed
+    beside it; in auto mode (settings.data.mode) the packs a batch or a search needs are fetched
+    and attached before it runs (placewise.engine._ondemand). overrides: any object with
+    `apply(result, lat, lon) -> Result`, applied last to every answer."""
 
     def __init__(self, packs=None, settings=None, store=None, overrides=None):
         self.settings = settings or Settings()
+        self._store = None  # the store packs come from on demand; None for packs given explicitly
+        self._attach_lock = threading.Lock()
         if packs is None:
             if store is None:
                 from placewise.store import Store
 
                 store = Store(settings=self.settings.data)
             packs = [store.ensure(const.DEFAULT_PACK), *_installed_country_packs(store)]
-        self.packs = [p if isinstance(p, Pack) else open_pack(p) for p in packs]
-        if not self.packs:
+            if callable(getattr(store, "fetch_for", None)):
+                self._store = store
+        packs = [p if isinstance(p, Pack) else open_pack(p) for p in packs]
+        if not packs:
             raise ValueError("a Geocoder needs at least one pack")
         self.overrides = overrides
         # placewise.overrides' engine takes relabel=; a plain `apply(result, lat, lon)` hook works too
         self._overrides_relabel = overrides is not None and _accepts(overrides.apply, "relabel")
-        self.layers = Layers(self.packs)
+        self._use(packs)
+
+    def _use(self, packs):
+        """Read `packs`: the layers, admin and every index built on first use start afresh (what
+        attaching a pack fetched on demand needs)."""
+        self.packs = packs
+        self.layers = Layers(packs)
         self.admin = Admin(self.layers)
-        self.data_version = "+".join(f"{p.name}-{p.version}" for p in self.packs)
+        self.data_version = "+".join(f"{p.name}-{p.version}" for p in packs)
+        for name, attr in vars(type(self)).items():
+            if isinstance(attr, once):
+                self.__dict__.pop(name, None)
 
     def __repr__(self):
         return f"<Geocoder {self.data_version}>"
@@ -114,6 +125,7 @@ class Geocoder:
 
     def find(self, text, **options):
         """Places named `text`, best first (placewise.search.find has the options)."""
+        _ondemand.before_search(self, text, options)
         return self.search.find(text, **options)
 
     def get(self, ident, **options):
@@ -127,6 +139,7 @@ class Geocoder:
     def lookup_many(self, lats, lons, *, worldview=None, near=True):
         """Results for many points, one per point, in order. Vectorised: much faster per point.
         Exactly repeated points are looked up once and share one Result."""
+        _ondemand.before_lookup(self, lats, lons, worldview)
         return self._lookup(lats, lons, worldview, near, everything=True)
 
     def _lookup_places(self, lats, lons, *, worldview=None):
@@ -250,7 +263,7 @@ def _installed_country_packs(store):
     if installed is None:
         return []
     names, found = installed(), []
-    for name in (*naming_const.COUNTRY_PACKS, water_const.PACK, *parks_const.PACKS, notable_const.PACK):
+    for name in _ondemand.OPTIONAL_PACKS:
         if name in names:
             try:
                 found.append(store.current(name))

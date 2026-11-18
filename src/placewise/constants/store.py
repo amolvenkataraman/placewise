@@ -18,6 +18,65 @@ OVERRIDES_FILE = "overrides.toml"
 LOCK_FILE = ".lock"
 TEMP_PREFIX = ".tmp-"  # dot-prefixed so pack listing never mistakes a half-built pack for a real one
 
+# Data modes (DataSettings.mode): how packs beyond the world pack arrive.
+MODE_AUTO = "auto"  # fetched when a lookup or search needs them (kinds in data.auto_packs)
+MODE_MANUAL = "manual"  # only `placewise data install`; the world pack still installs on first use
+MODE_LOCKED = "locked"  # never download anything, not even the index (data.offline = true)
+MODES = (MODE_AUTO, MODE_MANUAL, MODE_LOCKED)
+
+# Pack kinds (index.json "kind", docs/pack-format.md): what a pack adds to the answers.
+KIND_BASE = "base"  # the world pack: countries, admin1, cities, airports, time zones
+KIND_COUNTRY = "country"  # one country in depth: municipality, county, metro area, postal code
+KIND_PARKS = "parks"
+KIND_WATER = "water"
+KIND_NOTABLE = "notable"
+KIND_POSTAL = "postal"  # postal areas split out of a country pack (it requires that pack)
+KIND_OTHER = "other"
+PACK_KINDS = (KIND_BASE, KIND_COUNTRY, KIND_PARKS, KIND_WATER, KIND_NOTABLE, KIND_POSTAL, KIND_OTHER)
+AUTO_KINDS = (KIND_COUNTRY, KIND_PARKS, KIND_WATER, KIND_NOTABLE, KIND_POSTAL)  # data.auto_packs choices
+COVERS_WORLD = "*"  # a pack's `covers` for world-wide data
+# A pack whose index entry and pack.json don't name its kind: the name after "<country>-" or
+# "world-" says it ("usa-parks", "usa-parks-local", "world-water", "usa-zip"), else its layers do.
+SUFFIX_KINDS = {
+    "parks": KIND_PARKS,
+    "water": KIND_WATER,
+    "notable": KIND_NOTABLE,
+    "zip": KIND_POSTAL,
+    "postal": KIND_POSTAL,
+    "postcodes": KIND_POSTAL,
+}
+LAYER_KINDS = {
+    "parks": KIND_PARKS,  # a prefix: parks_national, parks_state ...
+    "park_points": KIND_PARKS,
+    "marine": KIND_WATER,
+    "lakes": KIND_WATER,
+    "rivers": KIND_WATER,
+    "notable": KIND_NOTABLE,
+    "zcta": KIND_POSTAL,
+    "postal": KIND_POSTAL,
+}
+# What a search's kinds= asks of the packs (PlaceKind value -> pack kind): a search for parks in
+# Canada fetches can-parks in auto mode even when parks aren't in data.auto_packs.
+SEARCH_KIND_PACKS = {
+    "admin2": KIND_COUNTRY,
+    "locality": KIND_COUNTRY,
+    "sublocality": KIND_COUNTRY,
+    "borough": KIND_COUNTRY,
+    "region": KIND_COUNTRY,
+    "postal_code": KIND_POSTAL,
+    "park": KIND_PARKS,
+    "water": KIND_WATER,
+    "university": KIND_NOTABLE,
+    "building": KIND_NOTABLE,
+    "station": KIND_NOTABLE,
+    "landmark": KIND_NOTABLE,
+    "beach": KIND_NOTABLE,
+    "viewpoint": KIND_NOTABLE,
+}
+# Auto mode plans from the cached index while it is this fresh, so a lookup only touches the
+# network when a pack is actually missing.
+INDEX_PLAN_MAX_AGE_S = 7 * 24 * 3600
+
 INDEX_SCHEMA = 1  # index.json layout
 PACK_SCHEMA = 1  # pack.json / pack layout this code reads (docs/pack-format.md)
 PACK_MANIFEST = "pack.json"

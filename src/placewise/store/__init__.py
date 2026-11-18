@@ -1,7 +1,8 @@
 """Pack storage: finding, downloading, verifying and housekeeping data packs on disk.
 
 store = Store()               # data dir and index URL from settings, env or platform defaults
-path = store.ensure("world")  # the pack directory, downloaded on first use unless offline
+path = store.ensure("world")  # the pack directory, downloaded on first use unless locked
+store.fetch_for(countries={"US"})  # auto mode: the packs points in the US need (DataSettings.mode)
 """
 
 from .errors import (
