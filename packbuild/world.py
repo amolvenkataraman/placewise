@@ -1,7 +1,9 @@
 """The world pack: countries and admin-1 polygons (Natural Earth), cities (GeoNames), airports
-(OurAirports), country facts (GeoNames, Unicode CLDR, Wikidata: packbuild.country_profiles) and
-time-zone polygons (datasets/timezones/world.json drawn with the Natural Earth units:
-packbuild.timezones). Natural Earth's disputed areas are the `worldviews` layer.
+(OurAirports, with the city each one serves: packbuild.served), the names people type for cities,
+admin-1 units and countries (alias columns: packbuild.world_aliases, from datasets/names and
+GeoNames alternate names), country facts (GeoNames, Unicode CLDR, Wikidata:
+packbuild.country_profiles) and time-zone polygons (datasets/timezones/world.json drawn with the
+Natural Earth units: packbuild.timezones). Natural Earth's disputed areas are the `worldviews` layer.
 
     uv run python -m packbuild.world --version 2026.11
 
@@ -14,7 +16,7 @@ import datetime as dt
 import logging
 from pathlib import Path
 
-from . import country_profiles, timezones
+from . import country_profiles, names, served, timezones, world_aliases
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .sources import geonames, naturalearth, ourairports, url
@@ -38,12 +40,24 @@ def build_layers(cache_dir, refresh=False):
     worldviews = naturalearth.disputed_areas(shapefile(url("naturalearth", "disputed_areas")))
     cities_zip = get(url("geonames", "cities"))
     cities_txt = unzip(cities_zip) / f"{cities_zip.stem}.txt"
-    cities = geonames.cities(
-        cities_txt,
-        get(url("geonames", "admin1_codes")),
-        get(url("geonames", "country_info")),
+    country_info = get(url("geonames", "country_info"))
+    cities = geonames.cities(cities_txt, get(url("geonames", "admin1_codes")), country_info)
+    country_ids = {
+        code: int(facts["geonameid"])
+        for code, facts in geonames.read_country_facts(country_info).items()
+        if facts["geonameid"].isdigit()
+    }
+    counts = world_aliases.add(
+        cities,
+        admin1,
+        countries,
+        get(url("geonames", "alternate_names")),
+        country_ids,
+        *world_aliases.curated(),
     )
+    log.info("features with aliases: %s", counts)
     airports = ourairports.airports(get(url("ourairports", "airports")))
+    log.info("airports with a served city: %d", served.add(airports, cities, served.load()))
     facts = country_profiles.country_facts(
         cache_dir,
         cities_txt,
@@ -60,7 +74,7 @@ def build_world(cache_dir, out_dir, version, refresh=False):
     layers = build_layers(cache_dir, refresh=refresh)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "world", version, layers)
+    return write_pack(Path(out_dir), "world", version, layers, names=names.for_pack("world", layers))
 
 
 def main(argv=None):

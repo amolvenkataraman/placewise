@@ -53,7 +53,9 @@ class BBox(Model):
 
 @dataclass(frozen=True, slots=True)
 class Outline(Model):
-    """A polygon: outer ring first, then holes; each ring a tuple of (lat, lon) pairs."""
+    """A polygon: outer ring first, then holes; each ring a tuple of (lat, lon) pairs. Containment is
+    even-odd over all rings, so the rings of several polygons together (an island state, a park in
+    parts) make one outline too."""
 
     rings: tuple[tuple[tuple[float, float], ...], ...]
 
@@ -71,7 +73,8 @@ class Outline(Model):
 
     @property
     def bbox(self):
-        lats, lons = zip(*self.rings[0], strict=True)  # holes lie inside the outer ring
+        lats = [lat for ring in self.rings for lat, _ in ring]
+        lons = [lon for ring in self.rings for _, lon in ring]
         return BBox(min(lats), min(lons), max(lats), max(lons))
 
     def contains(self, lat, lon):

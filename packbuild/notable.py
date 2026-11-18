@@ -32,6 +32,7 @@ import numpy as np
 
 from placewise.constants import notable as const
 
+from . import names
 from .fetch import DEFAULT_CACHE
 from .layer import LayerData, write_pack
 from .sources.notable import aliases, kinds, qrank, rank, wikidata
@@ -120,7 +121,7 @@ def build(cache_dir, out_dir, version, refresh=False):
     """Fetch the sources, build the layer and write `<out_dir>/world-notable-<version>/`."""
     start = time.perf_counter()
     layers = build_layers(cache_dir, refresh)
-    path = write_pack(Path(out_dir), const.PACK, version, layers)
+    path = write_pack(Path(out_dir), const.PACK, version, layers, names=names.for_pack(const.PACK, layers))
     log.info("world-notable: %d places in %.0f s", len(layers[0].columns["id"]), time.perf_counter() - start)
     return path
 

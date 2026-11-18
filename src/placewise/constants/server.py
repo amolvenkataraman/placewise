@@ -42,3 +42,6 @@ SOCKET_MODE = 0o600  # a Unix socket only its owner can connect to
 
 # -- client -----------------------------------------------------------------------------------------
 CLIENT_TIMEOUT_S = 30.0
+MAX_FIND_TEXT_CHARS = 200  # /v1/find q= and other text values (within=, id=)
+MAX_FIND_LIMIT = 50  # results per /v1/find request
+DEFAULT_FIND_LIMIT = 10

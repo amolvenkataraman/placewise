@@ -79,8 +79,9 @@ def label_points(shp_path):
 
 def admin1(shp_path):
     """Admin-1 units (states, provinces, ...). id is "iso:<iso_3166_2>"; placeholder codes such as
-    "-99-X11~" or "AI-X00", and codes Natural Earth gives to more than one feature (Bosnia's cantons all read
-    "BA-BIH"), fall back to "ne:<adm1_code>"."""
+    "-99-X11~" or "AI-X00", and codes Natural Earth gives to more than one feature (Bosnia's
+    cantons all read "BA-BIH"), fall back to "ne:<adm1_code>". `geonames` is Natural Earth's
+    GeoNames id for the unit ("geonames:6093943"), for joining GeoNames alternate names."""
     raw = read_shapefile(shp_path)
     props = [f.properties for f in raw]
     iso = [_text(p.get("iso_3166_2")) for p in props]
@@ -98,6 +99,7 @@ def admin1(shp_path):
         "adm0_a3": [_text(p.get("adm0_a3")) for p in props],
         "type_en": [_text(p.get("type_en")) for p in props],
         "name_alt": [_text(p.get("name_alt")) for p in props],
+        "geonames": [_geonames_id(p.get("gn_id")) for p in props],
     }
     columns.update(_worldview_columns(props))
     types = {name: "str" for name in columns}
@@ -145,6 +147,15 @@ def _with_ids(raw, ids):
 def _text(value):
     """Clean text. Natural Earth pads .dbf text with NUL bytes, which read_shapefile keeps."""
     return "" if value is None else str(value).strip(" \t\r\n\x00")
+
+
+def _geonames_id(value):
+    """ "geonames:<id>" for Natural Earth's gn_id, or "" where it has none (-1, 0, missing)."""
+    try:
+        number = int(float(value))
+    except (TypeError, ValueError):
+        return ""
+    return f"geonames:{number}" if number > 0 else ""
 
 
 def _code(value, pattern):

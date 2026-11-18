@@ -114,3 +114,26 @@ def test_a_cached_result_of_another_query_is_fetched_again(tmp_path, monkeypatch
     wikidata.fetch(tmp_path)
     assert ("notable-museum", True) in calls
     assert ("notable-station", False) in calls
+
+
+def test_a_server_error_is_tried_again(tmp_path, monkeypatch):
+    import urllib.error
+
+    calls = []
+
+    def flaky(url, folder, refresh=False, timeout=None):
+        calls.append(url)
+        if len(calls) == 1:
+            raise urllib.error.HTTPError(url, 500, "Internal Server Error", None, None)
+        return folder / "wikidata"
+
+    monkeypatch.setattr(wikidata, "fetch_file", flaky)
+    assert wikidata._fetch_retrying("u", tmp_path, False, wait_s=0) == tmp_path / "wikidata"
+    assert len(calls) == 2
+
+    def missing(url, folder, refresh=False, timeout=None):
+        raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
+
+    monkeypatch.setattr(wikidata, "fetch_file", missing)
+    with pytest.raises(urllib.error.HTTPError):
+        wikidata._fetch_retrying("u", tmp_path, False, wait_s=0)

@@ -27,7 +27,7 @@ should still read each licence for its own obligations.
 | [Egypt - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-egy) | CC-BY-3.0-IGO | egy/admin1, egy/admin2 |
 | [Türkiye - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-tur) | CC-BY-3.0-IGO | tur/admin1, tur/admin2 |
 | [United Arab Emirates - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-are) | CC-BY-3.0-IGO | are/admin1 |
-| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated), usa/zcta |
+| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, world/admin1 (alias columns), world/countries (alias columns), package: constants/countries/<country>/cities.py (generated), usa/zcta |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
 | [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-notable/notable, world-parks/park_points, world-water/lakes |
 | [QRank](https://qrank.toolforge.org) | CC0-1.0 | world-notable/notable |
@@ -35,6 +35,7 @@ should still read each licence for its own obligations.
 | [USDA Forest Service Administrative Forest Boundaries](https://data.fs.usda.gov/geodata/edw/datasets.php) | LicenseRef-public-domain | usa-parks/parks_state |
 | [Protected Areas Database of the United States (PAD-US) 4.1](https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e) | LicenseRef-public-domain | usa-parks/parks_state, usa-parks/parks_regional, usa-parks/parks_local |
 | [Canadian Protected and Conserved Areas Database (CPCAD), December 2025](https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c) | OGL-Canada-2.0 | can-parks/parks_national, can-parks/parks_state, can-parks/parks_regional, can-parks/parks_local |
+| [placewise curated datasets: names and airports (datasets/names, datasets/airports)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | world/cities (alias columns), world/admin1 (alias columns), world/countries (alias columns), world/airports (served_city), package: constants/countries/city_aliases.py (generated) |
 | [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
 | [Canadian Geographical Names Database (CGNDB), Natural Resources Canada](https://open.canada.ca/data/en/dataset/e27c6eba-3c5d-4051-9db2-082dc6411c2c) | OGL-Canada-2.0 | can/populated_places |
 | [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
@@ -71,7 +72,7 @@ should still read each licence for its own obligations.
 | parks | can | Canadian Protected and Conserved Areas Database (CPCAD), December 2025 |
 | parks | ind | none: No openly licensed outlines: WII/ENVIS publishes lists marked All Rights Reserved, and Bhuvan, PARIVESH and NTCA maps are view-only; OpenStreetMap's outlines are ODbL (share-alike pack only, not built yet). India's national parks, tiger reserves and sanctuaries are Wikidata points in world-parks. |
 | parks | usa | National Park Service Administrative Boundaries of National Park System Units, USDA Forest Service Administrative Forest Boundaries, Protected Areas Database of the United States (PAD-US) 4.1 |
-| places | world | GeoNames |
+| places | world | GeoNames, placewise curated datasets: names and airports (datasets/names, datasets/airports) |
 | places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts, Canadian Geographical Names Database (CGNDB), Natural Resources Canada |
 | places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
 | postal | can | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
@@ -217,7 +218,7 @@ Common Operational Dataset, administrative boundaries, from Federal Competitiven
 
 The world pack's country_facts layer takes capital, area, population, top-level domain, calling code, postal code format, languages and neighbours from countryInfo.txt, each country's IANA time zones from timeZones.txt, and the capital's coordinates from cities1000 (the PPLC city). countryInfo gives no reference year for its population and area figures, so the layer carries none.
 
-Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists.
+Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists. alternateNamesV2 (all alternate names, streamed from the zip) gives the world pack's alias columns on cities, admin1 and countries: English names, abbreviations, IATA codes attached to cities and short names; historic names only where a curated dataset confirms them (packbuild.world_aliases).
 
 GeoNames postal codes for the United States (export/zip/US.zip: 41,490 ZIP Codes with the USPS default city name, state, county and a centroid), under CC BY 4.0 per its readme. The US pack takes a ZCTA's postal city from it only where ZIP Code Business Patterns has no row for the ZIP Code (about 2,700 of 33,791 ZCTAs, mostly rural residential ones); the readme does not name the upstream source of the US file.
 
@@ -282,6 +283,14 @@ ScienceBase rights: 'Public Domain.' The credit is USGS's requested citation (no
 - Website: https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c
 
 The Open Government Portal record and the map service's copyright text give the Open Government Licence - Canada. The database is published as a File Geodatabase, so the build reads ECCC's map service of it in its native EPSG:3978 (NAD83 / Canada Atlas Lambert), generalised by the service to 10 m, and unprojects it (packbuild/projection.py; NAD83 used as WGS84). Only public protected areas are kept: private, NGO and habitat-only designations and OECMs are dropped (docs/parks.md). Ids are cpcad:<PARENT_ID>. CPCAD has no city parks apart from some municipal natural areas and British Columbia's municipal parks.
+
+## placewise curated datasets: names and airports (datasets/names, datasets/airports)
+
+- Credit: placewise curated datasets, CC BY 4.0
+- Licence: CC-BY-4.0
+- Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
+
+Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): the names people type for places (airport codes, short forms, nicknames, former names, with the GeoNames alternate names to drop), each code citing its OurAirports page and each former name a page on the rename; India's former state and city names (datasets/names/ind.json); and the city each major airport serves (datasets/airports/served.json).
 
 ## Statistics Canada, 2021 Census of Population, population and dwelling counts
 

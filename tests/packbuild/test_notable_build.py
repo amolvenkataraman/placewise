@@ -71,3 +71,15 @@ def test_page_view_floor(tmp_path, monkeypatch):
     cache = fx.write_cache(tmp_path / "cache")
     pack = open_pack(notable.build(cache, tmp_path / "out", "2026.11"))
     assert "wikidata:Q6" not in rows(pack)
+
+
+def test_name_index(pack):
+    from placewise.constants.names import PLACE_KINDS
+
+    idx = pack.names
+    station = idx.exact("Alpha Central station")  # a short name the build adds
+    assert len(station) == 1 and PLACE_KINDS[int(station.kind[0])] == "station"
+    assert pack["notable"].value("id", int(station.row[0])) == "wikidata:Q1"
+    tower = idx.exact("Alpha Tower")
+    assert PLACE_KINDS[int(tower.kind[0])] == "landmark" and tower.rank[0] == pytest.approx(0.85)
+    assert len(idx.codes("AAA")) == 1 and len(idx.codes("Q4")) == 1  # IATA code; Wikidata id

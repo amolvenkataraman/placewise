@@ -38,3 +38,25 @@ def test_metro_lookup():
     pdx = metros.city_alias("PDX")  # a city alias with no metro
     assert (pdx.city, pdx.admin1, pdx.country, pdx.metro) == ("Portland", "OR", "US", None)
     assert metros.metro_of("Mississauga", "CA", "ON").key == "GTA"
+
+
+def test_aliases_moved_out_of_the_regions_keep_their_metro():
+    yyz = metros.city_alias("YYZ")
+    assert (yyz.city, yyz.country, yyz.kind) == ("Toronto", "CA", "code")
+    assert yyz.metro is metros.find("GTA")
+    assert metros.city_alias("Bombay").metro is metros.find("MMR")
+
+
+def test_codes_that_keep_their_own_meaning_are_not_city_aliases():
+    assert metros.city_alias("CAN") is None  # Canada, not Guangzhou's airport
+    assert metros.city_alias("IND") is None
+    can = metros.any_alias("CAN")
+    assert (can.city, can.country, can.reads_as) == ("Guangzhou", "CN", "code")
+    assert metros.any_alias("BLR").city == "Bengaluru" and metros.city_alias("BLR").city == "Bengaluru"
+
+
+def test_former_names_of_india_and_countries():
+    for text, city in [("Madras", "Chennai"), ("Calcutta", "Kolkata"), ("Vizag", "Visakhapatnam")]:
+        assert metros.city_alias(text).city == city
+    assert metros.country_alias("Zaire") == "CD" and metros.country_alias("Ceylon") == "LK"
+    assert metros.country_alias("Canada") is None

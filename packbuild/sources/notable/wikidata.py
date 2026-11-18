@@ -7,6 +7,8 @@ aliases and ids from every row.
 """
 
 import re
+import time
+import urllib.error
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -16,6 +18,8 @@ from .. import url
 from . import kinds
 
 SOURCE = "wikidata"
+RETRIES = 3
+RETRY_WAIT_S = 20.0
 _ITEM = re.compile(r"^<http://www\.wikidata\.org/entity/(Q\d+)>$")
 _POINT = re.compile(r"^POINT\(\s*(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)\s*\)$", re.IGNORECASE)
 _LITERAL = re.compile(r'^"(.*)"(?:@[A-Za-z0-9-]+|\^\^<[^>]*>)?$', re.DOTALL)
@@ -44,8 +48,20 @@ def fetch(cache_dir, refresh=False):
         folder = Path(cache_dir) / f"notable-{kind.name.replace('_', '-')}"
         query_url = url(SOURCE, kinds.download_name(kind))
         stale = _cached_url(folder / "wikidata") not in (None, query_url)
-        out[kind.name] = fetch_file(query_url, folder, refresh=refresh or stale, timeout=900)
+        out[kind.name] = _fetch_retrying(query_url, folder, refresh or stale)
     return out
+
+
+def _fetch_retrying(query_url, folder, refresh, attempts=RETRIES, wait_s=RETRY_WAIT_S):
+    """fetch_file, tried again after a server error (QLever answers 500 now and then)."""
+    for attempt in range(attempts):
+        try:
+            return fetch_file(query_url, folder, refresh=refresh, timeout=900)
+        except urllib.error.HTTPError as e:
+            if e.code < 500 or attempt == attempts - 1:
+                raise
+            time.sleep(wait_s * (attempt + 1))
+    raise AssertionError("unreachable")
 
 
 def _cached_url(path):
