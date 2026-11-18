@@ -27,6 +27,7 @@ from urllib.parse import urlsplit
 
 from placewise.config import WorldviewLockedError, effective_worldview
 from placewise.constants import server as const
+from placewise.model import Entity, Result
 
 from . import validation
 from .http import HandlerBase
@@ -139,7 +140,7 @@ class Handler(SecurityChecks, HandlerBase):
         results = server.geocoder.lookup_many(lats, lons, worldview=worldview) if points else []
         if len(results) != len(points):
             raise RuntimeError("geocoder returned a different number of results")
-        self._write_json(200, _locked({"results": [r.to_dict() for r in results]}, locked))
+        self._write_json(200, _locked({"results": Result.to_dicts(results)}, locked))
 
     def _find(self, query):
         if query is None:
@@ -157,7 +158,7 @@ class Handler(SecurityChecks, HandlerBase):
         options = find_options(params)
         worldview, locked = self._worldview(params.get("worldview"))
         found = self._search("find", params["q"], worldview=worldview, **options)
-        self._write_json(200, _locked({"results": [e.to_dict() for e in found]}, locked))
+        self._write_json(200, _locked({"results": Entity.to_dicts(found)}, locked))
 
     def _get(self, query):
         params = query_params(query, ("id", "worldview", "geometry"))
