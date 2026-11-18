@@ -43,8 +43,10 @@ geo = placewise.Geocoder(packs=[...])             # Geocoder.find / Geocoder.get
 
 **Codes mean what people mean.** An airport code without `kinds` means the city the airport
 serves: `YYZ` is Toronto, then the airport. The served city is the airports layer's `served`
-column when the pack has it, else the largest GeoNames city within 60 km in the airport's country
-(never OurAirports' `municipality`, the airport's own town). `kinds="airport"` or the word
+column when the pack has it, else the GeoNames city within 60 km in the airport's country with the
+highest population / (km + 2) (never OurAirports' `municipality`, the airport's own town). A
+three-letter code that is also a country's alpha-3 means the airport's city ("BLR": Bengaluru, not
+Belarus) unless the country is commonly written that way ("IND", "CAN", "USA" ...). `kinds="airport"` or the word
 "airport" in the text ("YYZ airport") puts the airport first. Postal codes mean the postal area.
 
 ## Context arguments
@@ -71,7 +73,8 @@ layers at each place's point.
 
 `score = match ** 3 x name kind x (0.15 + 0.85 x rank) x context x near x factor`
 
-- **match**: 1 for exact names and codes; prefix matches `len(query) / len(name)`; typo matches
+- **match**: 1 for exact names and codes; prefix matches `0.6 + 0.4 x len(query) / len(name)` (not
+  cubed: while typing, the prior decides); typo matches
   `1 - edits / length`, then x0.85. Aliases are worth x0.97, former names and abbreviations x0.95.
 - **rank**: the index's prior prominence, 0..1 and comparable across packs (population, area, park
   tier, fame): countries 0.85-1, states 0.7-0.85, a 3M city ~0.85, a hamlet ~0.3.
@@ -91,7 +94,8 @@ whose kinds can describe one place (every settlement kind: locality, borough, su
 region; otherwise the same kind) and that overlap (one's point inside the other's outline, or two
 points within 15 km) become one Entity: the best-shaped one (a locality over a county over a metro
 area; an outline over a point; a country pack's outline over the world pack's) with the others in
-`alternates`. A state and a city of the same name (New York) stay apart.
+`alternates`. Rows of one feature stored in parts (`pad-us:x`, `pad-us:x#2`) always merge. A state
+and a city of the same name (New York) stay apart.
 
 ## Overrides
 
@@ -113,7 +117,10 @@ by name and by `get`. See `docs/overrides.md`.
 
 ## Speed
 
-Each pack's name index is memory-mapped; the first query opens what it touches. Entities' context
+Each pack's name index is memory-mapped; the first query opens what it touches. Measured on
+world + usa + can + ind + world-water + the three park packs: opening ~0.1 s, the first query
+~0.15 s (the first typo query ~0.9 s while the index builds its trigram postings), then a median of
+~1.5 ms per query and under 10 ms for every query in the e2e list (typos ~5 ms). Entities' context
 (city, region, country) is looked up for all results at once and cached (4,096 points per
 worldview). Outlines are built only with `geometry=True`: a country's outline has tens of thousands
 of vertices.
