@@ -454,6 +454,17 @@ uv run python -m packbuild.parks usa can world --version 2026.11
 NPS, USFS and PAD-US 4.1 (US), CPCAD (Canada) as one polygon layer per tier, Wikidata points
 elsewhere; tiers, ids, sources and gaps in `docs/parks.md`.
 
+## Name index (every pack)
+
+Every builder ends with `write_pack(..., names=names.for_pack(<pack>, layers))`: the pack's
+`names/` directory (`docs/pack-format.md`, "Name index") that forward search reads. What goes in
+is data, one `LayerNames` per layer in `packbuild/name_specs.py`: the official name columns,
+pipe-separated `aliases` (short capitals such as "GTA" become abbreviations; columns a build lacks
+are skipped, so world `aliases` columns are picked up as soon as they exist), former names, exact
+codes (columns or templates such as `CA-{code}`, plus id prefixes such as `iso:` whose remainder
+is a code), name suffixes to drop (India Post's "S.O", "B.O"), a label point for polygon layers
+(Census `intpt_lat/lon`) and a rank on one scale across packs. Ids are always indexed.
+
 ## Releasing data
 
 Packs are published as GitHub release assets of `amolvenkataraman/placewise-data` (no data in its

@@ -16,7 +16,7 @@ import datetime as dt
 import logging
 from pathlib import Path
 
-from . import country_profiles, served, timezones, world_aliases
+from . import country_profiles, names, served, timezones, world_aliases
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .sources import geonames, naturalearth, ourairports, url
@@ -74,7 +74,7 @@ def build_world(cache_dir, out_dir, version, refresh=False):
     layers = build_layers(cache_dir, refresh=refresh)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "world", version, layers)
+    return write_pack(Path(out_dir), "world", version, layers, names=names.for_pack("world", layers))
 
 
 def main(argv=None):

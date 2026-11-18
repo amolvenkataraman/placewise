@@ -21,6 +21,7 @@ from pathlib import Path
 
 from placewise.constants import water as const
 
+from . import names as name_index
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .sources import url
@@ -67,7 +68,8 @@ def build_water(cache_dir, out_dir, version, refresh=False, **options):
     layers = build_layers(cache_dir, refresh=refresh, **options)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), const.PACK, version, layers)
+    names = name_index.for_pack("world-water", layers)
+    return write_pack(Path(out_dir), const.PACK, version, layers, names=names)
 
 
 def main(argv=None):

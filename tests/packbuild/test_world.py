@@ -64,7 +64,8 @@ def offline(tmp_path, monkeypatch):
 def test_build_world_fetches_every_source_and_hands_six_layers_to_the_writer(tmp_path, offline, monkeypatch):
     calls = []
 
-    def fake_write_pack(out_dir, name, version, layers, created=None):
+    def fake_write_pack(out_dir, name, version, layers, created=None, names=None):
+        assert names is not None and len(names) > 0  # every pack carries a name index
         calls.append((out_dir, name, version, layers))
         return Path(out_dir) / f"{name}-{version}"
 
@@ -107,6 +108,15 @@ def test_build_world_writes_a_real_pack_that_reopens(tmp_path, offline):
     airports = pack["airports"]
     yyz = airports.row(int(airports.find("id", "ourairports:CYYZ")[0]))
     assert yyz["served_city"] == "geonames:6167865"  # the nearby rule: Toronto
+    toronto = pack.names.exact("Toronto")
+    assert [pack.names.layers[x] for x in toronto.layer] == ["cities"]
+    assert pack.names.codes("CA").layer.tolist() == [pack.names.layers.index("countries")]
+    yyz = pack.names.codes("YYZ")  # the airport, and Toronto through its airport_codes
+    assert {pack.names.layers[x] for x in yyz.layer} == {"airports", "cities"}
+    bangalore = pack.names.exact("Bangalore")  # a former name
+    assert [pack.names.resolve(int(x), int(r)).id for x, r in zip(bangalore.layer, bangalore.row)] == [
+        "geonames:1277333"
+    ]
     zones = pack["timezones"]
     assert zones.value("zone", zones.query(43.65, -79.38)) == "America/Toronto"
     facts = pack["country_facts"].row(0)

@@ -18,7 +18,7 @@ import urllib.error
 import urllib.parse
 from pathlib import Path
 
-from . import arcgis, regions_layer, timezones
+from . import arcgis, names, regions_layer, timezones
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .projection import STATCAN_LAMBERT
@@ -144,7 +144,7 @@ def build_ca(
     for layer in layers:
         vertices = sum(len(r) for f in layer.features or () for o in f.outlines for r in o.rings)
         log.info("%s: %d features, %d vertices", layer.name, len(layer.columns["id"]), vertices)
-    return write_pack(Path(out_dir), "can", version, layers)
+    return write_pack(Path(out_dir), "can", version, layers, names=names.for_pack("can", layers))
 
 
 def main(argv=None):
