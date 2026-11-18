@@ -140,3 +140,32 @@ def test_codab_levels_follow_the_country_table():
     assert kinds == ["admin1", "admin2", "admin2", "sublocality"]
     assert [spec.kind for spec in name_specs.SPECS["npl"]] == ["admin1", "admin2", "locality"]
     assert [spec.layer for spec in name_specs.SPECS["are"]] == ["admin1"]
+
+
+def test_a_kind_column_sets_each_row_s_kind():
+    layer = LayerData(
+        name="notable",
+        kind="point",
+        columns={"id": ["w:1", "w:2", "w:3"], "name": ["Tower", "Museum", "Odd"],
+                 "kind": ["landmark", "museum", "unheard-of"], "aliases": ["T", "", ""]},
+        sources=("synthetic",),
+        lat=np.zeros(3),
+        lon=np.zeros(3),
+    )  # fmt: skip
+    spec = LayerNames("notable", "landmark", aliases=("aliases",), kind_column="kind",
+                      kind_values={"landmark": "landmark", "museum": "building"})  # fmt: skip
+    data = build([layer], [spec])
+    assert list(zip(data.text, data.kind, strict=True)) == [
+        ("Tower", "landmark"), ("Museum", "building"), ("Odd", "landmark"), ("T", "landmark")
+    ]  # fmt: skip
+
+
+def test_world_notable_spec():
+    from placewise.constants import notable
+
+    (spec,) = name_specs.SPECS["world-notable"]
+    assert spec.layer == notable.LAYER and spec.kind_values == notable.KINDS
+    assert "aliases" in spec.aliases and set(spec.codes) == {"iata", "icao", "station_code"}
+    assert spec.id_codes == ("wikidata:",)
+    fame = {"fame": np.array([0.0, 0.5, 0.75, 1.0])}
+    assert rank_of(spec.rank, fame, 4).tolist() == pytest.approx([0.15, 0.15, 0.5, 0.85])

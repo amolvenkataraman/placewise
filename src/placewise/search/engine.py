@@ -142,7 +142,11 @@ class Search:
         if g.best_prior() < const.FUZZY_BELOW_PRIOR:
             for key in q.fallback_keys:
                 g.each("exact", key, group=0)
-            if q.trailing is not None:
+            if q.trailing is not None and q.trailing.context_place:
+                if self._known(q.trailing.key):  # "Union Station Toronto": "Union Station, Toronto"
+                    comma = parse_query(f"{q.trailing.name}, {q.trailing.context_place}")
+                    return self._search(comma, ctx, limit, prefix)
+            elif q.trailing is not None:
                 contexts.append(ctx_mod.text_context(q.trailing.context, ctx.countries, ctx.admin1))
                 g.each("exact", q.trailing.key, group=len(contexts) - 1)
         if g.best_prior() < const.FUZZY_BELOW_PRIOR:
@@ -154,6 +158,12 @@ class Search:
         order = order[scores[order] > 0][: const.POOL_FACTOR * limit + const.POOL_FACTOR]
         order = self._visible(pool, order)
         return pool, scores, self._merge(pool, order)[:limit]
+
+    def _known(self, key):
+        """Whether `key` is a prominent enough name, exactly, in some pack."""
+        probe = Gatherer(self.indexes)
+        probe.each("exact", key, group=0)
+        return probe.best_prior() >= const.FUZZY_BELOW_PRIOR
 
     def _score(self, pool, contexts, ctx):
         scores = rank.base_scores(

@@ -156,13 +156,17 @@ def _fallback_keys(key):
 
 def _trailing(raw, name, context, place):
     """The query with its last word read as a country or region ("Paris TX", "Lyon France"),
-    when there is no comma and that word reads as one."""
+    when there is no comma and that word reads as one; else, after a name of two words or more,
+    as a place ("Union Station Toronto": context_place, which the engine tries only when the
+    rest is a known name)."""
     if context or place or "," in raw:
         return None
     head, _, last = name.rpartition(" ")
     if not head or not (len(last) > 3 or last.isupper()):
         return None
     found = tuple(readings(last))
-    if not found:
-        return None
-    return Query(raw=raw, name=head, key=city_key(head), context=found)
+    if found:
+        return Query(raw=raw, name=head, key=city_key(head), context=found)
+    if " " in head and last[:1].isupper():
+        return Query(raw=raw, name=head, key=city_key(head), context_place=last)
+    return None

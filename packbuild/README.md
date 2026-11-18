@@ -454,6 +454,55 @@ uv run python -m packbuild.parks usa can world --version 2026.11
 NPS, USFS and PAD-US 4.1 (US), CPCAD (Canada) as one polygon layer per tier, Wikidata points
 elsewhere; tiers, ids, sources and gaps in `docs/parks.md`.
 
+## Notable pack (`world-notable`)
+
+```
+uv run python -m packbuild.notable --version 2026.11   # writes ~/.placewise/packbuild/out/world-notable-2026.11/
+```
+
+One point layer, `notable`: famous places from Wikidata (CC0), ranked by QRank page views (CC0).
+Registry `sources/notable.json` (`wikidata`, `qrank`).
+
+| Column | |
+|---|---|
+| `id` | `wikidata:Q...` |
+| `name`, `aliases` | English label; English aliases and short names, `|`-separated, at most 6 (`sources/notable/aliases.py`: short forms like "UW" first, web addresses and the place's own codes dropped; "X railway station" also "X station") |
+| `kind` | `airport`, `station`, `university`, `campus`, `stadium`, `museum`, `religious_site`, `bridge`, `park`, `beach`, `landmark`, `viewpoint`, `building` (`placewise.constants.notable.KINDS` maps each to a `PlaceKind`) |
+| `fame` | 0..1: the place's percentile within its kind among the pack's places, averaged with its percentile within (kind, country) |
+| `country` | ISO alpha-2 from Wikidata P17 when it names exactly one country, else "": informational only, never used to say where a place is (the boundary layers and the worldview do that) |
+| `sitelinks` | Wikimedia articles about it |
+| `iata`, `icao`, `ipeds`, `aishe`, `station_code` | external ids where Wikidata has them (station codes: Indian Railways, Amtrak, VIA Rail, else P296; upper case) |
+
+- **Kinds.** `sources/notable/kinds.py` is the class allowlist: one SPARQL query per kind lists the
+  instances of its root classes or their subclasses with a coordinate, an English label and a
+  sitelink, never dissolved, demolished or closed; protected areas are left to the park packs and
+  university faculties out. An item of several kinds takes the first in the list (the Eiffel Tower
+  is a landmark, not a viewpoint; a cricket ground is a stadium, not a park). Airports need an
+  IATA code (scheduled service); airports named for an air force, air base or the military are
+  dropped everywhere.
+- **Downloads.** The queries run on QLever's Wikidata endpoint (WDQS times out on classes this
+  big; the Wikidata API rate-limits) as TSV, about 110 MB for all kinds, each cached with its
+  sidecar in `notable-<kind>/wikidata`; a cached result whose sidecar names another query is
+  fetched again. QRank is pinned to one dated file (2026-11-15, SHA-256 in the registry notes);
+  QRank keeps only its three newest, so rebuilds read the cached copy.
+- **Selection** (`sources/notable/rank.py`), 2026.11: 881,484 candidates; a floor of 1,000 page
+  views a year (200 in India, the US and Canada) leaves 239,045; places with the same name key
+  within 300 m are merged (a station and its building; the subway's "Union" and the railway's
+  "Union Station"), the most famous keeping the others' names as aliases; then, per 16 km
+  equal-area cell, the 5 most famous of each kind (12 in India, the US and Canada), plus every
+  place at fame 0.98+ and every university, campus and airport: 177,373 places, 39 MB (the layer
+  22 MB, the name index 18 MB; the budget is 40 MB); the build takes about 65 s and 1 GB from the
+  cache. Viewpoints are all landmarks too, so none keeps that kind.
+- **Lookups** (`placewise.engine._notable`): `Result.near` lists up to 3 notable places after the
+  cities and parks, each only within the reach its fame gives (0.99+: 2 km, 0.9+: 1 km, else
+  300 m): the 3 best by `fame x (1 - distance / reach)`, listed nearest first. Airports
+  (`Result.airport`) and places already named in `within` or `near` are left out. The label never
+  changes.
+- **Gaps.** Items without an English label (many Indian and Japanese stations have only local
+  labels; Wikidata's `mul` labels are not read); India's universities without coordinates (only
+  4,756 of 24,285 Wikidata items with an AISHE code have one); outlines (campuses, airports and
+  stadiums are points); station complexes are merged only when their names match.
+
 ## Name index (every pack)
 
 Every builder ends with `write_pack(..., names=names.for_pack(<pack>, layers))`: the pack's
@@ -463,7 +512,11 @@ pipe-separated `aliases` (short capitals such as "GTA" become abbreviations; col
 are skipped, so world `aliases` columns are picked up as soon as they exist), former names, exact
 codes (columns or templates such as `CA-{code}`, plus id prefixes such as `iso:` whose remainder
 is a code), name suffixes to drop (India Post's "S.O", "B.O"), a label point for polygon layers
-(Census `intpt_lat/lon`) and a rank on one scale across packs. Ids are always indexed.
+(Census `intpt_lat/lon`) and a rank on one scale across packs. Ids are always indexed. A layer of mixed
+kinds names a `kind_column` and maps its values to PlaceKinds (`kind_values`): world-notable's
+`kind` column, so a museum is found as a building and a station as a station; its rank is
+0.15 + 0.7 x (fame - 0.5) / 0.5 for fame 0.5+, its codes IATA, ICAO, station codes and the bare
+QID.
 
 ## Releasing data
 

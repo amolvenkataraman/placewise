@@ -14,6 +14,7 @@ from placewise.constants.worldviews import WORLDVIEW_RULE
 from placewise.model import Nearby, PlaceKind, Relation, Result
 
 from . import _nearby as nearby
+from ._notable import RADIUS
 
 NAMED = ("sublocality", "locality", "city", "borough", "admin2", "postal", "admin1")
 
@@ -65,6 +66,7 @@ def build(geo, lat, lon, a, named, order, locked):
     sub_l, loc_l, city_l, bor_l, adm2_l, post_l, adm1_l = (named_lists.get(k, empty) for k in NAMED)
     regions_l, sources_l = named_lists.get("regions", empty), named_lists.get("sources", empty)
     parks = a.get("parks")  # (within, near, sources) per point (placewise.engine._within)
+    notable = a.get("notable_places")  # (near, layer key) per point (placewise.engine._notable)
     label_settings, data_version = geo.settings.label, geo.data_version
     by_locality, template = label_settings.style == "locality", label_settings.template
     labels = {}  # (id(name), id(admin1), id(country)) -> label: the Places outlive the loop
@@ -121,6 +123,9 @@ def build(geo, lat, lon, a, named, order, locked):
             near += park_near
             for field, rule in park_sources.items():
                 sources.setdefault(field, rule)
+        if notable is not None and notable[i][0]:
+            near += _new_places(notable[i][0], within, near)
+            sources.setdefault("near", layers.source(notable[i][1], RADIUS))
         fields = {
             "country": country, "admin1": admin1, "admin2": adm2_l[i], "city": city_place,
             "locality": locality, "sublocality": sub_l[i], "borough": bor_l[i], "postal": post_l[i],
@@ -156,6 +161,12 @@ def build(geo, lat, lon, a, named, order, locked):
 
 
 _ROLES = (const.COUNTRIES, const.ADMIN1, const.CITIES, const.AIRPORTS)
+
+
+def _new_places(found, within, near):
+    """The notable Nearbys not already named (a park the point is in, a city or park near it)."""
+    named = {p.name for p in within} | {n.place.name for n in near}
+    return tuple(n for n in found if n.place.name not in named)
 
 
 def _places(layers, key, rows):

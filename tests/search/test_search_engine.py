@@ -156,3 +156,28 @@ def test_a_word_that_names_nothing_reads_as_a_prefix(geo):
     assert ids(geo.find("Lake", kinds="water")) == ["lake:alpha"]
     assert ids(geo.find("Lake", within="South Province", kinds="water")) == ["lake:alpha"]
     assert geo.find("Lake", within="North Province", kinds="water") == []
+
+
+def test_a_trailing_city_word_reads_as_the_comma_context(tmp_path):
+    import numpy as np
+    from search_kit import write_packs
+
+    from packbuild import names
+    from placewise.engine import Geocoder
+    from placewise.packs import LayerData, write_pack
+
+    # two famous piers of one name: the better known by Beta Town, the other by Tinyville
+    layer = LayerData(
+        "notable", "point",
+        {"id": ["wikidata:Q901", "wikidata:Q902"], "name": ["Union Pier", "Union Pier"], "aliases": ["", ""],
+         "kind": ["landmark", "landmark"], "fame": np.array([0.7, 0.65], dtype=np.float32)},
+        ("synthetic",), lat=np.array([0.26, 0.76]), lon=np.array([-138.96, -139.36]),
+    )  # fmt: skip
+    notable = write_pack(
+        tmp_path, "world-notable", "2026.11", [layer], names=names.for_pack("world-notable", [layer])
+    )
+    geo = Geocoder(packs=[*write_packs(tmp_path), notable])
+    assert ids(geo.find("Union Pier"))[0] == "wikidata:Q901"
+    # no place is called "Union Pier Tinyville": it reads as "Union Pier, Tinyville"
+    assert ids(geo.find("Union Pier Tinyville"))[0] == "wikidata:Q902"
+    assert ids(geo.find("Union Pier, Tinyville"))[0] == "wikidata:Q902"

@@ -5,6 +5,7 @@ first-level divisions ~0.75-0.85, a 3M city ~0.8, a 100k town ~0.55, a hamlet ~0
 parks ~0.8, metro regions ~0.75, postal codes 0.2, a pocket park ~0.1.
 """
 
+from placewise.constants import notable
 from placewise.constants.codab import COUNTRIES, LAYER_PREFIX
 
 from .names import LayerNames, Rank, Term
@@ -169,6 +170,21 @@ def codab(country):
     return tuple(specs)
 
 
+# famous places (packbuild.notable): the kind per row; fame (a percentile within the kind) below
+# 0.5 adds nothing, the best known land with national parks and 3M cities
+NOTABLE = (
+    LayerNames(
+        notable.LAYER,
+        "landmark",
+        aliases=_ALIASES,
+        codes=("iata", "icao", "station_code"),
+        id_codes=("wikidata:",),  # the bare QID
+        kind_column="kind",
+        kind_values=notable.KINDS,
+        rank=Rank(base=0.15, terms=(Term("fame", 0.7, lo=0.5, hi=1.0, scale="linear"),)),
+    ),
+)
+
 SPECS = {
     "world": WORLD,
     "usa": USA,
@@ -176,5 +192,6 @@ SPECS = {
     "ind": IND,
     "world-water": WATER,
     "parks": PARKS,  # usa-parks, can-parks, world-parks
+    "world-notable": NOTABLE,
     **{iso3: codab(country) for iso3, country in COUNTRIES.items()},  # COD-AB packs
 }

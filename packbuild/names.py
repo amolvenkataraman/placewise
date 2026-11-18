@@ -72,6 +72,9 @@ class LayerNames:
     strip_suffixes: tuple[str, ...] = ()  # name endings to drop ("Koramangala S.O" -> Koramangala)
     rank: Rank = Rank()
     point: tuple[str, str] | None = None  # label point columns (lat, lon) for polygon layers
+    # a layer of mixed kinds: each row's kind is kind_values[row's kind_column value], else `kind`
+    kind_column: str | None = None
+    kind_values: dict = field(default_factory=dict)
 
 
 def build(layers, specs):
@@ -86,12 +89,13 @@ def build(layers, specs):
             continue
         columns = layer.columns
         rank = rank_of(spec.rank, columns, len(columns["id"]))
+        row_kinds = _row_kinds(spec, columns)
 
-        def add(texts, rows, name_kind, spec=spec, rank=rank):
+        def add(texts, rows, name_kind, spec=spec, rank=rank, row_kinds=row_kinds):
             out["text"] += texts
             out["layer"] += [spec.layer] * len(texts)
             out["row"] += rows
-            out["kind"] += [spec.kind] * len(texts)
+            out["kind"] += [row_kinds[r] for r in rows] if row_kinds else [spec.kind] * len(texts)
             out["rank"] += rank[np.asarray(rows, dtype=np.int64)].tolist()
             out["name_kind"] += name_kind if isinstance(name_kind, list) else [name_kind] * len(texts)
 
@@ -115,6 +119,13 @@ def build(layers, specs):
         if spec.point and layer.kind == "polygon" and all(c in columns for c in spec.point):
             points[spec.layer] = tuple(_floats(columns[c]) for c in spec.point)
     return NameData(**out, points=points)
+
+
+def _row_kinds(spec, columns):
+    """Each row's PlaceKind value from the spec's kind column, or None when it has none."""
+    if spec.kind_column is None or spec.kind_column not in columns:
+        return None
+    return [spec.kind_values.get(v, spec.kind) for v in columns[spec.kind_column]]
 
 
 def for_pack(pack, layers):

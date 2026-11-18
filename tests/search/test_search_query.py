@@ -101,6 +101,17 @@ def test_trailing_word_context_is_a_fallback_reading():
     assert parse_query("Clark County").trailing is None
 
 
+def test_a_trailing_place_word_after_a_longer_name_is_a_fallback_place():
+    q = parse_query("Union Station Toronto")
+    assert q.trailing is not None and q.trailing.key == "union station"
+    assert q.trailing.context == () and q.trailing.context_place == "Toronto"
+    assert parse_query("Clark County").trailing is None  # a one-word name keeps its last word
+    assert parse_query("Union Station, Toronto").trailing is None
+    assert (
+        parse_query("Golden Gate Bridge").trailing.context_place == "Bridge"
+    )  # tried only if it names a place
+
+
 def test_empty_query_is_an_error():
     with pytest.raises(ValueError, match="empty"):
         parse_query("   ")

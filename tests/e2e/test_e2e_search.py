@@ -252,19 +252,23 @@ def test_worldview_india_reports_india_for_indian_claims(geo):
 
 
 @pytest.mark.parametrize(
-    "name",
+    ("name", "qid"),
     [
-        "CN Tower",
-        "Eiffel Tower",
-        "Golden Gate Bridge",
-        "University of Waterloo",
-        "IIT Bombay",
-        "Union Station Toronto",
+        ("CN Tower", "Q134883"),
+        ("Eiffel Tower", "Q243"),
+        ("Golden Gate Bridge", "Q44440"),
+        ("University of Waterloo", "Q1049470"),
+        ("IIT Bombay", "Q1661242"),  # an alias of "Indian Institute of Technology Bombay"
+        ("Union Station Toronto", "Q511316"),
+        ("Taj Mahal", "Q9141"),
+        ("Gateway of India", "Q864862"),
+        ("Shibuya Crossing", "Q21083961"),  # an alias of "Shibuya scramble crossing"
     ],
 )
-def test_notable(geo, name):
+def test_notable(geo, name, qid):
     has(geo, "world-notable")
-    assert top(geo, name).place.name.lower().startswith(name.split()[0].lower())
+    e = top(geo, name)
+    assert f"wikidata:{qid}" in {e.place.id, *(p.id for p in e.alternates)}
 
 
 # -- speed ------------------------------------------------------------------------------------------
