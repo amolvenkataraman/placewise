@@ -31,6 +31,17 @@ class MaintenanceMixin:
                 problems += [f"{path.name}: {p}" for p in found]
         return problems
 
+    def size_on_disk(self, name, version) -> int:
+        """Bytes the installed pack's files take (their sizes, not the archive's)."""
+        total = 0
+        for root, _, files in os.walk(self.layout.pack(name, version)):
+            for file in files:
+                try:
+                    total += os.lstat(os.path.join(root, file)).st_size
+                except OSError:
+                    continue
+        return total
+
     def prune(self, keep=1) -> list[tuple[str, str]]:
         """Delete all but the newest `keep` versions of each pack, never the pinned or current one."""
         if keep < 1:

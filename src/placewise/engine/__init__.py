@@ -31,7 +31,8 @@ def _make_default():
 
 def default_geocoder():
     """The Geocoder `lookup` and `placewise.find` use, created on first call from the user's
-    settings and overrides (which may download the world pack, unless settings say offline)."""
+    settings and overrides (which may download the world pack, unless the data mode is locked;
+    in auto mode, lookups and searches fetch the packs they need, placewise.store.ondemand)."""
     global _default
     if _default is None:
         with _lock:

@@ -3,7 +3,8 @@
     uv run python -m packbuild.release --packs ~/.placewise/packbuild/out/world-2026.11 \\
         ~/.placewise/packbuild/out/usa-2026.11 --out ~/.placewise/packbuild/release/2026.11
 
-writes, into --out, one `<name>-<version>.tar.xz` per pack, `index.json` (relative URLs),
+writes, into --out, one `<name>-<version>.tar.xz` per pack, `index.json` (relative URLs, and what
+each pack covers: kind, countries, required packs, installed and archive sizes; docs/pack-format.md),
 `ATTRIBUTION.md` (only the sources these packs use, after the disclaimer), a copy of the repo's
 `DISCLAIMER.md`, `SHA256SUMS`, and `release-notes.md` (the release description, not an asset). The
 directory is a complete mirror. It then prints the `gh release create` command it would run.
@@ -31,6 +32,7 @@ from placewise.constants import packs as consts
 from placewise.constants.store import PACK_VERSION_PATTERN
 from placewise.model import PackInfo
 from placewise.packs import archive, open_pack, pack_info, write_index
+from placewise.store.coverage import derive
 
 DATA_REPO = "amolvenkataraman/placewise-data"  # GitHub owner/name; releases hold the assets
 ALLOW_PUBLISH_ENV = "PLACEWISE_ALLOW_PUBLISH"
@@ -101,6 +103,7 @@ def prepare_release(pack_dirs, out_dir) -> ReleasePlan:
     archives = tuple(_archive_into(p, out_dir) for p in pack_dirs)
     infos = tuple(pack_info(a) for a in archives)
     index = write_index(out_dir, infos)
+    _add_coverage(index, {m["name"]: (m, p) for m, p in zip(manifests, pack_dirs, strict=True)})
     attr = out_dir / ATTRIBUTION_FILE
     used = dict.fromkeys(s for info in infos for s in info.sources)
     attr.write_text(attribution.render_markdown(only=used), encoding="utf-8")
@@ -110,7 +113,8 @@ def prepare_release(pack_dirs, out_dir) -> ReleasePlan:
     listed = sorted((index, attr, disclaimer, *archives), key=lambda p: p.name)
     sums.write_text("".join(f"{_sha256(p)}  {p.name}\n" for p in listed), encoding="utf-8")
     notes = out_dir / NOTES_FILE
-    notes.write_text(_notes(infos), encoding="utf-8")
+    entries = json.loads(index.read_text(encoding="utf-8"))["packs"]
+    notes.write_text(_notes(infos, entries), encoding="utf-8")
     return ReleasePlan(out_dir, infos, archives, index, attr, disclaimer, sums, notes)
 
 
@@ -152,6 +156,18 @@ def _manifest(path):
     return doc
 
 
+def _add_coverage(index, packs):
+    """Add each entry's coverage (kind, covers, requires, installed_bytes) and archive_bytes, from
+    its pack.json where that says, else from the pack's name and layers (placewise.store.coverage)."""
+    doc = json.loads(index.read_text(encoding="utf-8"))
+    for name, entry in doc["packs"].items():
+        manifest, path = packs[name]
+        size = (path / consts.PACK_JSON).stat().st_size
+        entry.update(derive(name, manifest, manifest_bytes=size).to_entry())
+        entry["archive_bytes"] = entry["size_bytes"]
+    index.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
 def _archive_into(pack_dir, out_dir):
     """archive() writes beside the pack; move the result into out_dir (copy if an archive was
     already there, so nothing next to the pack disappears)."""
@@ -165,11 +181,19 @@ def _archive_into(pack_dir, out_dir):
     return target
 
 
-def _notes(infos):
-    lines = ["Data packs for placewise. Install with `placewise data install <pack>`.", ""]
-    lines += ["| Pack | Version | Size | Sources |", "|---|---|---|---|"]
+def _notes(infos, entries):
+    lines = [
+        "Data packs for placewise. Install with `placewise data install <pack>`; in auto mode",
+        "(the default) country packs also install when a lookup first needs them.",
+        "",
+    ]
+    lines += ["| Pack | Kind | Version | Download | On disk | Sources |", "|---|---|---|---|---|---|"]
     for p in infos:
-        lines.append(f"| {p.name} | {p.version} | {p.size_bytes / 1e6:.1f} MB | {', '.join(p.sources)} |")
+        entry = entries[p.name]
+        lines.append(
+            f"| {p.name} | {entry['kind']} | {p.version} | {p.size_bytes / 1e6:.1f} MB "
+            f"| {entry['installed_bytes'] / 1e6:.1f} MB | {', '.join(p.sources)} |"
+        )
     lines += [
         "",
         f"Credits and licences: {ATTRIBUTION_FILE}. Checksums: {SUMS_FILE} and index.json. "
