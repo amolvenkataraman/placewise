@@ -2,7 +2,7 @@
 exit-code handling.
 
 Each top-level command lives in its own module with one `add_<command>` function that builds its
-sub-parser and sets a handler; new ones (lookup) join `_COMMANDS` the same way.
+sub-parser and sets a handler; new ones join `_COMMANDS` the same way.
 """
 
 import argparse
@@ -15,6 +15,7 @@ from ._common import add_global_options, one_line
 from .attribution import add_attribution
 from .data import add_data
 from .find import add_find
+from .lookup import add_lookup
 from .serve import add_serve
 from .server import add_server
 
@@ -49,4 +50,4 @@ def _build_parser():
 
 
 # Top-level commands, in help order.
-_COMMANDS = (add_find, add_data, add_attribution, add_serve, add_server)
+_COMMANDS = (add_lookup, add_find, add_data, add_attribution, add_serve, add_server)

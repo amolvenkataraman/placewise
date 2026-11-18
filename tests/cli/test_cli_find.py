@@ -4,23 +4,30 @@ import json
 
 import pytest
 
-from placewise.cli import find as find_cli
-from placewise.cli import main
+from placewise.cli import _common, main
 from tests.search.search_kit import geocoder
 
 
 @pytest.fixture
 def geo(tmp_path, monkeypatch):
     built = geocoder(tmp_path / "packs")
-    monkeypatch.setattr(find_cli, "_geocoder", lambda args: built)
+    monkeypatch.setattr(_common, "open_geocoder", lambda args: built)
     return built
 
 
-def test_find_prints_result_cards(geo, capsys):
+def test_find_prints_entity_cards(geo, capsys):
     assert main(["find", "Alpha City"]) == 0
     out = capsys.readouterr().out
     assert out.startswith("1. Alpha City  (North Province, XA)")
-    assert "locality · town:alpha-city" in out and "same place in" in out and "radius" in out
+    cards = out.split("\n\n")
+    first = {line.split()[0]: line for line in cards[0].splitlines()[1:]}
+    assert first["kind"].split() == ["kind", "locality"]
+    assert first["id"].split()[:2] == ["id", "town:alpha-city"] and first["alternates"].split()[1] == "2:"
+    assert "radius" in first["extent"] and "score" in first and "point" in first
+    assert "\x1b[" not in out and max(len(line) for line in out.splitlines()) <= 100
+    assert main(["find", "Riverton"]) == 0
+    cards = capsys.readouterr().out.split("\n\n")
+    assert len(cards) == 2 and cards[0].startswith("1. Riverton") and cards[1].startswith("2. Riverton")
 
 
 def test_find_json_and_context_options(geo, capsys):

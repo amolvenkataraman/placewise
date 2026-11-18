@@ -11,7 +11,7 @@ If a module doesn't fit any folder's purpose below, the map is wrong: change thi
 | `tracks/` | The `Track` model and everything computed from tracks | file parsing (that's `io/`) |
 | `io/` | File formats in and out: `io/tracks/` (GPX, FIT, TCX ...), `io/polygons/` (GeoJSON, shapefile) | analysis |
 | `privacy/` | Location-privacy transforms and the privacy audit | file formats |
-| `model/` | Shared dataclasses: results, places, geometry, settings, rules | behaviour beyond validation and dict round trips |
+| `model/` | Shared dataclasses: results, places, geometry, settings, rules; how results show to people (`model/display/`: the text card of `str(result)`, the notebook table) | behaviour beyond validation, dict round trips and display |
 | `constants/` | Fixed values: standards and physical constants, file-format codes, thresholds and defaults, and all country and region reference tables (`constants/countries/`) | functions with logic |
 | `world/` | Queries over countries, subdivisions and country groups: lookups by code or name, lists by group or continent, memberships over time, country profiles | the reference data itself (that's `constants/countries/` and `datasets/`) |
 | `packs/` | The pack file format: write and read | downloading |

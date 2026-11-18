@@ -8,7 +8,8 @@ placewise find YYZ --kind airport --json
 import json
 import sys
 
-from ._common import count, subparser
+from . import _common
+from ._common import add_packs_option, card_width, count, subparser
 
 
 def add_find(commands):
@@ -33,11 +34,12 @@ def add_find(commands):
     sub.add_argument("--worldview", help="worldview for places in disputed areas (e.g. IN)")
     sub.add_argument("--geometry", action="store_true", help="with --json: include each place's outline")
     sub.add_argument("--json", action="store_true", help="the Entities as JSON")
+    add_packs_option(sub)
     sub.set_defaults(handler=_cmd_find)
 
 
 def _cmd_find(args):
-    geocoder = _geocoder(args)
+    geocoder = _common.open_geocoder(args)
     found = geocoder.find(
         args.text,
         limit=args.limit,
@@ -59,46 +61,13 @@ def _cmd_find(args):
     if not found:
         print(f"nothing found for {args.text!r}", file=sys.stderr)
         return 1
-    sys.stdout.write("\n".join(card(i, e) for i, e in enumerate(found, 1)))
+    width = card_width()
+    print(
+        "\n\n".join(
+            f"{i}. " + e.card(color=None, width=width - len(f"{i}. ")) for i, e in enumerate(found, 1)
+        )
+    )
     return 0
-
-
-def card(n, entity):
-    """A few readable lines for one Entity."""
-    place = entity.place
-    where = ", ".join(x for x in (entity.city, entity.region, entity.country) if x)
-    title = f"{n}. {place.name}" + (f"  ({where})" if where else "")
-    kind = place.kind.value.replace("_", " ") + (f", tier {place.tier}" if place.tier else "")
-    lines = [
-        title,
-        f"   {kind} · {place.id}" + (f" · score {entity.score:.3f}" if entity.score is not None else ""),
-        f"   point {entity.point.lat:.5f}, {entity.point.lon:.5f} · radius {entity.radius_km:.1f} km",
-        "   bbox {:.4f}, {:.4f} .. {:.4f}, {:.4f}".format(*entity.bbox.as_tuple()),
-    ]
-    codes = {k: v for k, v in place.codes.items() if k not in ("iso2", "admin1")}
-    if codes:
-        lines.append("   codes " + ", ".join(f"{k} {v}" for k, v in codes.items()))
-    if place.aliases:
-        lines.append("   also called " + ", ".join(place.aliases[:5]))
-    if entity.alternates:
-        lines.append("   same place in " + ", ".join(p.id for p in entity.alternates[:5]))
-    return "\n".join(lines) + "\n"
-
-
-def _geocoder(args):
-    from placewise.config import load_settings
-    from placewise.engine import Geocoder
-    from placewise.overrides import load_overrides
-
-    data = {}
-    if args.data_dir is not None:
-        data["data_dir"] = args.data_dir
-    if args.index_url is not None:
-        data["index_url"] = args.index_url
-    if args.offline:
-        data["offline"] = True
-    settings = load_settings(data=data)
-    return Geocoder(settings=settings, overrides=load_overrides(settings=settings))
 
 
 def _numbers(text, n, what):

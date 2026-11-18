@@ -109,7 +109,12 @@ from placewise.text import parse_location
 parse_location("US-CA-Menlo Park; Remote - US and Canada")  # structured places, offline
 ```
 
-`placewise find "Lake Tahoe"` prints the same from the command line (`--json` for Entities).
+`print(r)` shows a readable card (the label and coordinates, then one aligned line per field with
+its source; `r.card()` adds colour on a terminal, Jupyter shows a table); `repr(r)` stays exact.
+From the command line: `placewise lookup 43.6426 -79.3871` prints the card (`--json`,
+`--worldview IN`, `--packs DIR`), `placewise lookup --csv points.csv --out named.csv` names a
+whole file (lat/lon columns; `--lat-column`, `--lon-column`), and `placewise find "Lake Tahoe"`
+prints a card per place found (`--json` for Entities).
 The same lookups run as a local service or a self-hosted web server (`placewise serve`, see
 `docs/self-hosting.md`), with `placewise.Client` offering the identical interface.
 

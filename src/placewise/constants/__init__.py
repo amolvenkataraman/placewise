@@ -6,11 +6,13 @@ fit`), so importing one subject never pays for the others, the country tables ab
 import importlib
 
 __all__ = [
+    "cli",
     "codab",
     "config",
     "countries",
     "crs",
     "defaults",
+    "display",
     "distance",
     "earth",
     "fit",

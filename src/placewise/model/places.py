@@ -11,7 +11,38 @@ from ._base import Model, set_field
 from .geometry import BBox, Outline, Point
 
 
-class PlaceKind(str, Enum):
+class _Named:
+    """repr as Python reads it back (`PlaceKind.PARK`), so a Result's repr round-trips through eval."""
+
+    __slots__ = ()
+
+    def __repr__(self):
+        return f"{type(self).__name__}.{self.name}"
+
+
+class _Card:
+    """`str()` is the readable card, always plain text (placewise.model.display); `card()` colours
+    it on a terminal; `repr` stays the dataclass's."""
+
+    __slots__ = ()
+
+    def __str__(self):
+        return self.card(color=False)
+
+    def card(self, color=None, width=None):
+        """The text card. color: True, False, or None for colour only when stdout is a terminal
+        (NO_COLOR unset); width: at most this many columns (default 100)."""
+        from .display import text
+
+        return text.card(self, color, width or text.const.WIDTH)
+
+    def _repr_html_(self):
+        from .display import html
+
+        return html.card(self)
+
+
+class PlaceKind(_Named, str, Enum):
     COUNTRY = "country"
     ADMIN1 = "admin1"  # state, province, region
     ADMIN2 = "admin2"  # county, district
@@ -38,7 +69,7 @@ class PlaceKind(str, Enum):
     CUSTOM = "custom"  # added by an override or the calling app
 
 
-class Relation(str, Enum):
+class Relation(_Named, str, Enum):
     """How a point relates to a place."""
 
     AT = "at"  # airports, stations, buildings
@@ -129,7 +160,7 @@ class AppPlace(Model):
 
 
 @dataclass(frozen=True, slots=True)
-class Entity(Model):
+class Entity(_Card, Model):
     """What `find` returns: a place with a point guaranteed inside it, its extent and its context.
     `city`, `region` (state, province) and `country` (ISO alpha-2) say where it is, for telling
     places of one name apart; `alternates` are the same place as found in other data (a city's
@@ -161,7 +192,7 @@ class Entity(Model):
 
 
 @dataclass(frozen=True, slots=True)
-class Result(Model):
+class Result(_Card, Model):
     """What `lookup` returns for a point. `sources` maps each field to the layer or rule that set it.
 
     Three names per point (docs/naming.md): `sublocality` (what a local adds: Mission District),
