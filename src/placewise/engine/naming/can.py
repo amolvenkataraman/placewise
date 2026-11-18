@@ -16,13 +16,12 @@
   `regions` and the CMA or CA, smallest first).
 """
 
-from functools import cached_property
-
 import numpy as np
 
 from placewise.constants import lookup as lookup_const
 from placewise.constants import naming as const
 from placewise.model import PlaceKind
+from placewise.packs import once
 
 from . import _common as common
 from . import rules
@@ -64,7 +63,7 @@ class Can:
         values = self.layers.column(key, field)
         return values if values is not None else [""] * self.layers.layer(key).count
 
-    @cached_property
+    @once
     def _csd(self):
         provinces = self._col(self.csd, "province")
         row_of = self.admin.admin1_row_of_id
@@ -85,7 +84,7 @@ class Can:
             "by_name": by_name,
         }
 
-    @cached_property
+    @once
     def _cma(self):
         """Per CMA row: (the CSD row of its first city in its province or -1, folded title names)."""
         out = []

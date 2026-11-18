@@ -20,17 +20,21 @@ import numpy as np
 from placewise.constants.earth import MEAN_RADIUS_KM
 from placewise.geo import lines
 
+from ._lazy import Guarded
+
 _RUN_EDGES = (8, 64)  # edges per run: a quarter of the square root of the feature's count, within these
 _GROUP_RUNS = 32
 _SLACK = 1e-9  # radians added to every bound, far above the rounding of their angles
 _PAIRS = 1 << 19  # (query, group), (query, run) or (query, edge) pairs handled at once
 
 
-class EdgeCaps:
+class EdgeCaps(Guarded):
     """The caps of a polygon layer's features: edge e runs from (ya[e], xa[e]) to (yb[e], xb[e]),
-    and rings(f) gives the vertex offsets of feature f's rings (its edges are rings[0]:rings[-1])."""
+    and rings(f) gives the vertex offsets of feature f's rings (its edges are rings[0]:rings[-1]).
+    Safe to share between threads: adding caps and reading them hold one lock."""
 
     def __init__(self, ya, xa, yb, xb, rings, count):
+        super().__init__()
         self.ya, self.xa, self.yb, self.xb = ya, xa, yb, xb
         self._rings = rings
         self.g_start = np.full(count, -1, dtype=np.int64)  # feature f's groups: g_start[f]:g_stop[f]
@@ -42,6 +46,10 @@ class EdgeCaps:
 
     def add(self, features):
         """Make the caps of these features (those without them yet)."""
+        with self._lock:
+            self._add(features)
+
+    def _add(self, features):
         new = np.unique(np.asarray(features, dtype=np.int64))
         new = new[self.g_start[new] < 0].tolist()
         if not new:
@@ -72,7 +80,12 @@ class EdgeCaps:
         best = np.full(n, np.inf)
         if not n:
             return best
-        self.add(feature)
+        with self._lock:
+            self._add(feature)
+            return self._km(best, lat, lon, feature)
+
+    def _km(self, best, lat, lon, feature):
+        n = len(lat)
         p_all = lines._unit(lat, lon)
         gs, ge = self.g_start[feature], self.g_stop[feature]
         for b0, b1 in _slices(ge - gs, _PAIRS):

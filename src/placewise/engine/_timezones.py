@@ -21,11 +21,10 @@ none.
 Fills a["tz_zone"] (zone or None per point) and a["tz_source"] ("world/timezones:polygon" ...).
 """
 
-from functools import cached_property
-
 import numpy as np
 
 from placewise.constants import lookup as const
+from placewise.packs import once
 
 from ._index import RowIndex
 
@@ -54,7 +53,7 @@ class Timezones:
 
     # -- tables ---------------------------------------------------------------------------------
 
-    @cached_property
+    @once
     def _world_units(self):
         """Per countries row and admin1 row, the world feature of that unit (-1: none); shapes as
         (feature, countries row, admin1 row or -1); the one zone of each one-zone country ("")."""
@@ -85,7 +84,7 @@ class Timezones:
         )
         return country, admin1, shapes, sole
 
-    @cached_property
+    @once
     def _city_zones(self):
         cities = self.layers.layer(const.CITIES)
         if cities is None or "timezone" not in cities.fields:

@@ -29,6 +29,7 @@ from placewise.constants.packs import POINT_CELL_DEGS, POINT_CELL_TARGET
 from placewise.geo import haversine, validate
 
 from . import _geometry as gm
+from ._lazy import Guarded
 
 _KM_PER_DEG = math.pi * MEAN_RADIUS_KM / 180
 _HALF_TURN_KM = math.pi * MEAN_RADIUS_KM  # no two points on the sphere are farther apart
@@ -71,7 +72,7 @@ def choose_cell_deg(lat, lon):
     return min(POINT_CELL_DEGS)
 
 
-class PointIndex:
+class PointIndex(Guarded):
     """Exact k-nearest and radius search over a fixed set of points (WGS84 degrees), with
     haversine distances in km on the mean-radius sphere.
 
@@ -83,6 +84,7 @@ class PointIndex:
     only affects speed, never answers."""
 
     def __init__(self, lat, lon, cell_deg=None):
+        super().__init__()
         lat = np.array(lat, dtype=np.float64).ravel()
         lon = np.array(lon, dtype=np.float64).ravel()
         if lat.shape != lon.shape:
@@ -234,8 +236,10 @@ class PointIndex:
         return np.minimum(level, self._n_levels - 1)
 
     def _grid(self, level):
-        while len(self._grids) <= level:
-            self._grids.append(_Grid.of_points(self.lat, self.lon, self._grids[-1].cell_deg * 2))
+        if len(self._grids) <= level:
+            with self._lock:  # each level once, in order, however many threads ask
+                while len(self._grids) <= level:
+                    self._grids.append(_Grid.of_points(self.lat, self.lon, self._grids[-1].cell_deg * 2))
         return self._grids[level]
 
     def _by_level(self, rho):

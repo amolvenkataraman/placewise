@@ -11,7 +11,6 @@ its disk reaches only the stretch of boundary nearest the point.
 """
 
 import math
-from functools import cached_property
 
 import numpy as np
 
@@ -19,6 +18,7 @@ from placewise.constants.earth import MEAN_RADIUS_KM
 from placewise.geo import lines
 
 from . import _geometry as gm
+from ._lazy import once
 from ._points import PointIndex, _Grid
 
 _CELL_DEG = 0.25  # the grid edges are binned on
@@ -68,7 +68,7 @@ class Boundary:
         lon = np.degrees(np.arctan2(v[:, 1], v[:, 0]))
         return edge, lat, lon
 
-    @cached_property
+    @once
     def _sample_index(self):
         """One sample per feature per spacing-sized cell: enough for an upper bound."""
         edge, s_lat, s_lon = self._samples()

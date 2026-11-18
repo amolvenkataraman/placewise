@@ -199,6 +199,10 @@ conflict = "ignore"        # or "reject": a request for another worldview gets 4
   checked against Content-Length before anything is read.
 - **Connections:** at most 256 at once (the rest get an immediate 503). Each socket read times out
   after 30 s, so idle or slow clients can't hold threads.
+- **Concurrency:** requests run in threads that share one Geocoder. Its indexes and caches are
+  built on first use under a lock, once, and never seen half built, so concurrent requests get the
+  answers lone ones get. (Python's GIL means threads add little throughput; run several processes
+  behind the proxy for more.)
 - **Loopback:** a server bound to loopback only answers requests addressed to `localhost`,
   `127.0.0.1` or `[::1]`, which blocks DNS rebinding from web pages. A Unix socket is created with
   mode 0600, so other local users can't connect.

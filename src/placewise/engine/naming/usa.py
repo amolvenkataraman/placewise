@@ -17,13 +17,12 @@
   curated `regions` and the CBSA and CSA, smallest first).
 """
 
-from functools import cached_property
-
 import numpy as np
 
 from placewise.constants import lookup as lookup_const
 from placewise.constants import naming as const
 from placewise.model import Place, PlaceKind
+from placewise.packs import once
 
 from . import _common as common
 from . import rules
@@ -58,7 +57,7 @@ class Usa:
         values = self.layers.column(key, field) if key is not None else None
         return values if values is not None else [""] * (self.layers.layer(key).count if key else 0)
 
-    @cached_property
+    @once
     def _place(self):
         ids = self._col(self.place, "id")
         return {
@@ -69,7 +68,7 @@ class Usa:
             "row_of": {pid: r for r, pid in enumerate(ids)},
         }
 
-    @cached_property
+    @once
     def _county(self):
         ids, states = self._col(self.county, "id"), self._col(self.county, "state")
         row_of = self.admin.admin1_row_of_id
@@ -107,7 +106,7 @@ class Usa:
                 out[c] = next((p for p in lists[row] if place_states[p] == state), -1)
         return out
 
-    @cached_property
+    @once
     def _zcta(self):
         """Per ZCTA row, the place row of its postal city (-1: none or not a place in the pack)."""
         row_of = self._place["row_of"]

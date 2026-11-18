@@ -18,7 +18,6 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 """
 
 import inspect
-from functools import cached_property
 
 import numpy as np
 
@@ -29,7 +28,7 @@ from placewise.constants import notable as notable_const
 from placewise.constants import parks as parks_const
 from placewise.constants import water as water_const
 from placewise.model import CityRule, PlaceKind, Settings
-from placewise.packs import Pack, open_pack
+from placewise.packs import Pack, once, open_pack
 
 from . import _nearby, _results
 from ._admin import Admin
@@ -73,37 +72,37 @@ class Geocoder:
     def __repr__(self):
         return f"<Geocoder {self.data_version}>"
 
-    @cached_property
+    @once
     def cities(self):
         return Cities(self.layers, self.admin) if self.layers.has(const.CITIES) else None
 
-    @cached_property
+    @once
     def timezones(self):
         """The packs' timezones layers, or None when no pack has one."""
         found = Timezones(self.layers, self.admin)
         return found if found else None
 
-    @cached_property
+    @once
     def parks(self):
         """The park packs' layers (placewise.engine._within), or None when no pack has any."""
         return Parks(self.packs, self.layers, self.settings.near) or None
 
-    @cached_property
+    @once
     def water(self):
         """The water layers (placewise.engine._water); falsy when no pack has them."""
         return Water(self.packs, self.layers)
 
-    @cached_property
+    @once
     def notable(self):
         """The world-notable pack's layer (placewise.engine._notable), or None when no pack has it."""
         return Notable(self.packs, self.layers) or None
 
-    @cached_property
+    @once
     def naming(self):
         """The country packs' rules; they need the GeoNames cities beside them."""
         return Naming(self.packs, self.layers, self.admin, self.cities) if self.cities is not None else None
 
-    @cached_property
+    @once
     def search(self):
         """Forward search over these packs (placewise.search.Search)."""
         from placewise.search import Search
@@ -186,7 +185,7 @@ class Geocoder:
 
     # -- worldview, settings, overrides -------------------------------------------------------------
 
-    @cached_property
+    @once
     def _rules_read_parks(self):
         """Whether the overrides could set a city from the parks a point is in: a city rule (its
         area may name a park), or a hook whose rules can't be seen."""

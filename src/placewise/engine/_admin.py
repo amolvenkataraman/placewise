@@ -10,13 +10,12 @@
   packs may then correct it (placewise.engine.naming).
 """
 
-from functools import cached_property
-
 import numpy as np
 
 from placewise.constants import lookup as const
 from placewise.constants import worldviews as wv_const
 from placewise.model import Disputed
+from placewise.packs import once
 
 from ._index import best_per_query
 from ._worldview import Worldviews
@@ -31,19 +30,19 @@ class Admin:
         self._view_admin1 = {}
         self._flags = {}
 
-    @cached_property
+    @once
     def areas(self):
         """The disputed areas (the worldviews layer of the first pack that has one), or None."""
         pack = next((p for p in self.layers.packs if wv_const.WORLDVIEWS in p), None)
         return self.layers.layer(self.layers.add(pack, wv_const.WORLDVIEWS)) if pack is not None else None
 
-    @cached_property
+    @once
     def worldviews(self):
         return Worldviews(self.countries, self.areas) if self.countries is not None else None
 
     # -- per-feature tables -----------------------------------------------------------------------
 
-    @cached_property
+    @once
     def admin1_country(self):
         """Per admin1 feature, the countries row of its unit (adm0_a3), or -1."""
         wv = self.worldviews
@@ -51,27 +50,27 @@ class Admin:
             return np.full(self.admin1.count, -1, dtype=np.int64)
         return np.array([wv.row_of_adm0.get(c, -1) for c in self.admin1.column("adm0_a3")], dtype=np.int64)
 
-    @cached_property
+    @once
     def admin1_foreign(self):
         if self.worldviews is None:
             return np.full(self.admin1.count, -1, dtype=np.int64)
         return self.worldviews.foreign_rows(self.admin1)
 
-    @cached_property
+    @once
     def admin1_unanswered(self):
         """Per admin1 feature: in a unit that is nobody's country (constants.worldviews.DE_FACTO_UNITS),
         so never reported as it stands."""
         units = {self.worldviews.row_of_adm0.get(u, -2) for u in wv_const.DE_FACTO_UNITS}
         return np.isin(self.admin1_country, list(units))
 
-    @cached_property
+    @once
     def admin1_row_of_id(self):
         """{admin1 id: row}, for country packs whose states carry the same ids ("iso:US-CA")."""
         if self.admin1 is None:
             return {}
         return {pid: i for i, pid in enumerate(self.admin1.column("id"))}
 
-    @cached_property
+    @once
     def codes(self):
         """Country codes as small integers, shared by the cities' country column and claimants."""
         vocab = {}
@@ -85,7 +84,7 @@ class Admin:
         vocab.pop("", None)  # an unknown country matches nothing
         return vocab
 
-    @cached_property
+    @once
     def claimant_codes(self):
         """(countries, width) claimant code ints per polygon, padded with -1."""
         wv = self.worldviews
@@ -98,7 +97,7 @@ class Admin:
             out[j, : len(codes)] = codes
         return out
 
-    @cached_property
+    @once
     def country_code(self):
         """Code int of each countries row, -1 when unknown."""
         return np.array([self.codes.get(c, -1) for c in self.worldviews.code], dtype=np.int64)
