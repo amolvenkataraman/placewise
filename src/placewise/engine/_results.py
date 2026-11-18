@@ -16,7 +16,7 @@ from placewise.model import Nearby, PlaceKind, Relation, Result
 from . import _nearby as nearby
 from ._notable import RADIUS
 
-NAMED = ("sublocality", "locality", "city", "borough", "admin2", "postal", "admin1")
+NAMED = ("sublocality", "locality", "city", "borough", "admin2", "postal")
 
 
 def build(geo, lat, lon, a, named, order, locked):
@@ -63,7 +63,7 @@ def build(geo, lat, lon, a, named, order, locked):
     place = layers.place
     named_lists = {k: v.tolist() for k, v in named.items()}
     empty = [None] * n
-    sub_l, loc_l, city_l, bor_l, adm2_l, post_l, adm1_l = (named_lists.get(k, empty) for k in NAMED)
+    sub_l, loc_l, city_l, bor_l, adm2_l, post_l = (named_lists.get(k, empty) for k in NAMED)
     regions_l, sources_l = named_lists.get("regions", empty), named_lists.get("sources", empty)
     parks = a.get("parks")  # (within, near, sources) per point (placewise.engine._within)
     notable = a.get("notable_places")  # (near, layer key) per point (placewise.engine._notable)
@@ -104,7 +104,6 @@ def build(geo, lat, lon, a, named, order, locked):
             sources.pop("city", None)
             sources.pop("locality", None)
             sources.update(named_sources)
-            admin1 = adm1_l[i] or admin1  # a country pack's own admin1 (COD-AB), where it has one
         if airport[i] >= 0:
             km = airport_km[i]
             rel = Relation.AT if km <= const.AIRPORT_AT_KM else Relation.NEAR

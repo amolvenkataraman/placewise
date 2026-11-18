@@ -34,11 +34,10 @@ placewise is the third option: the answer a person would give, computed on your 
 > county or district, metro area, ZIP / FSA / PIN code, neighbourhoods), first naming rules ("Las
 > Vegas" for the Strip, Mississauga for Pearson, Gurugram in Haryana), curated regions (GTA, GTHA,
 > Bay Area, Delhi NCR ...), water ("Over Lake Ontario"), US and Canadian parks ("within Yosemite
-> National Park"), admin areas for 11 more countries (Sri Lanka, Nepal, Bangladesh, Thailand,
-> Vietnam, Mexico, South Africa, Kenya, Egypt, Türkiye, UAE), worldviews (default de facto; `IN`
-> answers India for every area India claims), forward search (`placewise.find("Yosemite")`, codes,
-> typos, context such as `country="USA"`; `docs/search.md`), location-string parsing, the geo toolkit, track
-> files, privacy tools, a local service and a self-hosted web server.
+> National Park"), worldviews (default de facto; `IN` answers India for every area India claims),
+> forward search (`placewise.find("Yosemite")`, codes, typos, context such as `country="USA"`;
+> `docs/search.md`), location-string parsing, the geo toolkit, track files, privacy tools, a local
+> service and a self-hosted web server.
 >
 > **Doesn't work yet:** notable places and
 > universities, India state/district/city outlines (India uses PIN-code areas for now), UK,

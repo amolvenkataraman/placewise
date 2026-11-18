@@ -6,7 +6,6 @@ parks ~0.8, metro regions ~0.75, postal codes 0.2, a pocket park ~0.1.
 """
 
 from placewise.constants import notable
-from placewise.constants.codab import COUNTRIES, LAYER_PREFIX
 
 from .names import LayerNames, Rank, Term
 
@@ -165,23 +164,6 @@ PARKS = (
 )
 
 
-def codab(country):
-    """Specs for a COD-AB pack: ADM1 is admin1; the levels placewise.constants.codab names
-    admin2, locality and sublocality are those kinds; other levels are administrative (admin2)."""
-    specs = []
-    for level in range(1, country.levels + 1):
-        if level == 1:
-            kind, rank = "admin1", 0.72
-        elif level == country.locality:
-            kind, rank = "locality", 0.35
-        elif level == country.sublocality:
-            kind, rank = "sublocality", 0.2
-        else:
-            kind, rank = "admin2", 0.45 if level == country.admin2 else 0.35
-        specs.append(LayerNames(f"{LAYER_PREFIX}{level}", kind, codes=("pcode",), rank=Rank(base=rank)))
-    return tuple(specs)
-
-
 # famous places (packbuild.notable): the kind per row; fame (a percentile within the kind) below
 # 0.5 adds nothing, the best known land with national parks and 3M cities
 NOTABLE = (
@@ -205,5 +187,4 @@ SPECS = {
     "world-water": WATER,
     "parks": PARKS,  # usa-parks, can-parks, world-parks
     "world-notable": NOTABLE,
-    **{iso3: codab(country) for iso3, country in COUNTRIES.items()},  # COD-AB packs
 }
