@@ -149,3 +149,10 @@ def test_overrides_alias_rename_hide_and_add(tmp_path):
     pier = geo.find("Alpha Pier")[0]
     assert pier.place.id == "app:pier" and pier.contains(0.79, -139.41)
     assert geo.get("app:pier").place.name == "Alpha Pier"
+
+
+def test_a_word_that_names_nothing_reads_as_a_prefix(geo):
+    # "Lake" is no place's whole name, but within a region and kind it means the lakes there
+    assert ids(geo.find("Lake", kinds="water")) == ["lake:alpha"]
+    assert ids(geo.find("Lake", within="South Province", kinds="water")) == ["lake:alpha"]
+    assert geo.find("Lake", within="North Province", kinds="water") == []

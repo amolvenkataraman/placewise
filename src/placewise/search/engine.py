@@ -62,6 +62,8 @@ class Search:
         if q.point is not None:
             return [self._point(q.point, worldview)]
         pool, scores, groups = self._search(q, ctx, limit, prefix)
+        if not groups and not prefix:  # "Lake" within a region: the lakes there
+            pool, scores, groups = self._search(q, ctx, limit, True)
         found = self._entities(pool, scores, groups, worldview, geometry)
         added = [_added(self.added[i]) for i in self._override_ids(q, ctx) if i in self.added]
         return (added + found)[:limit] if added else found
