@@ -192,3 +192,15 @@ def test_state_codes_cover_every_state_and_union_territory():
     assert indiapost.state_code("Jammu & Kashmir") == "IN-JK"
     assert indiapost.state_code("the dadra and nagar haveli and daman and diu") == "IN-DH"
     assert indiapost.state_code("Atlantis") == ""
+
+
+def test_branch_offices_are_counted_per_pin_code(tmp_path):
+    rows = directory_rows()
+    rural = ("Karnataka Circle", "Bengaluru East Region", "Bengaluru East Division")
+    district = ("BENGALURU RURAL", "KARNATAKA", "NA", "NA")
+    rows += [
+        (*rural, "Synthetic Village B.O", "562114", "BO", "Delivery", *district),
+        (*rural, "Other Village B.O", "562114", "BO", "Delivery", *district),
+    ]
+    counts = indiapost.branch_offices(write_directory(tmp_path / "pincode.csv", rows))
+    assert counts == {"562114": 2}

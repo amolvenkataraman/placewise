@@ -35,6 +35,7 @@ FIELDS = {
     "kind",
     "members",
     "districts",
+    "lgd_units",
     "definition",
     "search_as",
     "principal_cities",
@@ -58,6 +59,7 @@ REQUIRED = {
 # vernacular: a name in common use, drawn with official units
 KINDS = ("metro", "official-planning", "vernacular")
 _ID = re.compile(r"^region:[a-z0-9]+(?:-[a-z0-9]+)*$")
+_LGD_UNIT = re.compile(r"^(?:district|subdistrict):\d+$")
 _MEMBER = re.compile(r"^(?:census|statcan|pin|geonames|iso|ne):[A-Za-z0-9-]+$")
 HEADER = '''"""GENERATED from datasets/regions by packbuild.regions; do not edit.
 
@@ -110,6 +112,9 @@ def _validate(where, entry, ids):
     for code, names in entry.get("districts", {}).items():
         if code not in entry["admin1"] or not names:
             raise ValueError(f"{where}: districts of {code!r}: not an admin1 the region reaches, or none")
+    units = entry.get("lgd_units")
+    if units is not None and (not units or not all(_LGD_UNIT.match(str(u)) for u in units)):
+        raise ValueError(f"{where}: lgd_units must list district:<LGD code> or subdistrict:<LGD code>")
     cities = entry.get("principal_cities", {})
     for city, code in cities.items():
         if code not in entry["admin1"]:

@@ -75,6 +75,8 @@ def test_render_round_trips(tmp_path):
         ({"definition": {"title": "Plain", "url": "http://example.org"}}, "definition must be"),
         ({"members": ["statcan:3520", "statcan:3520"]}, "listed twice"),
         ({"districts": {"BC": ["SOMEWHERE"]}}, "districts of 'BC'"),
+        ({"lgd_units": ["taluka:4165"]}, "lgd_units"),
+        ({"lgd_units": []}, "lgd_units"),
         ({"search_as": "region:nowhere"}, "search_as must name"),
     ],
 )
@@ -100,6 +102,17 @@ def test_pin_ids_are_pack_ids(tmp_path):
         )
     )
     assert r["members"] == ["pin:110001"]
+
+
+def test_india_regions_may_name_lgd_districts_and_sub_districts(tmp_path):
+    (r,) = regions.load(
+        _write(
+            tmp_path,
+            _region(country="IN", admin1=["MH"], principal_cities={}, city_aliases={}, members=["pin:400001"],
+                    lgd_units=["district:482", "subdistrict:4165"]),
+        )
+    )  # fmt: skip
+    assert r["lgd_units"] == ["district:482", "subdistrict:4165"]
 
 
 def test_names_must_be_unique(tmp_path):

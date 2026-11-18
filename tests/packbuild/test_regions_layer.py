@@ -123,6 +123,13 @@ def test_union_answers_like_any_member_everywhere():
     assert vertices < sum(len(r) for m in members for o in m.outlines for r in o.rings)
 
 
+def test_union_keeps_every_hole_no_shell_holds_as_its_own_part():
+    # holes that touch their shell's boundary can fail the containment test: each is kept apart
+    shell, lone_a, lone_b = square(0, 0, 4), square(10, 10)[::-1], square(20, 20)[::-1]
+    union = rl.union("region:test", [shell, lone_a, lone_b])
+    assert len(union.outlines) == 3
+
+
 def test_feature_rings_normalise_winding():
     ccw = square(0, 0)[::-1]
     (ring,) = rl.feature_rings([feature("a", ccw)])

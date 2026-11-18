@@ -65,7 +65,7 @@ def test_the_folder_holds_only_purpose_files():
 
 def test_regions_without_a_usable_source_say_why():
     gaps = attribution.load_gaps()
-    assert "ind" in gaps["boundaries"] and gaps["boundaries"]["ind"]
+    assert "ind" in gaps["parks"] and gaps["parks"]["ind"]
     for purpose, regions in attribution.load_registry().items():
         for region in gaps.get(purpose, {}):
             assert not regions.get(region), f"{purpose}/{region} has sources and a gap note"

@@ -78,6 +78,30 @@
         },
         "notes": "Official geographical names approved by the Geographical Names Board of Canada and its provincial and territorial members, refreshed weekly (the national English-format CSV; names keep the language they were decided in, English or French, and are not translated). The Canada pack keeps generic category 'Populated Place' (hamlets, communities, towns, urban communities, neighbourhoods, Montreal's boroughs: about 26,000 points) without railway points, post offices, stations and former or vacated places, with the 'Relevance at Scale' field as a prominence. Coordinates are NAD83, used as WGS84. Points only, no boundaries or populations."
       }
+    ],
+    "ind": [
+      {
+        "id": "indiapost-pincode-directory",
+        "name": "All India Pincode Directory (Department of Posts, Open Government Data Platform India)",
+        "url": "https://www.data.gov.in/catalog/all-india-pincode-directory",
+        "licence": "LicenseRef-GODL-India",
+        "credit": "Department of Posts, Ministry of Communications, Government of India. All India Pincode Directory, sourced from the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
+        "used_in": [
+          "ind/neighbourhoods"
+        ],
+        "notes": "Neighbourhood points: post offices inside cities, named without their type words ('Koramangala S.O' -> Koramangala); institutional offices (colleges, courts, hospitals) are left out by the curated not_neighbourhoods words."
+      },
+      {
+        "id": "lgd-directory",
+        "name": "Local Government Directory (LGD), Ministry of Panchayati Raj",
+        "url": "https://lgdirectory.gov.in/",
+        "licence": "LicenseRef-GODL-India",
+        "credit": "Ministry of Panchayati Raj, Government of India. Local Government Directory (lgdirectory.gov.in), as published on the Open Government Data (OGD) Platform India (data.gov.in), under the Government Open Data Licence - India (GODL), https://www.data.gov.in/Godl",
+        "used_in": [
+          "ind/neighbourhoods"
+        ],
+        "notes": "Which city each neighbourhood point belongs to (its PIN area's city in the crosswalk)."
+      }
     ]
   }
 }
