@@ -8,7 +8,7 @@ import math
 import threading
 from contextlib import contextmanager
 
-from placewise.model import Place, PlaceKind, Point, Result, Settings
+from placewise.model import BBox, Entity, Place, PlaceKind, Point, Result, Settings
 
 DATA_VERSION = "2026.11-test"
 
@@ -67,7 +67,33 @@ def _result(lat, lon):
     )
 
 
-class FakeGeocoder:
+def _entity(name):
+    m = LANDMARKS[name]
+    place = Place(
+        id=f"test:{name}", name=m[2].split(",")[0], kind=PlaceKind.LANDMARK, point=Point(m[0], m[1])
+    )
+    box = BBox(m[0] - 0.001, m[1] - 0.001, m[0] + 0.001, m[1] + 0.001)
+    return Entity(place, point=place.point, bbox=box, radius_km=0.1, city=m[3], country=m[6], score=1.0)
+
+
+class FakeSearch:
+    """find / get over the landmarks (a name in their label), recording the options asked for."""
+
+    def find(self, text, **options):
+        self._record("find", 1, options)
+        return [_entity(k) for k, m in LANDMARKS.items() if text.lower() in m[2].lower()][
+            : options.get("limit", 10)
+        ]
+
+    def get(self, ident, **options):
+        self._record("get", 1, options)
+        name = ident.removeprefix("test:")
+        if name not in LANDMARKS:
+            raise KeyError(ident)
+        return _entity(name)
+
+
+class FakeGeocoder(FakeSearch):
     """Duck-typed Geocoder: lookup / lookup_many / data_version / settings, with call counting."""
 
     def __init__(self, settings=None, *, fail=False):

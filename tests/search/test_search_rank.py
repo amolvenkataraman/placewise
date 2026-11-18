@@ -43,12 +43,16 @@ def test_context_first_reading_later_reading_and_outside():
 
 
 def test_context_with_nothing_inside_keeps_everything_lightly():
-    got = context_factors([0, 0], ([("FR", None)],), np.array(["US", "CA"], dtype=object), np.array([None, None]))
+    got = context_factors(
+        [0, 0], ([("FR", None)],), np.array(["US", "CA"], dtype=object), np.array([None, None])
+    )
     assert got.tolist() == [const.CONTEXT_MISS_FACTOR] * 2
 
 
 def test_candidates_without_a_context_are_untouched():
-    got = context_factors([-1, 0], ([("FR", None)],), np.array(["US", "FR"], dtype=object), np.array([None, None]))
+    got = context_factors(
+        [-1, 0], ([("FR", None)],), np.array(["US", "FR"], dtype=object), np.array([None, None])
+    )
     assert got.tolist() == [1.0, 1.0]
 
 

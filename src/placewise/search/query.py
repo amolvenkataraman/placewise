@@ -34,11 +34,13 @@ class Query:
     context_place: str | None = None
     point: tuple[float, float] | None = None
     id: str | None = None
-    code_like: bool = False
+    code_like: bool = False  # the whole text could be a code
     aliases: tuple[tuple[str, tuple[str, str | None]], ...] = ()
     region_ids: tuple[str, ...] = ()
     fallback_keys: tuple[str, ...] = ()
     trailing: "Query | None" = None
+    code: str | None = None  # the text matched against codes ("YYZ" in "YYZ airport")
+    airport: bool = False  # the text says "airport": an airport code means the airport
 
     @property
     def is_id(self):
@@ -60,6 +62,7 @@ def parse_query(text):
     if ident is not None and _ID.fullmatch(raw):
         name, context, place = raw, (), None
     key = city_key(name)
+    code, airport = _code(raw)
     return Query(
         raw=raw,
         name=name,
@@ -72,6 +75,8 @@ def parse_query(text):
         region_ids=_region_ids(name),
         fallback_keys=_fallback_keys(key),
         trailing=_trailing(raw, name, context, place),
+        code=code,
+        airport=airport,
     )
 
 
@@ -93,6 +98,15 @@ def _identifier(raw):
     if _ID.fullmatch(raw) and not raw.split(const.ID_SEPARATOR, 1)[1].startswith("//"):
         return raw
     return None
+
+
+def _code(raw):
+    """(text to match as a code or None, whether the query asks for the airport)."""
+    words = raw.split()
+    rest = [w for w in words if w.lower() not in const.AIRPORT_WORDS]
+    airport = len(rest) < len(words)
+    text = " ".join(rest)
+    return (text if text and _code_like(text) else None), airport
 
 
 def _code_like(raw):

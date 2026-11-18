@@ -36,13 +36,14 @@ placewise is the third option: the answer a person would give, computed on your 
 > Bay Area, Delhi NCR ...), water ("Over Lake Ontario"), US and Canadian parks ("within Yosemite
 > National Park"), admin areas for 11 more countries (Sri Lanka, Nepal, Bangladesh, Thailand,
 > Vietnam, Mexico, South Africa, Kenya, Egypt, Türkiye, UAE), worldviews (default de facto; `IN`
-> answers India for every area India claims), location-string parsing, the geo toolkit, track
+> answers India for every area India claims), forward search (`placewise.find("Yosemite")`, codes,
+> typos, context such as `country="USA"`; `docs/search.md`), location-string parsing, the geo toolkit, track
 > files, privacy tools, a local service and a self-hosted web server.
 >
-> **Doesn't work yet:** forward search (`placewise.find("Yosemite")`), notable places and
+> **Doesn't work yet:** notable places and
 > universities, India state/district/city outlines (India uses PIN-code areas for now), UK,
 > Europe, Australia and most other countries beyond the world baseline, elevation, roads and
-> trails, the `reverse`/`find`/`explain` CLI commands, Docker. Expect slow first lookups (indexes
+> trails, the `reverse`/`explain` CLI commands, Docker. Expect slow first lookups (indexes
 > are built on first use) and roughly 25–50k points/s after that.
 >
 > **Install:** `pip install --pre placewise` (alpha), then `placewise data install world` (and
@@ -99,15 +100,24 @@ r.postal.name, r.admin2.name                  # "89109", "Clark County"
 
 placewise.lookup(35.9208, 74.3089, worldview="IN").label   # "Gilgit, Ladakh, India" (docs/worldviews.md)
 
+placewise.find("Yosemite")[0]                 # Entity: place, a point inside it, bbox, radius, context
+placewise.find("Paris", country="USA")[0]     # Paris, Texas; also state=, near=, within=, kinds=
+placewise.find("YYZ")[0].place.name           # "Toronto" (the city it serves); kinds="airport" for the airport
+placewise.get("census:0646870")               # by id; placewise.suggest("Mississ") for type-ahead
+
 from placewise.text import parse_location
 parse_location("US-CA-Menlo Park; Remote - US and Canada")  # structured places, offline
 ```
 
+`placewise find "Lake Tahoe"` prints the same from the command line (`--json` for Entities).
 The same lookups run as a local service or a self-hosted web server (`placewise serve`, see
 `docs/self-hosting.md`), with `placewise.Client` offering the identical interface.
 
 ## What it does
 
+- **Forward search** (`docs/search.md`): names, aliases, codes (IATA, postal, ISO, Wikidata),
+  typos and prefixes to places with a point inside, box, radius, outline and context; context
+  from the text ("Paris, TX") or arguments (country, state, near, bbox, within, kinds).
 - **Reverse lookup** (`docs/naming.md`): three names per point (sublocality, locality, city),
   county or district, metro and curated regions, postal area, time zone (by polygon), nearest
   airport, water body (`docs/water.md`), parks (`docs/parks.md`), with the source of every field.

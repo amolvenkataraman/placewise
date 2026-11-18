@@ -62,3 +62,53 @@ CODE_COLUMNS = (
     "state_code",
 )
 REVERSE_CACHE_SIZE = 4096  # Entity contexts (city, region, country) kept per worldview
+
+# kinds= accepts these everyday words for PlaceKind values
+KIND_ALIASES = {
+    "city": "locality",
+    "town": "locality",
+    "village": "locality",
+    "municipality": "locality",
+    "neighbourhood": "sublocality",
+    "neighborhood": "sublocality",
+    "state": "admin1",
+    "province": "admin1",
+    "county": "admin2",
+    "district": "admin2",
+    "metro": "region",
+    "postal": "postal_code",
+    "postcode": "postal_code",
+    "zip": "postal_code",
+    "lake": "water",
+    "river": "water",
+    "sea": "water",
+    "ocean": "water",
+    "university": "university",
+    "mountain": "peak",
+}
+
+# which context an Entity carries, by its kind's level: country (level >= 1), region (>= 2),
+# city (>= 4); a country carries only its own code, a state its country, a city its state too
+CONTEXT_LEVEL = {
+    "country": 0,
+    "admin1": 1,
+    "admin2": 2,
+    "region": 2,
+    "park": 2,
+    "water": 2,
+    "island": 2,
+    "peak": 2,
+    "trail": 2,
+    "highway": 2,
+    "ski_area": 2,
+    "timezone": 1,
+    "locality": 3,
+}
+CONTEXT_LEVEL_DEFAULT = 4  # neighbourhoods, postal codes, airports, landmarks ... carry a city
+
+# -- codes mean what people mean ------------------------------------------------------------------
+
+AIRPORT_WORDS = ("airport", "airports", "intl", "international")  # "YYZ airport" means the airport
+SERVED_CITY_KM = 60.0  # an airport serves the largest city this close in its country ...
+SERVED_COLUMN = "served"  # ... unless the airports layer names it (a city id) in this column
+SERVED_CITY_FACTOR = 1.05  # the served city scores this much above its airport
