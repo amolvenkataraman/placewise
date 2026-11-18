@@ -6,13 +6,13 @@ The index has two levels. Short edges (under _SHORT_DEG on each side, away from 
 runs of up to _RUN_EDGES consecutive edges of one ring, each run inside a latitude/longitude box
 padded far beyond the bulge of its arcs; a run is listed in every grid cell its box touches. A
 query reads the runs in the cells of its disk, drops those whose box is farther than its radius
-(a haversine bound, no trigonometry per pair), expands the rest to their edges and drops those
-whose own boxes are farther. Long and polar edges are listed instead in each cell that a sample
-along their arc falls in, samples no more than _SPACING_KM apart, so any part of such an arc is
-within half that of a listed cell (the disk is widened by that half spacing for them). Every
-candidate edge then goes through a cheap triangle-inequality bound and the exact measure. Pruning
-only ever drops edges that are farther than the radius, so the answers are those of measuring
-every edge.
+(a haversine bound, no trigonometry per pair), and expands the rest to their edges, each run
+once however many of the disk's cells list it. Long and polar edges are listed instead in each
+cell that a sample along their arc falls in, samples no more than _SPACING_KM apart, so any part
+of such an arc is within half that of a listed cell (the disk is widened by that half spacing
+for them). Every candidate edge then goes through a cheap triangle-inequality bound and the exact
+measure. Pruning only ever drops edges that are farther than the radius, so the answers are those
+of measuring every edge. Points with no border listed within a degree skip the reading entirely.
 
 A nearest-boundary query first finds an upper bound from the nearest sample (a PointIndex over a
 thinned set of samples of every arc), so its disk reaches only the stretch of boundary nearest the
@@ -42,6 +42,7 @@ _POLAR_DEG = 80.0  # edges reaching beyond this latitude never do
 _BULGE_PAD = 0.5
 _PAD_DEG = 1e-7
 _BOX_SLACK = 1e-9  # relative, on the box bounds
+_COVER_REACH_DEG = 0.99  # near() skips points by 1 degree cells for reaches under this
 
 
 class Boundary:
@@ -103,7 +104,22 @@ class Boundary:
             cells.append(pair // m)
             items.append(long_runs[pair % m])
             self._long_reach = _SPACING_KM / 2
-        self.grid = _Grid(_CELL_DEG, np.concatenate(cells), np.concatenate(items))
+        cells = np.concatenate(cells)
+        self.grid = _Grid(_CELL_DEG, cells, np.concatenate(items))
+        self._cover = _coverage(cells // cols, cells % cols)
+
+    def _covered(self, lat, lon, radius_km):
+        """False for points no border can come within radius_km of: none is listed in their 1
+        degree cell or the eight round it, and the radius (with the long edges' reach) spans
+        under a degree of latitude and of longitude there (|dlon| <= d / cos(|lat| + d) for
+        small d). Answering only the rest changes nothing, and skips layers far away cheaply."""
+        reach = np.degrees((radius_km + self._long_reach + _SLACK_KM) / MEAN_RADIUS_KM)
+        far = np.minimum(np.abs(lat) + reach, 90.0)
+        with np.errstate(divide="ignore"):
+            small = reach / np.cos(np.radians(far)) <= _COVER_REACH_DEG
+        row = np.clip(np.floor(lat + 90.0), 0, 179).astype(np.int64)
+        col = np.clip(np.floor(lon + 180.0), 0, 359).astype(np.int64)
+        return ~small | self._cover[row, col]
 
     def _arcs(self, i):
         """Unit vectors of the ends of borders i (positions in self.edge), and their angles."""
@@ -145,6 +161,7 @@ class Boundary:
         """(point, feature, km), one row per pair whose boundary comes within radius_km, at the
         nearest distance, sorted by point then feature. lat, lon: flat, normalised (NaN: none)."""
         ok = np.flatnonzero(np.isfinite(lat))
+        ok = ok[self._covered(lat[ok], lon[ok], radius_km)]
         radius = np.full(len(ok), float(radius_km))
         out_q, out_f, out_d = [], [], []
         for q, e, d, _ in self._measure(lat[ok], lon[ok], radius):
@@ -204,32 +221,32 @@ class Boundary:
         lat_reach, lon_reach = _box_reach(lat, radius)
         for q, pos in self.grid.read(lat, lon, reach):
             run = self.grid.items[pos].astype(np.int64)
-            south, west, north, east = (side[run] for side in self.run_box)
-            near = self.run_long[run] | _box_near(
-                lat[q], lon[q], south, west, north, east, lat_reach[q], lon_reach[q]
-            )
-            q, run = q[near], run[near]
+            box = (side[run] for side in self.run_box)
+            near = self.run_long[run] | _box_near(lat[q], lon[q], *box, lat_reach[q], lon_reach[q])
+            n_runs = len(self.run_start)  # a run is read once per cell of the disk listing it
+            key = np.unique(q[near] * n_runs + run[near])
+            q, run = key // n_runs, key % n_runs
             which, e = _expand(self.run_start[run], self.run_stop[run])
-            q, short = q[which], ~self.run_long[run][which]
-            i = self.edge[e]
-            ya, xa, yb, xb = self.ya[i], self.xa[i], self.yb[i], self.xb[i]
-            # each short edge by its own box too
-            pad = _BULGE_PAD * np.maximum(np.abs(ya - yb), np.abs(xa - xb)) ** 2 + _PAD_DEG
-            box = (
-                np.minimum(ya, yb) - pad,
-                np.minimum(xa, xb) - pad,
-                np.maximum(ya, yb) + pad,
-                np.maximum(xa, xb) + pad,
-            )
-            near = ~short | _box_near(lat[q], lon[q], *box, lat_reach[q], lon_reach[q])
-            q, e, ya, xa, yb, xb = q[near], e[near], ya[near], xa[near], yb[near], xb[near]
+            q = q[which]
             p = p_all[q]
-            a, b = lines._unit(ya, xa), lines._unit(yb, xb)  # as _arcs has them
+            a, b, arc = self._arcs(e)
             # an arc's points are no nearer than (|pa| + |pb| - |ab|) / 2 by the triangle inequality
-            bound = (_angle(p, a) + _angle(p, b) - _angle(a, b)) / 2 * MEAN_RADIUS_KM
+            bound = (_angle(p, a) + _angle(p, b) - arc) / 2 * MEAN_RADIUS_KM
             near = bound <= radius[q] + _SLACK_KM
             nearest, angle, _ = lines._nearest_on_arcs(p[near], a[near], b[near])
             yield q[near], e[near], angle * MEAN_RADIUS_KM, nearest
+
+
+def _coverage(rows, cols):
+    """(180, 360) bools: 1 degree cells holding or beside (round ±180 too) any of these cells of
+    the _CELL_DEG grid."""
+    per = round(1 / _CELL_DEG)
+    cover = np.zeros((180, 360), dtype=bool)
+    cover[rows // per, cols // per] = True
+    cover |= np.roll(cover, 1, axis=1) | np.roll(cover, -1, axis=1)
+    cover[1:] |= cover[:-1].copy()
+    cover[:-1] |= cover[1:].copy()
+    return cover
 
 
 def _edge_boxes(ya, xa, yb, xb):

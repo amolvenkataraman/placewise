@@ -459,6 +459,8 @@ class PolygonLayer(Layer):
             np.asarray(offsets[cell]).astype(np.int64),
             np.asarray(offsets[cell + 1]).astype(np.int64),
         )
+        if not (stop > start).any():  # no candidates: a layer far from every point
+            return np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.int64)
         point = np.repeat(ok, stop - start)
         items = self._array(f"{consts.GRID_DIR}/items.npy")
         feature = np.asarray(items[_ranges(start, stop)]).astype(np.int64)

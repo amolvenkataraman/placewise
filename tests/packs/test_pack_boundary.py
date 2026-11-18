@@ -133,3 +133,20 @@ def test_boundary_queries_shapes_and_odd_input(tmp_path):
     assert f == 1 and d == pytest.approx(1.5 * 111.195, rel=1e-2) and type(f) is int and type(d) is float
     f, d, a, _ = layer.nearest_boundary(np.nan, 0.0)
     assert f == -1 and d == np.inf and np.isnan(a)
+
+
+def test_near_boundary_skips_points_far_from_every_border(tmp_path, monkeypatch):
+    layer = _open(tmp_path, [box_feature(10, 10, 11, 11), fiji()])
+    boundary = layer._boundary
+    lat, lon = np.array([10.5, 40.0, -17.5, -17.5, 89.9]), np.array([10.5, -60.0, 175.0, -175.0, 0.0])
+    # near the box, far from all, Fiji either side of ±180, near the pole (not decided by cells)
+    assert boundary._covered(lat, lon, 25.0).tolist() == [True, False, True, True, True]
+    assert boundary._covered(lat, lon, 500.0).all()  # wider than the cells can tell
+    measured = []
+    real = type(boundary)._measure
+    monkeypatch.setattr(
+        type(boundary), "_measure", lambda self, a, b, r: measured.append(len(a)) or real(self, a, b, r)
+    )
+    point, feature, _ = layer.near_boundary(lat, lon, 25.0)
+    assert measured == [4] and point.tolist() == [] and feature.tolist() == []
+    assert layer.near_boundary(40.0, -60.0, 25.0)[0].tolist() == [] and measured == [4, 0]
