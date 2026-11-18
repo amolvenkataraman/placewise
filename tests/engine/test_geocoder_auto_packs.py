@@ -50,7 +50,7 @@ def naming_release(tmp_path):
 
 
 def _geocoder(data_dir, index_url, **data):
-    settings = Settings(data=DataSettings(**data))
+    settings = Settings(data=DataSettings(**{"mode": "auto", **data}))  # manual is the default
     return Geocoder(settings=settings, store=Store(data_dir, settings.data, index_url=index_url))
 
 

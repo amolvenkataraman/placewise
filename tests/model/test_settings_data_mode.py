@@ -6,11 +6,13 @@ import pytest
 from placewise.model import DataSettings, Settings
 
 
-def test_default_is_auto_for_country_packs_only():
+def test_default_is_manual_and_auto_is_opt_in():
+    # owner: auto-download is something you *optionally enable*; by default only the base world pack
+    # is installed on first use, and country packs once you turn auto on (or install them yourself)
     data = Settings().data
-    assert data.mode == "auto"
-    assert data.auto_packs == ("country",)
-    assert data.effective_mode == "auto"
+    assert data.mode == "manual"
+    assert data.auto_packs == ("country",)  # what auto fetches once enabled
+    assert data.effective_mode == "manual"
 
 
 def test_offline_is_the_old_spelling_of_locked():
