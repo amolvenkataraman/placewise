@@ -245,6 +245,49 @@ def test_worldview_india_reports_india_for_indian_claims(geo):
     assert e.country == "IN"
 
 
+# places whose point lies just off the world pack's 1:10m coast (harbours, islands, river banks):
+# (query, packs, expected name, region, country)
+COASTAL = [
+    ("Boston", ("usa",), "Boston", "Massachusetts", "US"),
+    ("Key West", ("usa",), "Key West", "Florida", "US"),
+    ("Corpus Christi", ("usa",), "Corpus Christi", "Texas", "US"),
+    ("Biloxi", ("usa",), "Biloxi", "Mississippi", "US"),
+    ("Quebec City", (), "Québec", "Québec", "CA"),
+    ("Tofino", ("can",), "Tofino", "British Columbia", "CA"),
+    ("Kochi", ("ind",), "Kochi", "Kerala", "IN"),
+    ("Alappuzha", ("ind",), "Alappuzha", "Kerala", "IN"),
+    ("Victoria, Hong Kong", (), "Victoria", "Central and Western", "HK"),
+    ("Dubrovnik", (), "Dubrovnik", None, "HR"),
+    ("Lagos", (), "Lagos", "Lagos", "NG"),
+    ("Mombasa", (), "Mombasa", None, "KE"),
+    ("Darwin", (), "Darwin", "Northern Territory", "AU"),
+    ("Suva", (), "Suva", None, "FJ"),
+    ("Guayaquil", (), "Guayaquil", "Guayas", "EC"),
+]
+
+
+@pytest.mark.parametrize(("text", "packs", "name", "region", "country"), COASTAL, ids=[c[0] for c in COASTAL])
+def test_coastal_places_are_in_the_country_and_region_of_their_coast(geo, text, packs, name, region, country):
+    has(geo, "world", *packs)
+    e = top(geo, text)
+    assert e.place.name == name, (text, e.place.id)
+    assert e.country == country and e.region is not None, (text, e.country, e.region)
+    if region is not None:
+        assert e.region == region, (text, e.region)
+    full = geo.lookup(e.point.lat, e.point.lon)  # what reverse lookup says of the same point
+    assert (e.country, e.region) == (full.cc, full.admin1.name)
+    assert e.place.codes["iso2"] == country
+
+
+def test_coastal_places_pass_country_and_state_filters(geo):
+    has(geo, "usa", "ind")
+    assert top(geo, "Boston", country="US", admin1="MA").place.name == "Boston"
+    assert top(geo, "Boston, MA").region == "Massachusetts"
+    assert top(geo, "Kochi", country="IN").region == "Kerala"
+    assert top(geo, "Kochi, Kerala").place.name == "Kochi"
+    assert top(geo, "Kochi", worldview="IN").country == "IN"
+
+
 # -- notable places (once world-notable exists) -----------------------------------------------------
 
 

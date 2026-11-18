@@ -3,7 +3,7 @@ within=, kinds=, combined with the context written in the text ("Paris, TX"). Ar
 the two disagree. Filters drop what fails them; with strict=False they only push it down.
 
 `Where` answers, for many points at once, the country (alpha-2) and admin1 code and name each is
-in, from the packs' world countries and admin1 layers (de facto boundaries)."""
+in, by reverse lookup's country and admin1 rules on the de facto view."""
 
 from dataclasses import dataclass
 
@@ -135,30 +135,30 @@ def factors(ctx, lat, lon, radius_km, kind, where):
 
 
 class Where:
-    """Country and admin1 of points, from the world layers (empty when a pack lacks them)."""
+    """Country and admin1 of points as reverse lookup has them on the de facto view (the engine's
+    Admin): the containing polygons, or, just off a coast, the nearest within the territorial sea
+    (Natural Earth's 1:10m coast misses many harbour and waterfront points). Empty without layers."""
 
-    def __init__(self, layers, lat, lon):
+    def __init__(self, admin, lat, lon):
         n = len(lat)
         self.country = np.full(n, None, dtype=object)
         self.admin1 = np.full(n, None, dtype=object)
         self.admin1_name = np.full(n, None, dtype=object)
-        countries = layers.layer(lookup_const.COUNTRIES)
-        if countries is not None and n:
-            idx = np.atleast_1d(countries.query(lat, lon))
-            iso2 = countries.column("iso2")
-            hit = idx >= 0
-            self.country[hit] = iso2[idx[hit]]
-        admin = layers.layer(lookup_const.ADMIN1)
-        if admin is not None and n:
-            idx = np.atleast_1d(admin.query(lat, lon))
-            hit = idx >= 0
-            self.admin1[hit] = admin.column("code")[idx[hit]]
-            self.admin1_name[hit] = admin.column("name")[idx[hit]]
-            country = admin.column("country")[idx[hit]]
-            missing = np.array([c is None for c in self.country[hit]], dtype=bool)
-            self.country[np.flatnonzero(hit)[missing]] = country[missing]
+        if not n or admin.countries is None:
+            return
+        a = {}
+        admin.answer(a, np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64), _DE_FACTO)
+        self.country[:] = admin.iso2_of_view(a)
+        aidx = a["aidx"]
+        hit = aidx >= 0
+        if hit.any():
+            self.admin1[hit] = admin.admin1.column("code")[aidx[hit]]
+            self.admin1_name[hit] = admin.admin1.column("name")[aidx[hit]]
         for arr in (self.country, self.admin1, self.admin1_name):
             arr[arr == ""] = None
 
     def pairs(self):
         return zip(self.country, self.admin1, strict=True)
+
+
+_DE_FACTO = (lookup_const.DE_FACTO,)

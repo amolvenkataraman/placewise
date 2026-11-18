@@ -215,3 +215,18 @@ def test_generic_park_names_are_never_found(tmp_path):
     assert ids(geo.find("Willow Park")) == ["pad-us:b"]
     assert "pad-us:a" not in ids(geo.find("Open Space"))
     assert "pad-us:a" not in ids(geo.find("Open Space", prefix=True))
+
+
+def test_a_place_just_offshore_is_in_the_country_and_region_its_coast_is(geo):
+    # Seaview's point is 5.6 km off Alphaland's coast: within its territorial sea, as lookup has it
+    port = geo.find("Seaview")[0]
+    full = geo.lookup(port.point.lat, port.point.lon)
+    assert full.cc == "XA" and full.admin1.name == "North Province"
+    assert (port.country, port.region) == ("XA", "North Province")
+    assert port.place.codes["iso2"] == "XA" and port.place.codes["admin1"] == "N"
+    assert ids(geo.find("Seaview", admin1="XA-N")) == ["geonames:6"]
+    assert ids(geo.find("Seaview, North Province")) == ["geonames:6"]
+    # far out at sea, it is in no country
+    reef = geo.find("Farout Reef")[0]
+    assert (reef.country, reef.region) == (None, None)
+    assert geo.find("Farout Reef", admin1="XA-N") == []

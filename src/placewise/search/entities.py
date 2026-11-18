@@ -2,7 +2,7 @@
 radius and (on request) outline, and where it is (city, region, country), looked up for all
 results at once and cached.
 
-Context comes from the world layers' countries and admin1 (`context.Where`) on the default
+Context comes from reverse lookup's country and admin1 rules (`context.Where`) on the default
 worldview, and from the Geocoder's full reverse lookup when another worldview applies or a city
 is wanted (neighbourhoods, postal codes, airports, landmarks)."""
 
@@ -78,7 +78,7 @@ class Contexts:
                 )
         rest = [i for i, v in enumerate(out) if v is None]
         if rest:
-            where = Where(self.geocoder.layers, lat[rest], lon[rest])
+            where = Where(self.geocoder.admin, lat[rest], lon[rest])
             for j, i in enumerate(rest):
                 out[i] = (None, where.admin1_name[j], where.country[j], where.admin1[j])
         return out

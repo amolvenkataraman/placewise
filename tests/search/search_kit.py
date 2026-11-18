@@ -2,7 +2,8 @@
 tests' Alphaland), with name indexes. Nothing real, nothing personal.
 
 world pack        countries, admin1 (North/South Province, West Region ...), GeoNames-like cities
-                  (Alpha City, two Rivertons), an airport (XAI / XAAA) serving Alpha City
+                  (Alpha City, two Rivertons, Seaview just offshore, Farout Reef far out at sea),
+                  an airport (XAI / XAAA) serving Alpha City
 alpha pack        towns (Alpha City and Riverton as outlines), metros (Alpha City metro area),
                   parks (Alpha Falls National Park, code ALFA), lakes (Lake Alpha)
 world-parks pack  park_points: Alpha Falls National Park again, as a point
@@ -31,6 +32,9 @@ CITIES = [
     ("geonames:3", "Beta Town", 0.25, -138.97, "XB", 500_000, "PPLA"),
     ("geonames:4", "Riverton", 0.22, -139.27, "XA", 30_000, "PPL"),
     ("geonames:5", "Riverton", 0.50, -138.70, "XB", 5_000, "PPL"),
+    # a port whose point is just off Alphaland's west coast, and a reef far out at sea
+    ("geonames:6", "Seaview", 0.75, -140.05, "XA", 20_000, "PPL"),
+    ("geonames:7", "Farout Reef", 0.75, -140.6, "XA", 100, "PPL"),
 ]
 
 
