@@ -27,7 +27,7 @@ from placewise.constants.codab import COUNTRIES, LAYER_PREFIX
 from placewise.constants.earth import MEAN_RADIUS_KM
 from placewise.io import read_shapefile
 
-from . import claims
+from . import claims, names
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import LayerData, write_pack
 from .polygons import to_feature
@@ -143,7 +143,7 @@ def build(iso3, cache_dir, out_dir, version, refresh=False, tolerance_m=DEFAULT_
     for layer in layers:
         vertices = sum(len(r) for f in layer.features for o in f.outlines for r in o.rings)
         log.info("%s/%s: %d features, %d vertices", iso3, layer.name, len(layer.features), vertices)
-    return write_pack(Path(out_dir), iso3, version, layers)
+    return write_pack(Path(out_dir), iso3, version, layers, names=names.for_pack("codab", layers))
 
 
 def main(argv=None):

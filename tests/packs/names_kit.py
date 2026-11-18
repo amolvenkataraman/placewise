@@ -96,22 +96,20 @@ def names_layers():
 
 
 def names_data(layers):
-    """NameData for names_layers(), written out by hand (packbuild.names.build does it by spec)."""
-    cities, admin = layers[:2]
+    """NameData for names_layers(), written out by hand (packbuild.names.build does it by spec);
+    ids need no entries: the writer indexes every indexed layer's ids."""
+    del layers  # the rows follow the tables above
     rows = []
     for i, (name, aliases, population, _, _) in enumerate(CITIES):
         rank = 0.3 + 0.7 * min(np.log10(population + 1) / 9, 1)
         rows.append((name, "cities", i, "locality", rank, "official"))
         rows += [(a, "cities", i, "locality", rank, "alias") for a in aliases.split("|") if a]
-        rows.append((cities.columns["id"][i], "cities", i, "locality", rank, "code"))
     for i, a in enumerate(ADMIN):
         rows += [(a[0], "admin1", i, "admin1", 0.8, "official"), (a[1], "admin1", i, "admin1", 0.8, "code")]
-        rows.append((admin.columns["id"][i], "admin1", i, "admin1", 0.8, "code"))
     rows += [
         ("Yosemite National Park", "parks", 0, "park", 0.8, "official"),
         ("Yosemite", "parks", 0, "park", 0.8, "alias"),
         ("YOSE", "parks", 0, "park", 0.8, "code"),
-        ("synthetic:park:0", "parks", 0, "park", 0.8, "code"),
         ("Toronto Pearson International Airport", "airports", 0, "airport", 0.6, "official"),
         ("YYZ", "airports", 0, "airport", 0.6, "code"),
         ("CYYZ", "airports", 0, "airport", 0.6, "code"),

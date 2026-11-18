@@ -22,7 +22,7 @@ import datetime as dt
 import logging
 from pathlib import Path
 
-from . import regions_layer, timezones
+from . import names, regions_layer, timezones
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .sources import url, uscensus
@@ -197,7 +197,7 @@ def build_us(cache_dir, out_dir, version, refresh=False, regions=None):
     layers = build_layers(cache_dir, refresh=refresh, regions=regions)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "usa", version, layers)
+    return write_pack(Path(out_dir), "usa", version, layers, names=names.for_pack("usa", layers))
 
 
 def main(argv=None):
