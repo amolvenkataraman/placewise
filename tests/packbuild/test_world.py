@@ -114,9 +114,9 @@ def test_build_world_writes_a_real_pack_that_reopens(tmp_path, offline):
     yyz = pack.names.codes("YYZ")  # the airport, and Toronto through its airport_codes
     assert {pack.names.layers[x] for x in yyz.layer} == {"airports", "cities"}
     bangalore = pack.names.exact("Bangalore")  # a former name
-    assert [pack.names.resolve(int(x), int(r)).id for x, r in zip(bangalore.layer, bangalore.row)] == [
-        "geonames:1277333"
-    ]
+    assert [
+        pack.names.resolve(int(x), int(r)).id for x, r in zip(bangalore.layer, bangalore.row, strict=True)
+    ] == ["geonames:1277333"]
     zones = pack["timezones"]
     assert zones.value("zone", zones.query(43.65, -79.38)) == "America/Toronto"
     facts = pack["country_facts"].row(0)
