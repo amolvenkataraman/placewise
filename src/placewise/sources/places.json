@@ -11,14 +11,32 @@
         "credit": "GeoNames (geonames.org), CC BY 4.0",
         "used_in": [
           "world/cities",
+          "world/admin1 (alias columns)",
+          "world/countries (alias columns)",
           "package: constants/countries/<country>/cities.py (generated)"
         ],
         "downloads": {
           "cities": "https://download.geonames.org/export/dump/cities1000.zip",
           "admin1_codes": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
-          "country_info": "https://download.geonames.org/export/dump/countryInfo.txt"
+          "country_info": "https://download.geonames.org/export/dump/countryInfo.txt",
+          "alternate_names": "https://download.geonames.org/export/dump/alternateNamesV2.zip"
         },
-        "notes": "Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists."
+        "notes": "Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists. alternateNamesV2 (all alternate names, streamed from the zip) gives the world pack's alias columns on cities, admin1 and countries: English names, abbreviations, IATA codes attached to cities and short names; historic names only where a curated dataset confirms them (packbuild.world_aliases)."
+      },
+      {
+        "id": "placewise-names",
+        "name": "placewise curated datasets: names and airports (datasets/names, datasets/airports)",
+        "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
+        "licence": "CC-BY-4.0",
+        "credit": "placewise curated datasets, CC BY 4.0",
+        "used_in": [
+          "world/cities (alias columns)",
+          "world/admin1 (alias columns)",
+          "world/countries (alias columns)",
+          "world/airports (served_city)",
+          "package: constants/countries/city_aliases.py (generated)"
+        ],
+        "notes": "Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): the names people type for places (airport codes, short forms, nicknames, former names, with the GeoNames alternate names to drop), each code citing its OurAirports page and each former name a page on the rename; India's former state and city names (datasets/names/ind.json); and the city each major airport serves (datasets/airports/served.json)."
       }
     ],
     "usa": [

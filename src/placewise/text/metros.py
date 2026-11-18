@@ -1,11 +1,23 @@
-"""Finding metros and city aliases (data: constants.countries.<cc>.metros and .cities)."""
+"""Finding metros and city aliases (data: constants.countries.regions and .city_aliases)."""
 
+import dataclasses
 import functools
 
 from placewise.constants._keys import city_key as key
 from placewise.constants.countries import CITY_ALIASES, METROS, CityAlias
+from placewise.constants.countries.city_aliases import COUNTRY_ALIASES
 
-__all__ = ["all_metros", "city_alias", "find", "is_member_city", "key", "metro_of", "metros_naming"]
+__all__ = [
+    "all_metros",
+    "any_alias",
+    "city_alias",
+    "country_alias",
+    "find",
+    "is_member_city",
+    "key",
+    "metro_of",
+    "metros_naming",
+]
 
 
 @functools.cache
@@ -19,11 +31,17 @@ def _index():
         for city, code in metro.cities.items():
             by_city[(key(city), metro.country, code)] = metro
     for alias, entry in CITY_ALIASES.items():
-        by_city_alias[key(alias)] = entry
+        metro = entry.metro or by_city.get((key(entry.city), entry.country, entry.admin1))
+        by_city_alias[key(alias)] = dataclasses.replace(entry, metro=metro) if metro else entry
     naming = {}  # city key -> metros listing a city of that name, in by_city order
     for (name, _, _), metro in by_city.items():
         naming.setdefault(name, []).append(metro)
     return {m.key: m for m in METROS}, by_name, by_city_alias, by_city, naming
+
+
+@functools.cache
+def _country_aliases():
+    return {key(alias): code for alias, code in COUNTRY_ALIASES.items()}
 
 
 def by_id():
@@ -42,8 +60,21 @@ def find(text):
 
 
 def city_alias(text):
-    """The CityAlias for another name of a city ("NYC", "Bangalore", "SF", "PDX"), or None."""
+    """The CityAlias for another name of a city ("NYC", "Bangalore", "SF", "PDX"), or None. Codes
+    that keep their own meaning alone ("CAN" is Canada, not Guangzhou's airport) are left out."""
+    alias = any_alias(text)
+    return alias if alias is not None and alias.reads_as != "code" else None
+
+
+def any_alias(text):
+    """The CityAlias for any other name of a city, codes that keep their own meaning included
+    ("CAN" -> Guangzhou), or None: for telling a code written next to its own city."""
     return _index()[2].get(key(text)) if text else None
+
+
+def country_alias(text):
+    """The alpha-2 code of a country's former name ("Zaire" -> "CD"), or None."""
+    return _country_aliases().get(key(text)) if text else None
 
 
 def metro_of(city, country, admin1):

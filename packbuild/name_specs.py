@@ -13,6 +13,8 @@ from .names import LayerNames, Rank, Term
 _PEOPLE = {"column": "population", "lo": 2.5, "hi": 7.3}
 _CITY = Rank(base=0.1, span=0.85, **_PEOPLE)
 _ALIASES = ("aliases",)
+_WORLD_ALIASES = ("aliases", "abbreviations")  # packbuild.world_aliases
+_FORMER = ("former_names",)
 _REGION = Rank(base=0.72, terms=(Term("area_km2", 0.1, lo=3, hi=5),))
 _POSTAL = Rank(base=0.2, terms=(Term("population", 0.05, lo=2, hi=5),))
 _PARK = Rank(
@@ -24,7 +26,8 @@ WORLD = (
     LayerNames(
         "countries",
         "country",
-        aliases=_ALIASES,
+        aliases=_WORLD_ALIASES,
+        former=_FORMER,
         codes=("iso2", "iso3"),
         id_codes=("iso:",),
         rank=Rank(base=0.85, span=0.15, column="population", lo=4, hi=9),
@@ -32,11 +35,20 @@ WORLD = (
     LayerNames(
         "admin1",
         "admin1",
-        aliases=("name_alt", "aliases"),
+        aliases=("name_alt", *_WORLD_ALIASES),
+        former=_FORMER,
         id_codes=("iso:",),
         rank=Rank(base=0.75),
     ),
-    LayerNames("cities", "locality", names=("name", "asciiname"), aliases=_ALIASES, rank=_CITY),
+    LayerNames(
+        "cities",
+        "locality",
+        names=("name", "asciiname"),
+        aliases=_WORLD_ALIASES,
+        former=_FORMER,
+        codes=("airport_codes",),  # YYZ finds Toronto, the city the airport serves
+        rank=_CITY,
+    ),
     LayerNames(
         "airports",
         "airport",

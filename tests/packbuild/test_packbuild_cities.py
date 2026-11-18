@@ -1,4 +1,4 @@
-"""packbuild.cities: GeoNames cities and datasets/cities/aliases.json -> generated modules."""
+"""packbuild.cities: GeoNames cities -> generated modules (aliases: test_packbuild_aliases)."""
 
 import pytest
 from datasets_kit import needs_datasets
@@ -9,14 +9,6 @@ from packbuild.sources.geonames import GEONAME_FIELDS
 
 CACHED = DEFAULT_CACHE / "cities1000" / "cities1000.txt"
 ADMIN1 = DEFAULT_CACHE / "admin1CodesASCII.txt"
-
-
-@needs_datasets
-def test_city_aliases_module_matches_the_dataset():
-    path = cities.PACKAGE / "city_aliases.py"
-    assert path.read_text(encoding="utf-8") == cities.render_aliases(cities.load_aliases()), (
-        "constants/countries/city_aliases.py is out of date: run python -m packbuild.cities"
-    )
 
 
 @pytest.mark.skipif(not (CACHED.exists() and ADMIN1.exists()), reason="GeoNames files not downloaded")
@@ -82,15 +74,6 @@ def test_render_cities(geonames):
     namespace = {}
     exec(compile(text, "cities.py", "exec"), namespace)
     assert namespace["CITIES"] == (("Toronto", "ON", 2_794_356), ("Iqaluit", "NU", 7_740))
-
-
-def test_aliases_must_name_a_geonames_city(geonames):
-    cities.check_aliases({"YYZ": {"city": "Toronto", "country": "CA", "admin1": "ON"}}, geonames[0])
-    cities.check_aliases(
-        {"Bangalore": {"city": "Bangalore", "country": "IN"}}, geonames[0]
-    )  # an alternate name
-    with pytest.raises(ValueError, match="Atlantis"):
-        cities.check_aliases({"ATL": {"city": "Atlantis", "country": "CA"}}, geonames[0])
 
 
 def test_unmapped_admin1_is_an_error(geonames, tmp_path):

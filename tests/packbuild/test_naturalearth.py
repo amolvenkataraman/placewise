@@ -70,7 +70,14 @@ def test_admin1_columns_and_fallbacks():
     assert _col(layer, "type_en")[:2] == ["Province", "State"]
     assert _col(layer, "name_alt")[1] == "Maisur|Mysore"
     assert _col(layer, "fclass_in")[2] == "Unrecognized"
+    assert len(_col(layer, "geonames")) == 5
     assert all(layer.types[c] == "str" for c in layer.columns)
+
+
+def test_admin1_geonames_ids():
+    assert naturalearth._geonames_id(6093943) == "geonames:6093943"
+    assert naturalearth._geonames_id(6093943.0) == "geonames:6093943"
+    assert [naturalearth._geonames_id(v) for v in (-1, 0, None, "")] == ["", "", "", ""]
 
 
 def test_nul_padded_text_is_cleaned(monkeypatch):

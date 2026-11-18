@@ -179,16 +179,35 @@ def _read_piece(text, start, end):
     tokens, leftovers = _plain_tokens(text, start, end), []
     for s, e, saved in asides:
         text.put(s, saved)
+        if _own_name(saved, tokens):  # "Bengaluru (BLR)": the city's airport code, not Belarus
+            continue
         inner = _plain_tokens(text, s, e)
         if not inner:
             continue
         if all(t.kind == "junk" for t in tokens):
             tokens = [*tokens, *inner]
-        elif all(t.kind == "region" for t in inner):
+        elif all(t.kind == "region" or (t.kind == "alias" and t.readings) for t in inner):
+            for t in inner:  # "Springfield (LA)": a short alias beside a city is a code
+                t.kind = "region"
             tokens.extend(inner)
         else:
             leftovers.append(_display(saved))
     return tokens, leftovers
+
+
+def _own_name(chunk, tokens):
+    """Is `chunk` another name of a city in `tokens` ("Bengaluru (BLR)", "Guangzhou, CAN")? Then
+    that city token becomes the alias, so it carries the city's country, and True."""
+    alias = _metros.any_alias(chunk)
+    if alias is None:
+        return False
+    for tok in tokens:
+        if tok.kind == "alias" and (tok.alias.city, tok.alias.country) == (alias.city, alias.country):
+            return True
+        if tok.kind == "city" and _metros.key(tok.text) == _metros.key(alias.city):
+            tok.kind, tok.alias, tok.readings = "alias", alias, ()
+            return True
+    return False
 
 
 def _plain_tokens(text, start, end):
@@ -208,6 +227,12 @@ def _plain_tokens(text, start, end):
         tokens.extend(chunk_tokens)
     if not reversed_inside and _broadest_first(tokens):  # "US, CA, Santa Clara", "Texas - Austin"
         tokens.reverse()
+    tokens = [  # "Bengaluru, BLR": a city's own code after it says nothing more
+        t
+        for i, t in enumerate(tokens)
+        if not (i and tokens[i - 1].kind in ("city", "alias") and t.kind in ("region", "alias"))
+        or not _own_name(t.text, [tokens[i - 1]])
+    ]
     if len([t for t in tokens if t.kind != "junk"]) > 1:
         for tok in tokens:  # "NY, USA": a short alias is a city only alone ("NY" is New York City)
             if tok.kind == "alias" and tok.readings and len(key(tok.text)) <= 2:
