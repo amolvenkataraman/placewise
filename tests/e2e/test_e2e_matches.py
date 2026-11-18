@@ -17,8 +17,15 @@ def test_cn_tower_is_inside_toronto():
     assert r.matches["city"].relation is Relation.WITHIN and r.locality_within
 
 
-def test_prairie_point_names_the_nearest_town_with_its_distance():
-    r = geocoder(*CA).lookup(52.0, -112.0)  # open Alberta prairie
+def test_alberta_prairie_is_inside_its_rural_municipality():
+    # census subdivisions cover all of Canada's land, so even open prairie is "within" one
+    r = geocoder(*CA).lookup(52.0, -112.0)
+    assert r.city_within and r.city_km == 0.0
+
+
+def test_outback_point_names_the_nearest_town_with_its_distance():
+    # no municipal outlines there (world pack only): the city is a fallback, with its distance
+    r = geocoder("world").lookup(-23.80, 133.98)  # open country ~15 km south-east of Alice Springs
     m = r.matches["city"]
     assert m.relation is Relation.NEAR and not r.city_within
     assert m.distance_km is not None and m.distance_km > 5 and r.city_km == m.distance_km
