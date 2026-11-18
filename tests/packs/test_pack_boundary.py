@@ -3,9 +3,10 @@ nearest_edge_km over every feature (exact great-circle distance to every edge)."
 
 import numpy as np
 import pytest
-from pack_kit import CREATED, blob_features, box_feature, fiji, polygon_layer
+from pack_kit import CREATED, blob_features, blob_ring, box_feature, fiji, polygon_layer
 
 from placewise.geo import haversine
+from placewise.model import Feature, Outline
 from placewise.packs import open_pack, write_pack
 
 
@@ -21,6 +22,13 @@ def _layers():
     return {
         "blobs": blob_features(30, rng, radius=(0.3, 3.0), lat_range=(-30, 30)),
         "holes_and_islands": blob_features(25, rng, radius=(1.0, 4.0), holes=True),
+        # fine outlines (short edges in runs), at high latitudes and beside ±180 too
+        "fine": [
+            *blob_features(12, rng, radius=(0.05, 0.8), vertices=(300, 1500), lat_range=(-60, 60)),
+            *blob_features(3, rng, radius=(0.2, 0.6), vertices=(400, 900), lat_range=(76, 79)),
+            Feature(outlines=(Outline((blob_ring(-16.0, 179.6, 0.25, 600, rng),)),)),
+            Feature(outlines=(Outline((blob_ring(-16.0, -179.6, 0.25, 600, rng),)),)),
+        ],
         # long edges far north (arcs bulge from straight lines in lat/lon), Fiji split at ±180
         "polar_and_antimeridian": [
             fiji(),
@@ -51,7 +59,7 @@ def _brute(layer, lat, lon):
 
 
 @pytest.mark.parametrize("kind", list(LAYERS))
-@pytest.mark.parametrize("radius_km", [0.0, 22.2, 150.0])
+@pytest.mark.parametrize("radius_km", [0.0, 1.0, 22.2, 150.0])
 def test_near_boundary_equals_brute_force(tmp_path, kind, radius_km):
     layer = _open(tmp_path, LAYERS[kind])
     lat, lon = _points(layer, LAYERS[kind], np.random.default_rng(52), 400)
@@ -61,7 +69,7 @@ def test_near_boundary_equals_brute_force(tmp_path, kind, radius_km):
     np.testing.assert_array_equal(point, want_p)
     np.testing.assert_array_equal(feature, want_f)
     np.testing.assert_allclose(dist, km[want_p, want_f], rtol=1e-9, atol=1e-9)
-    if radius_km:
+    if radius_km > 1:
         assert len(point) > 20  # the comparison means something
 
 
