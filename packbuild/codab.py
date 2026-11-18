@@ -143,7 +143,7 @@ def build(iso3, cache_dir, out_dir, version, refresh=False, tolerance_m=DEFAULT_
     for layer in layers:
         vertices = sum(len(r) for f in layer.features for o in f.outlines for r in o.rings)
         log.info("%s/%s: %d features, %d vertices", iso3, layer.name, len(layer.features), vertices)
-    return write_pack(Path(out_dir), iso3, version, layers, names=names.for_pack("codab", layers))
+    return write_pack(Path(out_dir), iso3, version, layers, names=names.for_pack(iso3, layers))
 
 
 def main(argv=None):
