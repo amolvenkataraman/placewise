@@ -182,7 +182,7 @@ class Search:
         if not len(pool):
             return scores
         needs = ctx.needs_where or any(contexts)
-        where = ctx_mod.Where(self.geocoder.layers, pool.lat, pool.lon) if needs else None
+        where = ctx_mod.Where(self.geocoder.admin, pool.lat, pool.lon) if needs else None
         if any(contexts):
             scores = scores * rank.context_factors(pool.group, contexts, where.country, where.admin1)
         scores = scores * ctx_mod.factors(ctx, pool.lat, pool.lon, pool.radius_km, pool.kind, where)
