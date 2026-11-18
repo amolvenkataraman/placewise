@@ -1,6 +1,7 @@
 """Ranking candidates: score = match quality x prior x context, all vectorised.
 
-    match term    match_score ** MATCH_POWER x the name kind's worth (x FUZZY_FACTOR for typos)
+    match term    match_score ** MATCH_POWER x the name kind's worth (x FUZZY_FACTOR for typos);
+                  prefix matches PREFIX_FLOOR + (1 - PREFIX_FLOOR) x match_score instead
     prior term    PRIOR_FLOOR + (1 - PRIOR_FLOOR) x rank (the index's prominence, 0..1)
     context       "Name, Context": 1 inside the first reading, CONTEXT_LATER_READING inside a later
                   one, 0 outside (CONTEXT_MISS_FACTOR when nothing at all is inside)
@@ -20,10 +21,16 @@ from placewise.geo.distances import haversine
 _NAME_KIND_FACTOR = np.array([const.NAME_KIND_FACTOR[k] for k in NAME_KINDS])
 
 
-def base_scores(match, rank, name_kind, fuzzy, factor):
-    """Match term x prior term x factor, before context."""
-    match = np.asarray(match, dtype=np.float64)
-    term = np.power(np.clip(match, 0.0, 1.0), const.MATCH_POWER) * _NAME_KIND_FACTOR[np.asarray(name_kind)]
+def base_scores(match, rank, name_kind, fuzzy, factor, prefix=None):
+    """Match term x prior term x factor, before context. A prefix match's term is
+    PREFIX_FLOOR + (1 - PREFIX_FLOOR) x match: while typing, how much of a name is typed says
+    little about which place is meant, so the prior decides."""
+    match = np.clip(np.asarray(match, dtype=np.float64), 0.0, 1.0)
+    term = np.power(match, const.MATCH_POWER)
+    if prefix is not None:
+        soft = const.PREFIX_FLOOR + (1.0 - const.PREFIX_FLOOR) * match
+        term = np.where(np.asarray(prefix, dtype=bool), soft, term)
+    term = term * _NAME_KIND_FACTOR[np.asarray(name_kind)]
     term = np.where(np.asarray(fuzzy, dtype=bool), term * const.FUZZY_FACTOR, term)
     prior = const.PRIOR_FLOOR + (1.0 - const.PRIOR_FLOOR) * np.clip(np.asarray(rank, dtype=np.float64), 0, 1)
     return term * prior * np.asarray(factor, dtype=np.float64)
@@ -52,6 +59,14 @@ def near_factors(lat, lon, radius_km, near):
     km = np.asarray(haversine(near[0], near[1], np.asarray(lat), np.asarray(lon)), dtype=np.float64)
     km = np.maximum(km - np.asarray(radius_km, dtype=np.float64), 0.0)
     return const.NEAR_FLOOR + (1.0 - const.NEAR_FLOOR) * np.exp(-km / const.NEAR_SCALE_KM)
+
+
+def served_city_scores(population, km):
+    """How well each city near an airport fits as the city it serves: population over distance
+    (SERVED_CITY_D0_KM softens the first kilometres), so a big city a little farther away wins
+    over the suburb the airport stands in."""
+    population = np.asarray(population, dtype=np.float64)
+    return population / (np.asarray(km, dtype=np.float64) + const.SERVED_CITY_D0_KM)
 
 
 def best_first(scores, ties):

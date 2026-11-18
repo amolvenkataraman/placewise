@@ -66,3 +66,25 @@ def test_near_decays_from_the_extent_not_the_point():
 
 def test_best_first_breaks_ties():
     assert best_first([1.0, 2.0, 1.0], [0.1, 0.0, 0.5]).tolist() == [1, 2, 0]
+
+
+def test_prefix_matches_rank_by_prior_more_than_by_how_much_is_typed():
+    # "Mississ": Mississauga (7 of 11 letters, a big city) beats Mississagi (7 of 10, a small park)
+    n = 2
+    city, park = base_scores(
+        [7 / 11, 7 / 10], [0.7, 0.5], [OFFICIAL] * n, [False] * n, [1.0] * n, prefix=[True] * n
+    )
+    assert city > park
+    exact = base_scores([1.0], [0.5], [OFFICIAL], [False], [1.0], prefix=[True])[0]
+    assert exact == pytest.approx(scores([1.0], [0.5])[0])
+
+
+def test_served_city_weighs_population_by_distance():
+    from placewise.search.rank import served_city_scores
+
+    # San Francisco (870k, 21 km) over San Jose (1M, 47 km);
+    # Toronto (2.7M, 22 km) over Mississauga (720k, 5 km)
+    sf, sj = served_city_scores([870_000, 1_000_000], [21.0, 47.0])
+    assert sf > sj
+    toronto, mississauga = served_city_scores([2_700_000, 720_000], [22.0, 5.0])
+    assert toronto > mississauga

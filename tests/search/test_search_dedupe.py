@@ -64,3 +64,11 @@ def test_preference():
     assert preference("locality", False, False) > preference("region", True, True)
     assert preference("park", True, False) > preference("park", False, False)
     assert preference("admin1", True, True) > preference("admin1", True, False)
+
+
+def test_parts_of_one_feature_merge():
+    # one park stored as two rows: "pad-us:x" and "pad-us:x#2", side by side, neither inside the other
+    a = (*item({"park"}, "park", 0.5, 0.5, polygon=True), "pad-us:x")
+    b = (*item({"park"}, "park", 5.0, 5.0, polygon=True), "pad-us:x#2")
+    c = (*item({"park"}, "park", 9.0, 9.0, polygon=True), "pad-us:y")
+    assert merge([0, 1, 2], [a, b, c], lambda i, lat, lon: False) == [[0, 1], [2]]

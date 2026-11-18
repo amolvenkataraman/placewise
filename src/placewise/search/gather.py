@@ -25,6 +25,7 @@ class Pool:
     lon: np.ndarray
     radius_km: np.ndarray
     fuzzy: np.ndarray
+    prefix: np.ndarray
     group: np.ndarray
     factor: np.ndarray
 
@@ -42,13 +43,14 @@ class Gatherer:
         self.indexes = indexes
         self.parts = []
 
-    def add(self, pack, found, *, fuzzy=False, group=-1, factor=1.0):
+    def add(self, pack, found, *, fuzzy=False, prefix=False, group=-1, factor=1.0):
         if not len(found):
             return
         n = len(found)
         part = {f: np.asarray(getattr(found, f)) for f in _FIELDS}
         part["pack"] = np.full(n, pack, dtype=np.int64)
         part["fuzzy"] = np.full(n, fuzzy, dtype=bool)
+        part["prefix"] = np.full(n, prefix, dtype=bool)
         part["group"] = np.full(n, group, dtype=np.int64)
         part["factor"] = np.full(n, factor, dtype=np.float64)
         self.parts.append(part)
@@ -77,7 +79,9 @@ class Gatherer:
             ints = {"pack", "entry", "layer", "row", "kind", "name_kind", "group"}
             return Pool(
                 **{
-                    f: np.zeros(0, dtype=np.int64 if f in ints else bool if f == "fuzzy" else np.float64)
+                    f: np.zeros(
+                        0, dtype=np.int64 if f in ints else bool if f in ("fuzzy", "prefix") else np.float64
+                    )
                     for f in Pool.__slots__
                 }
             )

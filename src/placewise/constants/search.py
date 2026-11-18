@@ -25,6 +25,10 @@ POOL_FACTOR = 4  # candidates ranked and deduplicated per result asked for
 
 MATCH_POWER = 3.0  # how hard an inexact match is punished against an exact one
 PRIOR_FLOOR = 0.15  # the prior term is PRIOR_FLOOR + (1 - PRIOR_FLOOR) x rank, so rank 0 still counts
+PREFIX_FLOOR = 0.6  # a prefix match's term: PREFIX_FLOOR + (1 - PREFIX_FLOOR) x the share typed
+# prefix candidates asked of each pack when a spatial filter (within=, bbox=, near= with
+# radius_km=) will drop most of them ("Lake" within the Bay Area)
+PREFIX_FILTERED_LIMIT = 20_000
 FUZZY_FACTOR = 0.85  # a fuzzy match's score is further multiplied by this
 # name kinds (official, alias, former, code, abbreviation): how much each is worth as a match
 NAME_KIND_FACTOR = {"official": 1.0, "alias": 0.97, "former": 0.95, "abbreviation": 0.95, "code": 1.0}
@@ -112,3 +116,9 @@ AIRPORT_WORDS = ("airport", "airports", "intl", "international")  # "YYZ airport
 SERVED_CITY_KM = 60.0  # an airport serves the largest city this close in its country ...
 SERVED_COLUMN = "served"  # ... unless the airports layer names it (a city id) in this column
 SERVED_CITY_FACTOR = 1.05  # the served city scores this much above its airport
+SERVED_CITY_D0_KM = 2.0  # served city fit: population / (km + this)
+AIRPORT_AFTER_CITY = 0.999  # the airport scores this much below the city it serves
+# a country code that is also an airport code ("BLR": Belarus and Bengaluru's airport) means the
+# airport's city, unless the country is commonly written by it (constants.countries.conventions
+# ALPHA3_ANY_CASE: "IND" is India, "CAN" Canada)
+COUNTRY_CODE_BELOW_AIRPORT = 0.99

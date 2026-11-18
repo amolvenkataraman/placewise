@@ -14,6 +14,7 @@ import numpy as np
 
 from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
+from placewise.constants.countries.conventions import ALPHA3_ANY_CASE
 from placewise.constants.names import CODE, PLACE_KINDS
 from placewise.geo.distances import haversine
 from placewise.model import Add, BBox, Entity, Hide, Place, Point, RegionRule, Rename
@@ -24,6 +25,7 @@ from .gather import Gatherer
 from .query import parse_query
 
 _AIRPORT = PLACE_KINDS.index("airport")
+_COUNTRY = PLACE_KINDS.index("country")
 _SETTLEMENTS = frozenset(PLACE_KINDS.index(k) for k in const.SETTLEMENT_PREFERENCE)
 
 
@@ -123,7 +125,9 @@ class Search:
         g = Gatherer(self.indexes)
         g.each("exact", q.key, group=0)
         if prefix:
-            g.each("prefix", q.key, const.CANDIDATES_PER_PACK, group=0)
+            spatial = ctx.within is not None or ctx.bbox is not None or ctx.radius_km is not None
+            many = const.PREFIX_FILTERED_LIMIT if spatial else const.CANDIDATES_PER_PACK
+            g.each("prefix", q.key, many, prefix=True, group=0)
         for key, reading in q.aliases:
             contexts.append(ctx_mod.text_context((reading,), ctx.countries, ctx.admin1))
             g.each("exact", key, group=len(contexts) - 1, factor=const.CITY_ALIAS_FACTOR)
@@ -152,7 +156,9 @@ class Search:
         return pool, scores, self._merge(pool, order)[:limit]
 
     def _score(self, pool, contexts, ctx):
-        scores = rank.base_scores(pool.match_score, pool.rank, pool.name_kind, pool.fuzzy, pool.factor)
+        scores = rank.base_scores(
+            pool.match_score, pool.rank, pool.name_kind, pool.fuzzy, pool.factor, pool.prefix
+        )
         if not len(pool):
             return scores
         needs = ctx.needs_where or any(contexts)
@@ -183,8 +189,10 @@ class Search:
         if city is None:
             return pool, scores
         ident, name, lat, lon = city
-        g = Gatherer(self.indexes)
-        g.ids(ident)
+        world = (self.geocoder.layers.world(lookup_const.CITIES) or "").partition("/")[0]
+        g = Gatherer([x for x in self.indexes if x[1].name == world])
+        g.ids(ident)  # the city's own row, then its namesakes in every pack
+        g.indexes = self.indexes
         g.each("exact", name)
         extra = g.pool()
         if not len(extra):
@@ -200,6 +208,12 @@ class Search:
             return pool, scores
         top = scores[best] * const.SERVED_CITY_FACTOR
         added = top * (0.99 + 0.01 * extra.rank.astype(np.float64))
+        scores = scores.copy()
+        airport = float(added.min()) * const.AIRPORT_AFTER_CITY
+        scores[best] = airport
+        if len(q.code) == 3 and q.code.upper() not in ALPHA3_ANY_CASE:
+            country = (pool.kind == _COUNTRY) & (pool.name_kind == CODE) & (scores > airport)
+            scores[country] = airport * const.COUNTRY_CODE_BELOW_AIRPORT
         merged = type(pool)(
             **{f: np.concatenate([getattr(pool, f), getattr(extra, f)]) for f in pool.__slots__}
         )
@@ -232,7 +246,9 @@ class Search:
             found = found[~np.isin(codes, list(lookup_const.CITY_EXCLUDED_FEATURE_CODES))]
         if not len(found):
             return None
-        c = int(found[np.argmax(np.asarray(cities.column("population"))[found])])
+        km = haversine(float(pool.lat[i]), float(pool.lon[i]), cities.lat[found], cities.lon[found])
+        fit = rank.served_city_scores(np.asarray(cities.column("population"))[found], km)
+        c = int(found[np.argmax(fit)])
         return cities.value("id", c), cities.value("name", c), float(cities.lat[c]), float(cities.lon[c])
 
     def _visible(self, pool, order):
@@ -260,14 +276,38 @@ class Search:
                 float(pool.lon[i]),
                 polygon,
                 polygon and pack.name != lookup_const.DEFAULT_PACK,
+                lyr.value("id", int(pool.row[i])),
             )
 
-        def contains(i, lat, lon):
-            pack = self.packs[int(pool.pack[i])]
-            lyr = pack[pack.names.layers[int(pool.layer[i])]]
-            return bool(lyr.contains(lat, lon, int(pool.row[i])))
+        inside = self._inside_pairs(pool, items)
+        return dedupe.merge([int(i) for i in order], items, lambda i, lat, lon: (i, lat, lon) in inside)
 
-        return dedupe.merge([int(i) for i in order], items, contains)
+    def _inside_pairs(self, pool, items):
+        """{(i, lat, lon)}: candidate i's outline holds that point of another candidate it could be
+        merged with; every such test of one layer in one vectorised call."""
+        asks = {}  # (pack, layer) -> ([row], [lat], [lon], [i])
+        for i, (keys_i, kind_i, *_rest) in items.items():
+            if not items[i][4]:
+                continue
+            lyr = self._layer(pool, i)
+            s, w, n, e = lyr.bboxes()[int(pool.row[i])].tolist()
+            for j, (keys_j, kind_j, lat, lon, *_more) in items.items():
+                if j == i or dedupe.family(kind_i) != dedupe.family(kind_j) or not (keys_i & keys_j):
+                    continue
+                if s <= lat <= n and (w <= lon <= e if w <= e else (lon >= w or lon <= e)):
+                    ask = asks.setdefault((int(pool.pack[i]), int(pool.layer[i])), ([], [], [], []))
+                    for part, value in zip(ask, (int(pool.row[i]), lat, lon, i), strict=True):
+                        part.append(value)
+        found = set()
+        for (pack, layer), (rows, lats, lons, owners) in asks.items():
+            lyr = self.packs[pack][self.packs[pack].names.layers[layer]]
+            hit = np.atleast_1d(lyr.contains(np.array(lats), np.array(lons), np.array(rows)))
+            found.update((owners[k], lats[k], lons[k]) for k in np.flatnonzero(hit))
+        return found
+
+    def _layer(self, pool, i):
+        pack = self.packs[int(pool.pack[i])]
+        return pack[pack.names.layers[int(pool.layer[i])]]
 
     def _entities(self, pool, scores, groups, worldview, geometry):
         if not groups:

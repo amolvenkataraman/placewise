@@ -11,7 +11,7 @@ DEDUPE_POINT_KM of each other.
 import math
 
 from placewise.constants import search as const
-from placewise.geo.distances import haversine
+from placewise.constants.earth import MEAN_RADIUS_KM
 
 
 def family(kind):
@@ -29,7 +29,8 @@ def preference(kind, polygon, detailed):
 def merge(order, items, contains):
     """Groups of candidate indexes, in `order` (best score first), representative first.
 
-    items[i]: (keys, kind, lat, lon, polygon, detailed): `keys` the set of name keys it goes by;
+    items[i]: (keys, kind, lat, lon, polygon, detailed[, id]): `keys` the set of name keys it goes by;
+    rows of one feature stored in parts ("pad-us:x", "pad-us:x#2") always merge;
     contains(i, lat, lon) -> whether candidate i's outline holds the point (only asked for
     polygons)."""
     groups = []
@@ -50,17 +51,36 @@ def merge(order, items, contains):
 def _same(i, j, items, contains):
     keys_i, kind_i = items[i][:2]
     keys_j, kind_j = items[j][:2]
-    return family(kind_i) == family(kind_j) and bool(keys_i & keys_j) and _overlap(i, j, items, contains)
+    if family(kind_i) != family(kind_j) or not (keys_i & keys_j):
+        return False
+    stem_i, stem_j = _stem(items[i]), _stem(items[j])
+    return (stem_i is not None and stem_i == stem_j) or _overlap(i, j, items, contains)
+
+
+def _stem(item):
+    """The id without a part suffix ("pad-us:x#2" -> "pad-us:x"), or None."""
+    ident = item[6] if len(item) > 6 else None
+    return ident.partition("#")[0] if ident else None
 
 
 def _overlap(i, j, items, contains):
-    _, _, lat_i, lon_i, poly_i, _ = items[i]
-    _, _, lat_j, lon_j, poly_j, _ = items[j]
+    lat_i, lon_i, poly_i = items[i][2:5]
+    lat_j, lon_j, poly_j = items[j][2:5]
     if poly_j and contains(j, lat_i, lon_i):
         return True
     if poly_i and contains(i, lat_j, lon_j):
         return True
     if poly_i or poly_j:
         return False
-    km = float(haversine(lat_i, lon_i, lat_j, lon_j))
+    km = _km(lat_i, lon_i, lat_j, lon_j)
     return math.isfinite(km) and km <= const.DEDUPE_POINT_KM
+
+
+def _km(lat1, lon1, lat2, lon2):
+    """Haversine for two scalar points (plain floats are far cheaper than numpy here)."""
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    a = (
+        math.sin((p2 - p1) / 2) ** 2
+        + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
+    )
+    return 2 * MEAN_RADIUS_KM * math.asin(min(1.0, math.sqrt(a)))
