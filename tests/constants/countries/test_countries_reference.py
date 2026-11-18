@@ -35,8 +35,11 @@ def test_region_and_city_alias_names_are_unique():
     for metro in countries.METROS:
         for name in (metro.key, metro.name, *metro.aliases, *metro.city_aliases):
             assert seen.setdefault(city_key(name), metro.key) == metro.key, name
-    for alias in countries.CITY_ALIASES:
-        assert seen.setdefault(city_key(alias), "city_aliases") == "city_aliases", alias
+    by_key = {m.key: m for m in countries.METROS}
+    for alias, entry in countries.CITY_ALIASES.items():
+        owner = seen.setdefault(city_key(alias), "city_aliases")
+        # a city alias may share a metro's name only for the city the metro is named after ("NYC")
+        assert owner == "city_aliases" or entry.city in by_key[owner].cities, alias
 
 
 def test_city_aliases_use_known_codes():

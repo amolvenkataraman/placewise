@@ -6,8 +6,8 @@
 - `src/placewise/constants/countries/<alpha3>/cities.py` for the countries with an admin1 table
   (usa, can, ind, gbr): GeoNames cities1000 (CC BY 4.0) places with POPULATION_MIN people or more,
   plus every admin1 seat and capital, with the admin1 as its ISO 3166-2 suffix.
-- `src/placewise/constants/countries/city_aliases.py` from `datasets/cities/aliases.json`; every
-  alias must name a GeoNames city in the stated country and admin1.
+- `src/placewise/constants/countries/city_aliases.py` from `datasets/names/aliases.json`
+  (packbuild.aliases); every alias must name its GeoNames city, in the stated country and admin1.
 
 Downloads are cached in ~/.placewise/packbuild/ (see packbuild.fetch).
 """
@@ -18,16 +18,14 @@ import sys
 from pathlib import Path
 
 from placewise.constants import countries
-from placewise.constants._keys import city_key
 
-from . import datasets
+from . import aliases, regions
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .sources import url
 from .sources.geonames import GEONAME_FIELDS, read_admin1, read_tsv
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = ROOT / "src" / "placewise" / "constants" / "countries"
-ALIASES = datasets.path("cities", "aliases.json")  # in the placewise-data checkout (packbuild.datasets)
 POPULATION_MIN = 100_000
 SEATS = {"PPLA", "PPLC"}  # admin1 seats and national capitals
 FOLDERS = {"US": "usa", "CA": "can", "IN": "ind", "GB": "gbr"}
@@ -103,56 +101,13 @@ CITIES = (
 '''
 
 
-def load_aliases(path=ALIASES):
-    return json.loads(path.read_text(encoding="utf-8"))["aliases"]
-
-
-def check_aliases(aliases, cities_path):
-    """Every alias names a GeoNames city (any population) in its country and admin1."""
-    known = {}
-    for row in read_tsv(cities_path, len(GEONAME_FIELDS)):
-        names = {row[_F["name"]], row[_F["asciiname"]], *row[_F["alternatenames"]].split(",")}
-        for n in names:
-            if n:
-                known.setdefault((city_key(n), row[_F["country_code"]]), set()).add(row[_F["admin1_code"]])
-    missing = [
-        f"{alias} -> {e['city']}, {e['country']}"
-        for alias, e in aliases.items()
-        if (city_key(e["city"]), e["country"]) not in known
-    ]
-    if missing:
-        raise ValueError(f"aliases naming no GeoNames city: {missing}")
-
-
-def render_aliases(aliases):
-    items = []
-    for alias, e in aliases.items():
-        admin1 = json.dumps(e["admin1"]) if e.get("admin1") else "None"
-        items.append(
-            f"    {json.dumps(alias, ensure_ascii=False)}: CityAlias("
-            f"{json.dumps(e['city'], ensure_ascii=False)}, {admin1}, {json.dumps(e['country'])}),"
-        )
-    body = "\n".join(items)
-    return f'''"""GENERATED from datasets/cities/aliases.json by packbuild.cities; do not edit.
-
-Other names of cities that no region covers (airport codes, nicknames, former names) -> the city's
-English name, admin1 and country.
-"""
-
-from ._records import CityAlias
-
-CITY_ALIASES = {{
-{body}
-}}
-'''
-
-
 def outputs(cities_path=None, admin1_path=None):
     """{path: text} for every generated module; cities only when the GeoNames files are given."""
-    aliases = load_aliases()
-    out = {PACKAGE / "city_aliases.py": render_aliases(aliases)}
+    entries = aliases.load()
+    aliases.check_regions(entries, regions.load())
+    out = {PACKAGE / "city_aliases.py": aliases.render(entries)}
     if cities_path is not None:
-        check_aliases(aliases, cities_path)
+        aliases.check_targets(entries, cities_path, admin1_path)
         for country, rows in read_cities(cities_path, admin1_path).items():
             out[PACKAGE / FOLDERS[country] / "cities.py"] = render_cities(country, rows)
     return out

@@ -15,6 +15,7 @@ from placewise.constants.countries.conventions import (
 )
 from placewise.constants.location_text import AND_NAMES
 
+from .. import metros as _metros
 from .. import regions as _regions
 
 
@@ -67,6 +68,8 @@ def _readings(text, upper):
         found.append(_Reading(country, by_name=len(k) > 3))
     elif country is not None and k in LOWERCASE_SHORT_FORMS:
         found.append(_Reading(country))
+    elif country is None and len(k) > 3 and (former := _metros.country_alias(k)) is not None:
+        found.append(_Reading(former, by_name=True))  # "Ceylon", "Zaire"
     if code and (state := ind.subregions.lookup(code)) is not None:
         found.append(_Reading("IN", state, india_code=True))
     if text.rstrip().endswith(".") and len(k) > 2:  # "Ind." is Indiana's abbreviation, "IND" India

@@ -17,9 +17,6 @@ REGIONS = (
             "Greater Toronto", "Toronto Area", "Toronto Metro", "GTHA", "Greater Toronto and Hamilton Area",
             "Greater Toronto Hamilton Area",
         ),
-        city_aliases={
-            "TOR": "Toronto", "YYZ": "Toronto", "North York": "Toronto",
-        },
         cities={
             "Toronto": "ON", "North York": "ON", "Scarborough": "ON", "Etobicoke": "ON",
             "Mississauga": "ON", "Brampton": "ON", "Markham": "ON", "Vaughan": "ON", "Richmond Hill": "ON",
@@ -43,9 +40,6 @@ REGIONS = (
         aliases=(
             "Greater Vancouver", "Greater Vancouver Area", "Vancouver Area", "Vancouver Metro",
         ),
-        city_aliases={
-            "VAN": "Vancouver", "YVR": "Vancouver",
-        },
         cities={
             "Vancouver": "BC", "Burnaby": "BC", "Surrey": "BC", "Richmond": "BC", "Coquitlam": "BC",
             "North Vancouver": "BC", "West Vancouver": "BC", "New Westminster": "BC", "Delta": "BC",
@@ -59,9 +53,6 @@ REGIONS = (
         aliases=(
             "Montreal Area", "Montreal Metro", "Grand Montréal", "Montreal Metropolitan Community",
         ),
-        city_aliases={
-            "MTL": "Montreal", "YUL": "Montreal",
-        },
         cities={
             "Montreal": "QC", "Montréal": "QC", "Laval": "QC", "Longueuil": "QC", "Brossard": "QC",
             "Terrebonne": "QC", "Saint-Laurent": "QC",
@@ -75,9 +66,6 @@ REGIONS = (
             "Ottawa Gatineau", "National Capital Region of Canada", "Canada's Capital Region",
             "Ottawa Area",
         ),
-        city_aliases={
-            "OTT": "Ottawa", "YOW": "Ottawa",
-        },
         cities={
             "Ottawa": "ON", "Kanata": "ON", "Nepean": "ON", "Gatineau": "QC",
         },
@@ -90,9 +78,6 @@ REGIONS = (
             "Region of Waterloo", "Kitchener-Waterloo", "Kitchener Waterloo",
             "Kitchener-Waterloo-Cambridge",
         ),
-        city_aliases={
-            "KW": "Kitchener",
-        },
         cities={
             "Kitchener": "ON", "Waterloo": "ON", "Cambridge": "ON",
         },
@@ -104,9 +89,6 @@ REGIONS = (
         aliases=(
             "London Area", "London Metropolitan Area",
         ),
-        city_aliases={
-            "LDN": "London",
-        },
         cities={
             "London": "ENG",
         },
@@ -120,9 +102,6 @@ REGIONS = (
             "Delhi National Capital Region", "Delhi NCR core", "Delhi NCR (core)", "Central NCR",
             "Core NCR",
         ),
-        city_aliases={
-            "Gurgaon": "Gurugram",
-        },
         cities={
             "New Delhi": "DL", "Delhi": "DL", "Gurugram": "HR", "Faridabad": "HR", "Noida": "UP",
             "Greater Noida": "UP", "Ghaziabad": "UP",
@@ -135,9 +114,6 @@ REGIONS = (
         aliases=(
             "Mumbai Metropolitan Region", "Mumbai Metro", "Mumbai Area",
         ),
-        city_aliases={
-            "Bombay": "Mumbai", "Greater Mumbai": "Mumbai",
-        },
         cities={
             "Mumbai": "MH", "Thane": "MH", "Navi Mumbai": "MH",
         },
@@ -150,9 +126,6 @@ REGIONS = (
             "Bengaluru Urban", "Bangalore Urban", "Greater Bengaluru", "Bengaluru Area", "Bangalore Area",
             "Bengaluru Metropolitan Region", "Bangalore Metropolitan Region", "BMR", "BMRDA Region",
         ),
-        city_aliases={
-            "Bangalore": "Bengaluru", "Bengaluru": "Bengaluru",
-        },
         cities={
             "Bengaluru": "KA",
         },
@@ -164,10 +137,6 @@ REGIONS = (
         aliases=(
             "SF Bay Area", "SFBA", "San Francisco Bay Area", "SF Bay", "Silicon Valley", "Bay Area Region",
         ),
-        city_aliases={
-            "SF": "San Francisco", "South SF": "South San Francisco", "SFO": "San Francisco",
-            "SSF": "South San Francisco", "SJ": "San Jose", "SJC": "San Jose",
-        },
         cities={
             "San Francisco": "CA", "South San Francisco": "CA", "Oakland": "CA", "Berkeley": "CA",
             "Emeryville": "CA", "San Jose": "CA", "Palo Alto": "CA", "Mountain View": "CA",
@@ -187,9 +156,6 @@ REGIONS = (
             "Greater LA", "LA Metro", "Los Angeles Metro", "Los Angeles Area", "LA Area",
             "Los Angeles Metropolitan Area",
         ),
-        city_aliases={
-            "LA": "Los Angeles", "LAX": "Los Angeles",
-        },
         cities={
             "Los Angeles": "CA", "Santa Monica": "CA", "Pasadena": "CA", "Burbank": "CA",
             "Long Beach": "CA", "Irvine": "CA", "Anaheim": "CA", "Santa Ana": "CA", "Culver City": "CA",
@@ -205,10 +171,6 @@ REGIONS = (
             "New York Metro", "NYC Metro", "NY Metro", "New York Metropolitan Area", "Greater New York",
             "Tri-State Area", "New York Area", "NYC Area", "New York City Metropolitan Area",
         ),
-        city_aliases={
-            "NYC": "New York City", "New York City": "New York City", "New York": "New York City",
-            "NY City": "New York City", "NY": "New York City",
-        },
         cities={
             "New York City": "NY", "Manhattan": "NY", "Brooklyn": "NY", "Queens": "NY", "Bronx": "NY",
             "Staten Island": "NY", "Long Island City": "NY", "White Plains": "NY", "Yonkers": "NY",
@@ -224,9 +186,6 @@ REGIONS = (
             "Greater Boston Area", "Boston Area", "Boston Metro", "Metro Boston",
             "Boston Metropolitan Area",
         ),
-        city_aliases={
-            "BOS": "Boston",
-        },
         cities={
             "Boston": "MA", "Cambridge": "MA", "Somerville": "MA", "Waltham": "MA", "Newton": "MA",
             "Quincy": "MA", "Burlington": "MA", "Woburn": "MA", "Needham": "MA", "Wellesley": "MA",
@@ -241,9 +200,6 @@ REGIONS = (
             "Greater Seattle Area", "Seattle Area", "Seattle Metro", "Seattle Metropolitan Area",
             "Puget Sound", "Puget Sound Region",
         ),
-        city_aliases={
-            "SEA": "Seattle",
-        },
         cities={
             "Seattle": "WA", "Bellevue": "WA", "Redmond": "WA", "Kirkland": "WA", "Tacoma": "WA",
             "Everett": "WA", "Bothell": "WA", "Renton": "WA", "Issaquah": "WA", "Kent": "WA",
@@ -272,9 +228,6 @@ REGIONS = (
         aliases=(
             "Houston Area", "Houston Metro", "Houston Metropolitan Area",
         ),
-        city_aliases={
-            "HOU": "Houston",
-        },
         cities={
             "Houston": "TX", "The Woodlands": "TX", "Sugar Land": "TX", "Katy": "TX", "Pearland": "TX",
         },
@@ -287,9 +240,6 @@ REGIONS = (
             "DC Metro", "DC Metro Area", "DC Area", "Washington DC Metro", "Washington DC Area",
             "Washington Metropolitan Area", "Greater Washington", "Washington DC Metropolitan Area",
         ),
-        city_aliases={
-            "DC": "Washington",
-        },
         cities={
             "Washington": "DC", "Arlington": "VA", "Alexandria": "VA", "Reston": "VA", "Herndon": "VA",
             "McLean": "VA", "Tysons": "VA", "Fairfax": "VA", "Chantilly": "VA", "Bethesda": "MD",
@@ -303,9 +253,6 @@ REGIONS = (
         aliases=(
             "Philadelphia Area", "Philadelphia Metro", "Philly Area", "Delaware Valley",
         ),
-        city_aliases={
-            "Philly": "Philadelphia", "PHL": "Philadelphia",
-        },
         cities={
             "Philadelphia": "PA", "King of Prussia": "PA", "Conshohocken": "PA", "Camden": "NJ",
             "Cherry Hill": "NJ", "Wilmington": "DE",
@@ -319,9 +266,6 @@ REGIONS = (
             "Chicago Area", "Greater Chicago", "Chicago Metro", "Chicago Metro Area",
             "Chicago Metropolitan Area",
         ),
-        city_aliases={
-            "CHI": "Chicago",
-        },
         cities={
             "Chicago": "IL", "Evanston": "IL", "Naperville": "IL", "Schaumburg": "IL", "Oak Brook": "IL",
             "Skokie": "IL", "Deerfield": "IL", "Northbrook": "IL", "Gary": "IN", "Hammond": "IN",
@@ -335,9 +279,6 @@ REGIONS = (
         aliases=(
             "Atlanta Metro", "Greater Atlanta", "Atlanta Area", "Atlanta Metropolitan Area",
         ),
-        city_aliases={
-            "ATL": "Atlanta",
-        },
         cities={
             "Atlanta": "GA", "Alpharetta": "GA", "Marietta": "GA", "Sandy Springs": "GA", "Decatur": "GA",
             "Kennesaw": "GA", "Norcross": "GA", "Duluth": "GA",
@@ -351,9 +292,6 @@ REGIONS = (
             "Minneapolis-Saint Paul", "Minneapolis-St. Paul", "Minneapolis St Paul", "Minneapolis-St Paul",
             "MSP Area",
         ),
-        city_aliases={
-            "MPLS": "Minneapolis", "MSP": "Minneapolis",
-        },
         cities={
             "Minneapolis": "MN", "Saint Paul": "MN", "St. Paul": "MN", "Bloomington": "MN",
             "Eden Prairie": "MN", "Edina": "MN", "Eagan": "MN", "Maple Grove": "MN",
@@ -367,9 +305,6 @@ REGIONS = (
             "RTP", "Research Triangle Park", "The Triangle", "Triangle Area", "Raleigh-Durham",
             "Raleigh Durham",
         ),
-        city_aliases={
-            "RDU": "Raleigh",
-        },
         cities={
             "Raleigh": "NC", "Durham": "NC", "Chapel Hill": "NC", "Cary": "NC", "Morrisville": "NC",
             "Apex": "NC",
