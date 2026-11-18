@@ -242,7 +242,7 @@ tool documents what it does *not* protect against.
 
 ## Data
 
-The base install is just the **world** pack (10 MB download, 43 MB on disk), installed on first
+The base install is just the **world** pack (about 10 MB to download, 50 MB on disk), installed on first
 use. Everything else is a pack you add, by hand or on demand:
 
 ```
@@ -276,9 +276,11 @@ placewise attribution                 # the installed packs' sources, licences a
 
 The default keeps the base lean: only the world pack until you install more. Auto mode with its
 default kinds fetches only country packs, and only for the countries you look up. Sizes for the
-2026.11 data (download / on disk): `usa` 38 / 96 MB, `can` 23 / 110 MB, `ind` 15 / 41 MB,
-`usa-parks` 40 / 108 MB, `can-parks` 9 / 33 MB, `world-water` 25 / 46 MB, `world-parks` 0.1 / 0.6 MB;
-`placewise data status` shows the current ones.
+2026.11 data on disk: `world` 50 MB, `usa` 71 MB, `can` 90 MB, `ind` 41 MB, `usa-parks` 64 MB,
+`can-parks` 33 MB, `world-water` 46 MB, `world-parks` 0.6 MB, and two packs that are optional even
+beside their own: `usa-zip` 53 MB (US ZIP Code areas: `postal`, and search by ZIP Code; without it
+US points have no postal code and everything else is the same) and `usa-parks-local` 43 MB (city
+and county parks); `placewise data status` shows the current ones.
 
 Everything placewise downloads lives in `~/.placewise/` unless configured otherwise (`--data-dir`,
 `PLACEWISE_DATA_DIR` or `data.data_dir` in `placewise.toml`; `placewise data where` prints it).

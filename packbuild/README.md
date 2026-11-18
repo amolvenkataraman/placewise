@@ -522,6 +522,42 @@ Registry `sources/notable.json` (`wikidata`, `qrank`).
   4,756 of 24,285 Wikidata items with an AISHE code have one); outlines (campuses, airports and
   stadiums are points); station complexes are merged only when their names match.
 
+## Pack sizes
+
+Installed size on disk (`du`, MB) of the 2026.11 packs built from the same sources before and after
+grids were cut to each layer's extent, time zones moved onto the admin layers, and the ZIP Code
+areas and US local parks became optional packs:
+
+| Pack | Before | After | |
+|---|---|---|---|
+| `world` (the base install) | 56.8 | 49.6 | timezones 7.0 -> 0.1, grids 3.5 -> 2.3 |
+| `usa` | 101.2 | 70.5 | zcta 52.4 -> postal_cities 30.9, timezones 4.0 -> 0.2, grids 6.6 -> 1.0 |
+| `usa-zip` (optional) | - | 53.3 | the ZCTAs and their name index |
+| `can` | 113.8 | 89.6 | timezones 19.8 -> 0 (the `tz` column on csd, cd, provinces), grids 5.5 -> 0.4 |
+| `usa-parks` | 121.1 | 63.6 | parks_local moved out; grids 17.6 -> 1.0 (+1.5 in usa-parks-local) |
+| `usa-parks-local` (optional) | - | 42.7 | parks_local and its name index |
+
+world + usa + can + ind: 348 -> 286 MB (ind unchanged at 76.5 here; rebuilt with cut grids it loses
+about 4 MB more). The grid index was the fixed cost of every polygon layer: a world-wide grid of
+1° cells is 0.78 MB whatever the layer holds (0.5°: 3.1 MB, 0.25°: 12.4 MB). A grid now spans the
+layer's extent, so a one-feature layer's is 0.5 KB, and the whole fixed cost of a small pack (one
+polygon layer, name index, pack.json; 37 files) is 10 KB of data, 188 KB on disk with 4 KB blocks
+(it was 0.94 MB at 1°, 12.3 MB at 0.25°). Across the 2026.11 packs grids went from 57 to 10 MB.
+
+**Same answers.** 32,816 points (9,000 near US and 6,000 near Canadian GeoNames places, 7,800
+uniform over the US, Alaska and Canada, 8,000 near other places, 2,000 anywhere, and the time-zone
+e2e points) were looked up with the old code on the old packs and the new code on the new ones
+(`ind` the same pack for both, read through the new reader's old-grid path):
+
+- world alone: every field identical (28,980 points with a zone).
+- world + usa + usa-zip + can + ind: identical, `Result.sources` naming `usa-zip/zcta` for
+  `postal`, except that on 7 Canadian coastal points the zone (the same zone) is credited to
+  `can/timezones:polygon` instead of `world/timezones:split`: they lie in a subdivision but outside
+  the province's outline (the layers are simplified apart), which the copied polygons missed.
+- without usa-zip: the same, less `postal`.
+- world + usa + usa-zip + usa-parks + usa-parks-local: identical (`usa-parks-local/parks_local`
+  in sources); without usa-parks-local the same less the local parks in `within`.
+
 ## Name index (every pack)
 
 Every builder ends with `write_pack(..., names=names.for_pack(<pack>, layers))`: the pack's
