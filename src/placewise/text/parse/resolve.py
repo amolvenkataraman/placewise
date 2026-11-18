@@ -131,7 +131,14 @@ def _resolve_group(group, context, gazetteer):
                     for r in city_tok.readings
                     if not r.india_code and (r.country, r.admin1) != (alias.country, alias.admin1)
                 ]
-                if others:  # "LA": Los Angeles first, Louisiana second
+                if others and group.remote and any(r.admin1 is None for r in others):
+                    # "Remote - AUS": a remote listing's lone code is the country it is limited to
+                    cands[0].weight = 0.2
+                    cands = [
+                        _Candidate(r.country, r.admin1, weight=0.8 / len(others), no_city=True)
+                        for r in others
+                    ] + cands
+                elif others:  # "LA": Los Angeles first, Louisiana second
                     cands[0].weight = 0.6
                     cands += [
                         _Candidate(r.country, r.admin1, weight=0.4 / len(others), no_city=True)

@@ -4,12 +4,20 @@ the country facts (countryInfo.txt, timeZones.txt) the country profiles are buil
 GeoNames dumps are UTF-8, tab-separated, one record per line, with no quoting and no escaping, so
 they are split on tabs only (the csv module would mangle names that contain quotes).
 
-Future work: the `alternatenames` field (and alternateNamesV2) is left out of the world pack for
-size; only its count is kept. Names in other languages belong in a later, optional names pack.
+alternateNamesV2 (`read_alternate_names`, `pick_alternates`) gives the world pack's aliases the
+names location strings use: English names, abbreviations, IATA codes and short names, plus former
+names a curated dataset confirms (GeoNames' flags are often wrong, so `isHistoric` alone isn't
+trusted). Names in other languages belong in a later, optional names pack.
 """
 
+import io
 import logging
+import re
+import zipfile
 from collections import Counter
+from dataclasses import dataclass
+
+from placewise.constants._keys import city_key
 
 from ..layer import LayerData
 
@@ -31,6 +39,17 @@ COUNTRY_INFO_FIELDS = (
     "tld", "currency_code", "currency_name", "phone", "postal_code_format", "postal_code_regex",
     "languages", "geonameid", "neighbours", "equivalent_fips_code",
 )  # fmt: skip
+# alternateNamesV2.txt columns (readme, "The table 'alternate names'")
+ALTERNATE_FIELDS = (
+    "alternate_id", "geonameid", "language", "name", "preferred", "short", "colloquial", "historic",
+    "from", "to",
+)  # fmt: skip
+ALTERNATE_MEMBER = "alternateNamesV2.txt"
+# the pseudo-languages and languages kept: English, abbreviations, IATA codes, no language given
+_LANGUAGES = frozenset(("en", "abbr", "iata", ""))
+HISTORIC_MIN_POPULATION = 100_000  # a city's former names are kept only from this size up
+_ALTERNATE_MAX = 60  # characters; longer "names" are descriptions
+_INVISIBLE = re.compile(r"[\u0000-\u001f\u007f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff|]")
 ELEVATION_NULL = -32768  # i2 sentinel
 _DEM_NO_DATA = -9999
 _I2_MAX = 32767
@@ -132,3 +151,61 @@ def _elevation(surveyed, dem):
             if metres != _DEM_NO_DATA:
                 return max(min(metres, _I2_MAX), ELEVATION_NULL + 1)
     return ELEVATION_NULL
+
+
+@dataclass(frozen=True, slots=True)
+class AlternateName:
+    language: str  # ISO 639 code, or "abbr", "iata", "" (none given)
+    name: str
+    preferred: bool
+    short: bool
+    colloquial: bool
+    historic: bool
+
+
+def read_alternate_names(path, wanted):
+    """{geonameid: [AlternateName]} for the ids in `wanted` (ints), in file order, from
+    alternateNamesV2.zip (streamed, never extracted: the text file is ~800 MB) or its .txt.
+    Only the languages a pack keeps are returned (links, postal codes, Wikidata ids are not)."""
+    wanted = {str(g) for g in wanted}
+    found = {}
+    with _open_alternates(path) as f:
+        for line in f:
+            row = line.rstrip("\r\n").split("\t")
+            if len(row) < 8 or row[1] not in wanted or row[2] not in _LANGUAGES:
+                continue
+            flags = [v == "1" for v in row[4:8]]
+            found.setdefault(int(row[1]), []).append(AlternateName(row[2], row[3].strip(), *flags))
+    return found
+
+
+def _open_alternates(path):
+    if str(path).endswith(".zip"):
+        archive = zipfile.ZipFile(path)
+        return io.TextIOWrapper(archive.open(ALTERNATE_MEMBER), encoding="utf-8", newline="")
+    return open(path, encoding="utf-8", newline="")
+
+
+def pick_alternates(names, *, population=0, formers=frozenset(), codes=True):
+    """The (name, kind) pairs of one feature's alternate names a pack keeps, best first:
+    abbreviations ("abbr"), IATA codes ("code", only with `codes`), English short names ("short",
+    even when flagged colloquial: "LA"), other English names ("name": not nicknames, not historic),
+    and English or unlabelled historic names ("former") only when the feature has
+    HISTORIC_MIN_POPULATION people or more and the name's key is in `formers` (curated)."""
+    picked = {"abbr": [], "code": [], "short": [], "name": [], "former": []}
+    for a in names:
+        if not a.name or len(a.name) > _ALTERNATE_MAX or _INVISIBLE.search(a.name):
+            continue
+        if a.language == "abbr":
+            picked["abbr"].append(a.name)
+        elif a.language == "iata":
+            if codes:
+                picked["code"].append(a.name)
+        elif a.historic:
+            if population >= HISTORIC_MIN_POPULATION and city_key(a.name) in formers:
+                picked["former"].append(a.name)
+        elif a.language == "en" and a.short:
+            picked["short"].append(a.name)
+        elif a.language == "en" and not a.colloquial:
+            picked["name"].append(a.name)
+    return [(name, kind) for kind, found in picked.items() for name in dict.fromkeys(found)]

@@ -115,7 +115,8 @@ def offline(downloads, monkeypatch):
 def test_build_india_fetches_both_sources_from_the_registry(tmp_path, offline, monkeypatch):
     calls = []
 
-    def fake_write_pack(out_dir, name, version, layers, created=None):
+    def fake_write_pack(out_dir, name, version, layers, created=None, names=None):
+        assert names is not None and len(names) > 0  # every pack carries a name index
         calls.append((name, version, layers))
         return Path(out_dir) / f"{name}-{version}"
 
@@ -155,6 +156,8 @@ def test_build_india_writes_a_pack_that_answers_the_spot_checks(tmp_path, offlin
         return pincodes.row(int(i)) if i >= 0 else None
 
     assert at(MG_ROAD)["id"] == "pin:560001"
+    pin = pack.names.codes("560001")
+    assert [pack.names.layers[x] for x in pin.layer] == ["pincodes"]
     assert (at(MG_ROAD)["district"], at(MG_ROAD)["state_code"]) == ("BENGALURU URBAN", "IN-KA")
     assert (at(GATEWAY_OF_INDIA)["pincode"], at(GATEWAY_OF_INDIA)["district"]) == ("400001", "MUMBAI")
     assert at(CHARMINAR)["state"] == "TELANGANA"
@@ -207,7 +210,7 @@ def test_manually_downloaded_files_skip_the_download(tmp_path, downloads, offlin
 
 
 def test_one_manual_file_still_fetches_the_other(tmp_path, downloads, offline, monkeypatch):
-    monkeypatch.setattr(india, "write_pack", lambda out_dir, name, version, layers: layers)
+    monkeypatch.setattr(india, "write_pack", lambda out_dir, name, version, layers, names=None: layers)
     layers = india.build_india(
         tmp_path / "c", tmp_path / "o", "2026.11", pincode_directory=downloads["pincode.csv"]
     )

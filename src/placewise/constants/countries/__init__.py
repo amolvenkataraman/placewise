@@ -4,7 +4,8 @@
 - `usa`, `can`, `ind`, `gbr` (ISO alpha-3, lower case): per-country `country` details and
   `subregions` (admin1); `cities` there are GENERATED from GeoNames by packbuild.cities.
 - `regions`: metro and vernacular regions, GENERATED from datasets/regions by packbuild.regions.
-- `city_aliases`: other names of cities, GENERATED from datasets/city_aliases.json.
+- `city_aliases`: other names of cities (and former names of countries), GENERATED from
+  datasets/names/aliases.json by packbuild.cities.
 - `groups`: country groups (continents, UN M49 regions, business regions, unions, treaties ...)
   with dated memberships, GENERATED from datasets/country_groups by packbuild.country_groups.
 - `currency_codes`: the ISO 4217 code per country, GENERATED from CLDR by packbuild.currency_codes.

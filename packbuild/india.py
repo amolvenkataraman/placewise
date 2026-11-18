@@ -29,7 +29,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import regions_layer
+from . import names, regions_layer
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .ind import crosswalk, defacto, lgd, places
 from .ind import layers as ind_layers
@@ -51,11 +51,11 @@ def build_layers(
     districts=None,
     regions=None,
     lgd_tables=None,
-    names=None,
+    names_dataset=None,
     countries=None,
 ):
     """The India layers. Each source is the given file if any, else the registry download:
-    `lgd_tables` {table: CSV path} (lgd.TABLES), `names` the curated names dataset (None:
+    `lgd_tables` {table: CSV path} (lgd.TABLES), `names_dataset` the curated names file (None:
     datasets/names/ind.json), `countries` Natural Earth's countries as a LayerData (None: read
     from the registry download). `regions` None reads datasets/regions."""
     layers = []
@@ -79,7 +79,7 @@ def build_layers(
     # an office keeps its coordinates only in or near its own PIN area (indiapost.OFFICE_BUFFER_KM)
     offices, _ = indiapost.keep_placed_offices(indiapost.post_offices(pincode_directory), pincodes)
     directory = lgd.read(lgd_tables if lgd_tables is not None else lgd.download(cache_dir, refresh))
-    curated_names = ind_names.load(names)
+    curated_names = ind_names.load(names_dataset)
     curated_names.check(directory)
     if countries is None:
         countries = _countries(cache_dir, refresh)
@@ -183,7 +183,7 @@ def build_india(cache_dir, out_dir, version, refresh=False, **paths):
     layers = build_layers(cache_dir, refresh=refresh, **paths)
     for layer in layers:
         log.info("%s: %d features", layer.name, len(layer.columns["id"]))
-    return write_pack(Path(out_dir), "ind", version, layers)
+    return write_pack(Path(out_dir), "ind", version, layers, names=names.for_pack("ind", layers))
 
 
 def main(argv=None):

@@ -119,7 +119,7 @@
       },
       {
         "id": "placewise-names",
-        "name": "placewise curated datasets: names of Indian units (datasets/names/ind.json)",
+        "name": "placewise curated datasets: names and airports (datasets/names, datasets/airports)",
         "url": "https://github.com/amolvenkataraman/placewise-data/tree/main/datasets",
         "licence": "CC-BY-4.0",
         "credit": "placewise curated datasets, CC BY 4.0",

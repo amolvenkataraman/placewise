@@ -1,10 +1,10 @@
 """Where the curated datasets live: placewise-data's `datasets/` folder, in a checkout beside this
 repository (`../placewise-data/datasets`), or wherever $PACKBUILD_DATASETS points.
 
-The datasets (country groups, regions, city aliases ...) are maintained by hand in the data
-repository under CC BY 4.0. The package never reads them: packbuild validates them and generates
-the offline copies the package ships (constants/countries/groups.py, regions.py, city_aliases.py)
-and the packs' curated layers.
+The datasets (country groups, regions, names and aliases, airports' cities ...) are maintained
+by hand in the data repository under CC BY 4.0. The package never reads them: packbuild validates
+them and generates the offline copies the package ships (constants/countries/groups.py,
+regions.py, city_aliases.py) and the packs' curated layers.
 """
 
 import os

@@ -94,7 +94,8 @@ def test_build_ca_fetches_from_the_registry_and_hands_six_layers_to_the_writer(
 ):
     calls = []
 
-    def fake_write_pack(out_dir, name, version, layers, created=None):
+    def fake_write_pack(out_dir, name, version, layers, created=None, names=None):
+        assert names is not None and len(names) > 0  # every pack carries a name index
         calls.append((out_dir, name, version, layers))
         return Path(out_dir) / f"{name}-{version}"
 
@@ -123,6 +124,8 @@ def test_build_ca_writes_a_pack_that_answers_for_public_places(tmp_path, offline
     }  # fmt: skip
     i, km = pack["populated_places"].nearest(*fx.LAKE_LOUISE)
     assert pack["populated_places"].row(int(i))["name"] == "Lake Louise" and float(km) < 1
+    louise = pack.names.exact("Lake Louise")
+    assert "populated_places" in {pack.names.layers[x] for x in louise.layer}
 
     def names(lat, lon):
         out = {}

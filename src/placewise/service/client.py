@@ -1,5 +1,5 @@
 """A client for the placewise HTTP API (a local service or a hosted server), with the same
-`lookup` / `lookup_many` interface as the library's Geocoder, so switching is one line:
+`lookup` / `lookup_many` / `find` / `get` interface as the library's Geocoder, so switching is one line:
 
     geo = Geocoder()                                          # in-process
     geo = Client("http://127.0.0.1:8770")                     # the local service
@@ -23,7 +23,7 @@ from urllib.parse import urlsplit
 from placewise import __version__
 from placewise.constants import defaults
 from placewise.constants import server as const
-from placewise.model import Result
+from placewise.model import Entity, Result
 
 
 class ServiceError(Exception):
@@ -175,6 +175,50 @@ class Client:
         for start in range(0, len(lats), size):
             out += self._lookup_chunk(lats[start : start + size], lons[start : start + size], worldview)
         return out
+
+    def find(self, text, **options):
+        """Places named `text` -> [Entity]; the options of placewise.search.find (sent as a POST
+        body, so `near` stays out of URLs)."""
+        body = {"q": str(text)}
+        for name, value in options.items():
+            if value is None:
+                continue
+            if name in ("near", "bbox"):
+                value = [value.lat, value.lon] if hasattr(value, "lat") else list(value)
+                if hasattr(options[name], "as_tuple"):
+                    value = list(options[name].as_tuple())
+            elif name in ("country", "admin1", "state", "kinds"):
+                value = [value] if isinstance(value, str) else [str(getattr(v, "value", v)) for v in value]
+            elif name == "within":
+                value = str(getattr(getattr(value, "place", None), "id", value))
+            elif name == "worldview" and isinstance(value, str):
+                value = [p.strip() for p in value.split(",")]
+            body[name] = value
+        payload = self._request("POST", "/v1/find", body)
+        try:
+            return [Entity.from_dict(item) for item in payload["results"]]
+        except (KeyError, TypeError, ValueError) as e:
+            raise TransportError(f"unexpected answer from {self.url}: {e}") from None
+
+    def get(self, ident, *, worldview=None, geometry=False):
+        """The Entity with placewise id `ident`; KeyError when the server doesn't have it."""
+        from urllib.parse import urlencode
+
+        query = {"id": str(ident)}
+        if worldview is not None:
+            query["worldview"] = worldview if isinstance(worldview, str) else ",".join(worldview)
+        if geometry:
+            query["geometry"] = "1"
+        try:
+            payload = self._request("GET", "/v1/get?" + urlencode(query))
+        except NotFoundError as e:
+            if e.code == "not_found" and "id" in e.message:
+                raise KeyError(str(ident)) from None
+            raise
+        try:
+            return Entity.from_dict(payload)
+        except (TypeError, ValueError) as e:
+            raise TransportError(f"unexpected answer from {self.url}: {e}") from None
 
     @property
     def data_version(self):

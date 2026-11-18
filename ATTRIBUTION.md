@@ -19,7 +19,7 @@ should still read each licence for its own obligations.
 | [Local Government Directory (LGD), Ministry of Panchayati Raj](https://lgdirectory.gov.in/) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/pincodes, ind/neighbourhoods |
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/pincodes, ind/regions |
 | [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/neighbourhoods, ind/pincodes, ind/post_offices, ind/regions |
-| [placewise curated datasets: names of Indian units (datasets/names/ind.json)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | ind/states, ind/districts, ind/cities |
+| [placewise curated datasets: names and airports (datasets/names, datasets/airports)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | ind/states, ind/districts, ind/cities, world/cities (alias columns), world/admin1 (alias columns), world/countries (alias columns), world/airports (served_city), package: constants/countries/city_aliases.py (generated) |
 | [Sri Lanka - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-lka) | CC-BY-3.0-IGO | lka/admin1, lka/admin2, lka/admin3, lka/admin4 |
 | [Nepal - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-npl) | CC-BY-3.0-IGO | npl/admin1, npl/admin2, npl/admin3 |
 | [Bangladesh - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-bgd) | CC-BY-3.0-IGO | bgd/admin1, bgd/admin2, bgd/admin3 |
@@ -31,9 +31,10 @@ should still read each licence for its own obligations.
 | [Egypt - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-egy) | CC-BY-3.0-IGO | egy/admin1, egy/admin2 |
 | [Türkiye - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-tur) | CC-BY-3.0-IGO | tur/admin1, tur/admin2 |
 | [United Arab Emirates - Subnational Administrative Boundaries (OCHA COD-AB)](https://data.humdata.org/dataset/cod-ab-are) | CC-BY-3.0-IGO | are/admin1 |
-| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, package: constants/countries/<country>/cities.py (generated), usa/zcta |
+| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, world/admin1 (alias columns), world/countries (alias columns), package: constants/countries/<country>/cities.py (generated), usa/zcta |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
-| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-parks/park_points, world-water/lakes |
+| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-notable/notable, world-parks/park_points, world-water/lakes |
+| [QRank](https://qrank.toolforge.org) | CC0-1.0 | world-notable/notable |
 | [National Park Service Administrative Boundaries of National Park System Units](https://irma.nps.gov/DataStore/Reference/Profile/2321443) | LicenseRef-public-domain | usa-parks/parks_national, usa-parks/parks_regional, usa-parks/parks_local |
 | [USDA Forest Service Administrative Forest Boundaries](https://data.fs.usda.gov/geodata/edw/datasets.php) | LicenseRef-public-domain | usa-parks/parks_state |
 | [Protected Areas Database of the United States (PAD-US) 4.1](https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e) | LicenseRef-public-domain | usa-parks/parks_state, usa-parks/parks_regional, usa-parks/parks_local |
@@ -56,7 +57,7 @@ should still read each licence for its own obligations.
 | boundaries | bgd | Bangladesh - Subnational Administrative Boundaries (OCHA COD-AB) |
 | boundaries | can | Statistics Canada, 2021 Census Boundary Files (cartographic) |
 | boundaries | egy | Egypt - Subnational Administrative Boundaries (OCHA COD-AB) |
-| boundaries | ind | Local Government Directory (LGD), Ministry of Panchayati Raj, All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India), placewise curated datasets: names of Indian units (datasets/names/ind.json), Natural Earth 1:10m Cultural Vectors |
+| boundaries | ind | Local Government Directory (LGD), Ministry of Panchayati Raj, All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India), placewise curated datasets: names and airports (datasets/names, datasets/airports), Natural Earth 1:10m Cultural Vectors |
 | boundaries | ken | Kenya - Subnational Administrative Boundaries (OCHA COD-AB) |
 | boundaries | lka | Sri Lanka - Subnational Administrative Boundaries (OCHA COD-AB) |
 | boundaries | mex | Mexico - Subnational Administrative Boundaries (OCHA COD-AB) |
@@ -67,11 +68,12 @@ should still read each licence for its own obligations.
 | boundaries | vnm | Viet Nam - Subnational Administrative Boundaries (OCHA COD-AB) |
 | boundaries | zaf | South Africa - Subnational Administrative Boundaries (OCHA COD-AB) |
 | countries | world | GeoNames, Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0, Wikidata, Natural Earth 1:10m Cultural Vectors |
+| notable | world | Wikidata, QRank |
 | parks | world | Wikidata |
 | parks | can | Canadian Protected and Conserved Areas Database (CPCAD), December 2025 |
 | parks | ind | none: No openly licensed outlines: WII/ENVIS publishes lists marked All Rights Reserved, and Bhuvan, PARIVESH and NTCA maps are view-only; OpenStreetMap's outlines are ODbL (share-alike pack only, not built yet). India's national parks, tiger reserves and sanctuaries are Wikidata points in world-parks. |
 | parks | usa | National Park Service Administrative Boundaries of National Park System Units, USDA Forest Service Administrative Forest Boundaries, Protected Areas Database of the United States (PAD-US) 4.1 |
-| places | world | GeoNames |
+| places | world | GeoNames, placewise curated datasets: names and airports (datasets/names, datasets/airports) |
 | places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts, Canadian Geographical Names Database (CGNDB), Natural Resources Canada |
 | places | ind | All India Pincode Directory (Department of Posts, Open Government Data Platform India), Local Government Directory (LGD), Ministry of Panchayati Raj |
 | places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
@@ -160,13 +162,15 @@ Every post office with its PIN code, office type (HO, SO, BO), delivery status, 
 
 The directory's district column decides which PIN areas make up a district.
 
-## placewise curated datasets: names of Indian units (datasets/names/ind.json)
+## placewise curated datasets: names and airports (datasets/names, datasets/airports)
 
 - Credit: placewise curated datasets, CC BY 4.0
 - Licence: CC-BY-4.0
 - Website: https://github.com/amolvenkataraman/placewise-data/tree/main/datasets
 
 Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): per LGD code, the name placewise shows, former names with the year of the rename and other names in use, each citing the notification or a page citing it; cities LGD's PIN table doesn't draw (Bengaluru as the former BBMP area, Delhi's reunified corporation); words that make a post-office name an institution.
+
+Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in the placewise-data repository): the names people type for places (airport codes, short forms, nicknames, former names, with the GeoNames alternate names to drop), each code citing its OurAirports page and each former name a page on the rename; India's former state and city names (datasets/names/ind.json); and the city each major airport serves (datasets/airports/served.json).
 
 ## Sri Lanka - Subnational Administrative Boundaries (OCHA COD-AB)
 
@@ -264,7 +268,7 @@ Common Operational Dataset, administrative boundaries, from Federal Competitiven
 
 The world pack's country_facts layer takes capital, area, population, top-level domain, calling code, postal code format, languages and neighbours from countryInfo.txt, each country's IANA time zones from timeZones.txt, and the capital's coordinates from cities1000 (the PPLC city). countryInfo gives no reference year for its population and area figures, so the layer carries none.
 
-Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists.
+Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists. alternateNamesV2 (all alternate names, streamed from the zip) gives the world pack's alias columns on cities, admin1 and countries: English names, abbreviations, IATA codes attached to cities and short names; historic names only where a curated dataset confirms them (packbuild.world_aliases).
 
 GeoNames postal codes for the United States (export/zip/US.zip: 41,490 ZIP Codes with the USPS default city name, state, county and a centroid), under CC BY 4.0 per its readme. The US pack takes a ZCTA's postal city from it only where ZIP Code Business Patterns has no row for the ZIP Code (about 2,700 of 33,791 ZCTAs, mostly rural residential ones); the readme does not name the upstream source of the US file.
 
@@ -284,9 +288,19 @@ The cldr-json packages (github.com/unicode-org/cldr-json), pinned to release 49.
 
 Driving side (property P1622, values Q11920728 left and Q14565199 right) of every item with an ISO 3166-1 alpha-2 code (P297), leaving out deprecated statements and ones with an end time (P582). A code whose current statements disagree gets no driving side. The query result is cached on the first build; rebuilding with --refresh asks again.
 
+One SPARQL query per kind of place (packbuild/sources/notable/kinds.py holds the class allowlist and builds these URLs; a test keeps them equal), run on QLever's Wikidata endpoint (qlever.dev, University of Freiburg; an academic service without an SLA, much faster than WDQS, which times out on classes this big) and cached as TSV with a sidecar (URL, SHA-256, retrieval date), so a rebuild reads the cache offline. Items of the classes or their subclasses with a coordinate, an English label and at least one sitelink, never dissolved, demolished or closed (P576, P3999). Country (P17) is informational only: the boundary layers and the chosen worldview decide where a place is.
+
 Parks known only by a point: items that are national parks or tiger reserves of India (or subclasses), wildlife refuges, and India's protected areas, with an English label, a coordinate (P625) and no dissolution date, outside the US and Canada (whose parks have outlines in usa-parks and can-parks). The radius is that of a circle of the item's area (P2046), capped at 30 km; such parks are only ever 'near' (in the area of), never 'within'. Country (P17) is read only to leave out the US and Canada: the packs carry no park's country, which comes from the boundary layers and the chosen worldview.
 
 English names of lakes (Q23397), reservoirs (Q131681), lagoons (Q187223), salt lakes (Q188025), marine lakes (Q1898470), artificial lakes (Q3215290) and crater lakes (Q204324) that have coordinates and an English Wikipedia article, two queries (about 14,000 and 4,000 items, November 2026). An item names a HydroLAKES outline its point falls in when neither Natural Earth nor another item already names it (Dal Lake, Wular Lake, Loktak Lake).
+
+## QRank
+
+- Credit: QRank (qrank.toolforge.org), CC0
+- Licence: CC0-1.0
+- Website: https://qrank.toolforge.org
+
+Page views of each Wikidata item over the 52 weeks before 15 November 2026, summed across Wikimedia projects (version 2026-11-15, 125,969,489 bytes, SHA-256 b7e8e69a73e267498cbead148a802d5aaf6c7fb3bb100a890b85da12a8755c33 as listed in its datapackage.json). QRank keeps only its three newest files, so the dated URL disappears within weeks: rebuilds read the cached copy; to move on, bump the date here. The dedication: 'The QRank data is dedicated to the Public Domain via Creative Commons Zero 1.0.'
 
 ## National Park Service Administrative Boundaries of National Park System Units
 

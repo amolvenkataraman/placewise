@@ -10,7 +10,7 @@ PLACEWISE_* variables.
 """
 
 import os
-from functools import cache
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
@@ -77,7 +77,9 @@ def naming_geocoder():
     return geocoder(*names)
 
 
-@cache
+# Only the two most recent combinations stay open: each Geocoder maps several packs, and keeping
+# every combination alive made the e2e suite exceed the machine's memory budget.
+@lru_cache(maxsize=2)
 def geocoder(*names):
     """A Geocoder over the named packs (cached per combination)."""
     from placewise.engine import Geocoder

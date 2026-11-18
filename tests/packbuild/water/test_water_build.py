@@ -77,6 +77,8 @@ def test_build_writes_the_three_layers(tmp_path, offline):
     assert sorted(names) == ["Dal Lake", "Lake Ontario", "Lake Small", "Lake Tahoe"]
     assert lakes.sources == ("hydrolakes", "naturalearth-physical", "wikidata")
     assert pack["marine"].column("name").tolist() == ["North Atlantic Ocean"]
+    tahoe = pack.names.exact("Lake Tahoe")
+    assert [pack.names.layers[x] for x in tahoe.layer] == ["lakes"]
     assert pack["rivers"].column("id").tolist() == ["wikidata:Q5089"]
     assert set(pack.sources) == {"naturalearth-physical", "hydrolakes", "wikidata"}
     assert all(link.startswith("https://") for link in requested)

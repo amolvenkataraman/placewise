@@ -46,6 +46,10 @@ class CityAlias:
     admin1: str | None
     country: str
     metro: Metro | None = None  # the metro listing the city, if any
+    kind: str = ""  # code, short, colloquial, former, exonym, name (datasets/names/aliases.json)
+    # for a text that is also an ISO or subdivision code: "city" reads it alone as the city first,
+    # "code" keeps the code's meaning unless it follows the city's own name ("Guangzhou (CAN)")
+    reads_as: str = "city"
 
 
 @dataclass(frozen=True)

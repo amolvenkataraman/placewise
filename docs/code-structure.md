@@ -17,6 +17,7 @@ If a module doesn't fit any folder's purpose below, the map is wrong: change thi
 | `packs/` | The pack file format: write and read | downloading |
 | `store/` | Downloading, verifying and installing packs | reading pack contents |
 | `geocode/` | Answering place questions from packs: `geocode/reverse/` (point to place), `geocode/text/` (parsing location strings); forward search joins later | file formats, HTTP |
+| `search/` | Forward search, name to place: query reading, candidates from the packs' name indexes, ranking under the caller's context, merging one place found in several packs, Entities; the `Gazetteer` location search uses | file formats, HTTP, the reverse-lookup rules (it asks the Geocoder) |
 | `overrides/` | Repo, app and local override rules and their engine | settings loading |
 | `config/` | Loading settings: `placewise.toml`, environment, TOML/JSON parsing | override rules |
 | `attribution/` | The source registry (`attribution/sources/*.json`, one file per purpose listing sources per region) and attribution output | build code |
@@ -35,8 +36,8 @@ loaders, `packbuild/packs/` one builder per pack, release tooling); `tests/` mir
 - **Public API:** users import from packages (`from placewise.io import read_gpx`,
   `placewise.geo.distance`), which re-export; modules starting with `_` are private and may move.
 - **Dependencies point one way:** `constants` and `model` import nothing above them; `geo` uses
-  only those; `geocode` may use `packs`, `store`, `config`, `overrides`; nothing imports `cli` or
-  `service`.
+  only those; `geocode` may use `packs`, `store`, `config`, `overrides`; `search` may use those, `text` and
+  the reverse-lookup engine (for each result's context); nothing imports `cli` or `service`.
 - **Tests mirror src:** `src/placewise/io/tracks/gpx/reader.py` is tested in
   `tests/io/tracks/test_gpx_reader.py`. Test file names stay unique across the suite (pytest's
   default import mode needs it); shared fixtures live in a `*_kit.py` beside the tests that use them.

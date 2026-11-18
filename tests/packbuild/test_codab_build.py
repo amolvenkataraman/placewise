@@ -164,6 +164,7 @@ def test_build_writes_a_pack_named_by_alpha3(package, tmp_path, monkeypatch):
     pack = open_pack(path, verify=True)
     assert pack.name == "npl" and [layer.name for layer in pack] == ["admin1", "admin2", "admin3"]
     assert pack["admin3"].column("name").tolist()[0] == "Alpha"
+    assert "admin3" in {pack.names.layers[x] for x in pack.names.exact("Alpha").layer}
     assert pack.sources == ("ocha-cod-ab-npl",)
     with pytest.raises(ValueError, match="no COD-AB pack"):
         codab.build("pak", package, tmp_path / "out", "2026.11")

@@ -232,6 +232,76 @@ def test_real_world_city_aliases(text, expected):
     assert (part.city, part.admin1_code, part.country_iso2) == expected
 
 
+# --- names people type: datasets/names/aliases.json (the curated report's bug list) -------------
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Bengaluru (BLR)", ("Bengaluru", "KA", "IN")),  # BLR is Bengaluru's airport, not Belarus
+        ("Bangalore (BLR), India", ("Bengaluru", "KA", "IN")),
+        ("Bengaluru, BLR", ("Bengaluru", "KA", "IN")),
+        ("Guangzhou (CAN)", ("Guangzhou", None, "CN")),  # CAN after its own city is the airport
+        ("Frankfurt (FRA)", ("Frankfurt am Main", None, "DE")),
+        ("Perth (PER)", ("Perth", None, "AU")),
+        ("Kochi (COK)", ("Kochi", "KL", "IN")),
+        ("Indianapolis (IND)", ("Indianapolis", "IN", "US")),
+        ("San Antonio, SA", ("San Antonio", "TX", "US")),
+        ("Toronto (YYZ)", ("Toronto", "ON", "CA")),
+        ("Madras", ("Chennai", "TN", "IN")),
+        ("Calcutta, India", ("Kolkata", "WB", "IN")),
+        ("Vizag", ("Visakhapatnam", "AP", "IN")),
+        ("Trivandrum", ("Thiruvananthapuram", "KL", "IN")),
+        ("Mysore, Karnataka", ("Mysuru", "KA", "IN")),
+    ],
+)
+def test_codes_after_their_city_and_former_names(text, expected):
+    (part,) = parse_location(text).parts
+    assert (part.city, part.admin1_code, part.country_iso2) == expected
+    assert parse_location(text).unparsed == ()
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Toronto (CAN)", ("Toronto", "ON", "CA")),  # CAN beside another city stays Canada
+        ("CAN", (None, None, "CA")),
+        ("IND", (None, None, "IN")),
+        ("Sydney, AUS", ("Sydney", None, "AU")),
+        ("Mumbai (BLR)", ("Mumbai", None, "BY")),  # not Mumbai's airport: the code reading stays
+    ],
+)
+def test_codes_keep_their_own_meaning_elsewhere(text, expected):
+    part = parse_location(text).parts[0]
+    assert (part.city, part.admin1_code, part.country_iso2) == expected
+
+
+def test_a_lone_code_that_reads_as_a_city_keeps_the_country_as_an_alternative():
+    (part,) = parse_location("BLR").parts
+    assert (part.city, part.country_iso2) == ("Bengaluru", "IN")
+    assert [(a.city, a.country_iso2) for a in part.alternatives] == [(None, "BY")]
+
+
+@pytest.mark.parametrize(
+    ("text", "scope"), [("Remote - AUS", ("AU",)), ("Remote (AUS)", ("AU",)), ("AUS - Remote", ("AU",))]
+)
+def test_a_remote_scope_reads_a_code_as_its_country(text, scope):
+    parsed = parse_location(text)
+    assert parsed.work_mode == "remote" and parsed.remote_scope == scope
+    assert parsed.parts[0].country_iso2 == "AU"
+    assert [(a.city, a.country_iso2) for a in parsed.parts[0].alternatives] == [("Austin", "US")]
+
+
+def test_outside_remote_scopes_aus_is_still_austin_first():
+    assert parse_location("Hybrid - AUS").parts[0].city == "Austin"
+    assert parse_location("AUS").parts[0].city == "Austin"
+
+
+def test_former_country_names_read_as_the_country():
+    assert [(p.city, p.country_iso2) for p in parse_location("Colombo, Ceylon").parts] == [("Colombo", "LK")]
+    assert parse_location("Zaire").parts[0].country_iso2 == "CD"
+
+
 def test_a_short_alias_is_a_city_only_alone():
     # a lone short code is a city alias; beside other parts it's a code
     (part,) = parse_location("NY, USA").parts
