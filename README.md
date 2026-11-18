@@ -7,7 +7,7 @@
 [![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-0f6f68?labelColor=15181c&color=0f6f68)](https://github.com/amolvenkataraman/placewise/blob/master/LICENSE)
 [![data: placewise-data](https://img.shields.io/badge/data-placewise--data-0f6f68?labelColor=15181c&color=0f6f68)](https://github.com/amolvenkataraman/placewise-data)
 
-[Why](#why) · [Quick start](#quick-start) · [What it does](#what-it-does) · [Data](#data) · [Status](#status)
+[Why](#why) · [Coverage](#coverage) · [Quick start](#quick-start) · [What it does](#what-it-does) · [Data](#data) · [Status](#status)
 
 </div>
 
@@ -48,6 +48,58 @@ placewise is the third option: the answer a person would give, computed on your 
 >
 > **Install:** `pip install --pre placewise` (alpha), then `placewise data install world` (and
 > `usa`, `can`, `ind`, `world-water`, `usa-parks` ... as needed; `placewise data list` shows them all).
+
+## Coverage
+
+Detailed data is built for the **United States, Canada and India**. Everywhere else is covered by
+world-wide datasets, so answers are sensible but coarser. ●●● official boundaries at full detail ·
+●● good, approximate in places · ● basic (nearest point or coarse outline) · — not available.
+
+| Layer | United States | Canada | India | Europe & UK | Asia-Pacific | Latin America & Caribbean | Africa & Middle East |
+|---|---|---|---|---|---|---|---|
+| Country | ●●● | ●●● | ●●● | ●● | ●● | ●● | ●● |
+| State / province (admin1) | ●●● Census | ●●● StatCan | ●●● states from PIN + LGD | ●● Natural Earth 1:10m | ●● | ●● | ●● |
+| County / district (admin2) | ●●● Census counties | ●●● census divisions | ●● districts (LGD, from PIN areas) | — | — | — | — |
+| City / locality | ●●● incorporated places + CDPs, ZIP postal city | ●●● municipalities + named places (CGNDB) | ●● city corporations / ULBs (from PIN areas) | ● nearest GeoNames city | ● | ● | ● |
+| Neighbourhood | ●● GeoNames sections | ●● CGNDB neighbourhoods | ●● post-office areas | ● GeoNames sections | ● | ● | ● |
+| Metro / region | ●●● metro areas (CBSA/CSA) + curated (Bay Area …) | ●●● CMAs + curated (GTA, GTHA …) | ●● curated (Delhi NCR, MMR, BMR) | — | — | — | — |
+| Postal code | ●●● ZIP areas (ZCTA) | ●● FSA (first 3 characters) | ●●● PIN-code areas | — | — | — | — |
+| Time zone | ●●● by county | ●●● by division | ●●● | ●● by admin1 | ●● | ●● | ●● |
+| Parks & protected areas | ●●● NPS, USFS, state and local (PAD-US) | ●●● CPCAD (no city parks) | ● Wikidata points ("near" only) | ● Wikidata points | ● | ● | ● |
+| Lakes, rivers, seas | ●● Natural Earth + HydroLAKES ≥ 10 km² | ●● | ●● (many lakes unnamed) | ●● | ●● | ●● | ●● |
+| Airports | ●●● OurAirports + city served | ●●● | ●●● | ●●● | ●●● | ●●● | ●●● |
+| Notable places | ●●● ~38k (Wikidata) | ●● ~4k | ●● ~12k | ●●● | ●● | ●● | ● |
+| Search (name → place) | ●●● every layer above | ●●● | ●●● incl. old names (Bangalore, Gurgaon) | ●● cities, admin1, water, parks, landmarks | ●● | ●● | ●● |
+
+Worldviews: the default is de facto (who administers the ground); `worldview="IN"` answers India,
+with its state, for every area India claims; `"CN"` puts Taiwan, Hong Kong and Macau in China
+(`docs/worldviews.md`).
+
+**Current limitations**
+
+- Outside the US, Canada and India the city is the nearest notable GeoNames place, not a municipal
+  boundary, and state lines are Natural Earth's 1:10m outlines (a few hundred metres off at borders).
+- India's districts and cities are unions of PIN-code areas: state lines agree with an independent
+  reference 99.7% of the time, districts 85%; large fringe PIN areas can fall outside a city, and
+  satellite cities (Salt Lake → Bidhannagar) aren't rolled up yet. India has no open park outlines.
+- Canada's postal data stops at the FSA (M5V); full six-character postcodes aren't open data.
+- Lakes under 10 km² and rivers below Natural Earth's detail are missing; HydroLAKES names are sparse
+  outside North America.
+- Parks outside the US and Canada are points with a radius, so they're "near", never "within".
+- Search ranks well-known places first; very small or ambiguous names may need a `country=` or
+  `near=` hint. English names only.
+- No street addresses or house numbers (not a goal).
+
+**Planned**
+
+- India: town and village points, satellite-city roll-ups, more metro regions (HMDA, CMDA, PMRDA),
+  park outlines if an openly licensed source appears.
+- US and Canada: county subdivisions (New England towns), city neighbourhood polygons from open city
+  portals, smaller lakes.
+- World: municipal outlines from openly licensed global sources (e.g. GHS settlement areas,
+  geoBoundaries where the licence allows), better parks, reservoirs.
+- Speed: faster boundary queries and first lookups; a readable result card and `placewise lookup` in
+  the terminal.
 
 ## Why
 
