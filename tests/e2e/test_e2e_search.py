@@ -72,15 +72,7 @@ PLACES = [
     ("Brooklyn", (), "Brooklyn", "New York", "US", None),
     ("Ontario", (), "Ontario", None, "CA", PlaceKind.ADMIN1),
     ("Karnataka", (), "Karnataka", None, "IN", PlaceKind.ADMIN1),
-    pytest.param(
-        "Clark County",
-        ("usa",),
-        "Clark County",
-        "Nevada",
-        "US",
-        PlaceKind.ADMIN2,
-        marks=pytest.mark.xfail(reason="usa counties carry no population, so every Clark County ranks alike"),
-    ),
+    ("Clark County", ("usa",), "Clark County", "Nevada", "US", PlaceKind.ADMIN2),  # by population
     ("Peel Region", ("can",), "Peel", "Ontario", "CA", None),
     ("Yosemite", ("usa-parks",), "Yosemite National Park", "California", "US", PlaceKind.PARK),
     ("Yosemite National Park", ("usa-parks",), "Yosemite National Park", "California", "US", PlaceKind.PARK),
@@ -106,6 +98,9 @@ PLACES = [
 @pytest.mark.parametrize(("text", "packs", "name", "region", "country", "kind"), PLACES)
 def test_places(geo, text, packs, name, region, country, kind):
     has(geo, "world", *packs)
+    usa = next((p for p in geo.packs if p.name == "usa"), None)
+    if text == "Clark County" and usa is not None and "population" not in usa["counties"].fields:
+        pytest.skip("usa counties without population (packs built before it): every Clark County ranks alike")
     e = top(geo, text)
     assert e.place.name == name, (text, e.place.name, e.place.id)
     if region is not None:

@@ -8,6 +8,10 @@
     near          NEAR_FLOOR + (1 - NEAR_FLOOR) x exp(-km / NEAR_SCALE_KM), km from the near
                   point to the place's extent (its point less its radius)
     factor        per candidate: city aliases from location search, override rules
+    named after   SHADOW_FACTOR for what is named after a place the query also names (a station
+                  called Richmond), a code read as a word ("Goa"), 1 otherwise
+    typing        TYPING_FACILITY_FACTOR for facilities matched by a prefix
+    postal codes  other code matches score just below the best postal code match
 
 Constants: placewise.constants.search.
 """
@@ -15,10 +19,14 @@ Constants: placewise.constants.search.
 import numpy as np
 
 from placewise.constants import search as const
-from placewise.constants.names import NAME_KINDS
+from placewise.constants.names import ABBREVIATION, ALIAS, CODE, NAME_KINDS, PLACE_KINDS
 from placewise.geo.distances import haversine
 
 _NAME_KIND_FACTOR = np.array([const.NAME_KIND_FACTOR[k] for k in NAME_KINDS])
+_PLACES = [PLACE_KINDS.index(k) for k in const.SHADOWING_KINDS]
+_FACILITIES = [PLACE_KINDS.index(k) for k in const.FACILITY_KINDS]
+_POSTAL = PLACE_KINDS.index("postal_code")
+_AIRPORT = PLACE_KINDS.index("airport")
 
 
 def base_scores(match, rank, name_kind, fuzzy, factor, prefix=None):
@@ -72,3 +80,80 @@ def served_city_scores(population, km):
 def best_first(scores, ties):
     """Candidate indexes by score, best first; `ties` (higher first) breaks equal scores."""
     return np.lexsort((-np.asarray(ties, dtype=np.float64), -np.asarray(scores, dtype=np.float64)))
+
+
+def namesakes_after(scores, pool, key_of, typed_word):
+    """`scores` with other code matches after a postal code (postal_codes_first), facilities after
+    places while typing (typing_factors) and what is named after a place the query also names after
+    it (named_after_factors: a station called Richmond, "Goa" as Genoa's airport code, San
+    Francisco Zoo while typing "San Fran"). Only the best SHADOW_CANDIDATES of `pool` (gather.Pool)
+    are compared by name; key_of(i) is candidate i's matched key."""
+    if not len(pool):
+        return scores
+    scores = postal_codes_first(scores, pool.kind, pool.name_kind) * typing_factors(pool.kind, pool.prefix)
+    live = np.flatnonzero(scores > 0)
+    if len(live) < 2:
+        return scores
+    live = live[np.argsort(-scores[live], kind="stable")[: const.SHADOW_CANDIDATES]]
+    keys = np.full(len(pool), None, dtype=object)
+    for i in live.tolist():
+        keys[i] = key_of(i)
+    return scores * named_after_factors(pool.kind, pool.name_kind, pool.rank, keys, typed_word)
+
+
+def named_after_factors(kind, name_kind, rank, keys, typed_word):
+    """SHADOW_FACTOR for each candidate named after a place the query also matches, 1 for the rest.
+    A place is a candidate of a SHADOWING_KINDS kind with a prior of SHADOW_MIN_RANK or more,
+    matched by a name (not a code: Toronto found by "YYZ" leaves the airport alone). Named after
+    it: FACILITY_KINDS of the same key, other kinds through an alias or abbreviation of that key
+    (Boise National Forest as "Boise"), codes of that key when `typed_word` (the query has
+    lowercase letters: "Goa") or, but for airport codes, when the place is abbreviated so ("SF" is
+    San Francisco before a station's code; "DEL" stays Delhi's airport, not Delaware), and anything
+    not a place
+    whose key is the place's key and more words (while typing "San Fran": San Francisco Zoo).
+    `keys` is each candidate's matched key, None for candidates not compared."""
+    kind, name_kind = np.asarray(kind), np.asarray(name_kind)
+    keys = np.asarray(keys, dtype=object)
+    out = np.ones(len(kind))
+    compared = np.array([k is not None for k in keys], dtype=bool)
+    is_place = np.isin(kind, _PLACES)
+    place = compared & is_place & (name_kind != CODE)
+    place &= np.asarray(rank, dtype=np.float64) >= const.SHADOW_MIN_RANK
+    if not place.any():
+        return out
+    named = set(keys[place])
+    abbreviated = set(keys[place & (name_kind == ABBREVIATION)])
+    code = name_kind == CODE
+    facility = np.isin(kind, _FACILITIES)
+    other = ~is_place & np.isin(name_kind, (ALIAS, ABBREVIATION))
+    for i in np.flatnonzero(compared & ~place):
+        k = keys[i]
+        if code[i]:
+            hit = (typed_word and k in named) or (k in abbreviated and kind[i] != _AIRPORT)
+        elif k in named:
+            hit = facility[i] or other[i]
+        else:
+            words = k.split()
+            hit = not is_place[i] and any(" ".join(words[:j]) in named for j in range(1, len(words)))
+        if hit:
+            out[i] = const.SHADOW_FACTOR
+    return out
+
+
+def typing_factors(kind, prefix):
+    """TYPING_FACILITY_FACTOR for facilities matched by a prefix (while typing "Toro", Toronto
+    before Toron, a famous castle), 1 for the rest."""
+    facility = np.isin(np.asarray(kind), _FACILITIES) & np.asarray(prefix, dtype=bool)
+    return np.where(facility, const.TYPING_FACILITY_FACTOR, 1.0)
+
+
+def postal_codes_first(scores, kind, name_kind):
+    """`scores` with every code match other than a postal code scoring at most CODE_AFTER_POSTAL
+    times the best postal code match ("10001" is a ZIP Code before a railway station's code)."""
+    scores, kind, name_kind = np.asarray(scores, dtype=np.float64), np.asarray(kind), np.asarray(name_kind)
+    code = name_kind == CODE
+    postal = code & (kind == _POSTAL)
+    if not postal.any():
+        return scores
+    cap = float(scores[postal].max()) * const.CODE_AFTER_POSTAL
+    return np.where(code & ~postal, np.minimum(scores, cap), scores)

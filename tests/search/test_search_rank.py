@@ -88,3 +88,97 @@ def test_served_city_weighs_population_by_distance():
     assert sf > sj
     toronto, mississauga = served_city_scores([2_700_000, 720_000], [22.0, 5.0])
     assert toronto > mississauga
+
+
+def _kinds(*names):
+    from placewise.constants.names import PLACE_KINDS
+
+    return np.array([PLACE_KINDS.index(n) for n in names])
+
+
+def test_what_is_named_after_a_place_comes_after_it():
+    from placewise.search.rank import named_after_factors
+
+    # "Richmond": a city, a railway station and a university known as Richmond, a park whose alias
+    # it is, a river officially called it, and a prefix match left out (key None)
+    kind = _kinds("locality", "station", "university", "park", "water", "station")
+    name_kind = np.array([OFFICIAL, OFFICIAL, ALIAS, ALIAS, OFFICIAL, OFFICIAL])
+    rank = np.array([0.7, 0.8, 0.85, 0.8, 0.6, 0.9])
+    keys = np.array(["richmond"] * 5 + [None], dtype=object)
+    got = named_after_factors(kind, name_kind, rank, keys, typed_word=True)
+    s = const.SHADOW_FACTOR
+    assert got.tolist() == [1.0, s, s, s, 1.0, 1.0]
+
+
+def test_only_a_place_of_some_size_puts_namesakes_after_it():
+    from placewise.search.rank import named_after_factors
+
+    # a hamlet called Times Square leaves the landmark alone; another name leaves it alone too
+    kind = _kinds("locality", "landmark")
+    keys = np.array(["times square", "times square"], dtype=object)
+    small = named_after_factors(kind, np.array([OFFICIAL] * 2), np.array([0.2, 0.9]), keys, typed_word=True)
+    assert small.tolist() == [1.0, 1.0]
+    other = np.array(["times square", "madison square garden"], dtype=object)
+    big = named_after_factors(kind, np.array([OFFICIAL] * 2), np.array([0.6, 0.9]), other, typed_word=True)
+    assert big.tolist() == [1.0, 1.0]
+
+
+def test_a_code_reads_as_the_place_when_typed_as_a_word_or_abbreviated():
+    from placewise.constants.names import ABBREVIATION
+    from placewise.search.rank import named_after_factors
+
+    # "Goa": Goa (the state) over Genoa, whose airport's code is GOA; a city found by its airport
+    # code doesn't count as a place named so; in capitals the code is meant as a code
+    kind = _kinds("admin1", "locality", "airport")
+    name_kind = np.array([OFFICIAL, CODE, CODE])
+    rank = np.array([0.8, 0.85, 0.8])
+    keys = np.array(["goa"] * 3, dtype=object)
+    s = const.SHADOW_FACTOR
+    assert named_after_factors(kind, name_kind, rank, keys, typed_word=True).tolist() == [1.0, s, s]
+    assert named_after_factors(kind, name_kind, rank, keys, typed_word=False).tolist() == [1.0, 1.0, 1.0]
+    # "SF" in capitals: San Francisco's abbreviation over a station's code; an airport code stays
+    # the airport's ("DEL" is Delhi's airport even though Delaware is abbreviated Del.)
+    kind = _kinds("locality", "station", "airport")
+    abbr = np.array([ABBREVIATION, CODE, CODE])
+    assert named_after_factors(kind, abbr, rank, keys, typed_word=False).tolist() == [1.0, s, 1.0]
+    # "YYZ": Toronto by its airport code doesn't push the airport down
+    toronto = named_after_factors(
+        _kinds("locality", "airport"), np.array([CODE, CODE]), rank[:2], keys[:2], typed_word=False
+    )
+    assert toronto.tolist() == [1.0, 1.0]
+
+
+def test_a_postal_code_means_the_postal_area():
+    from placewise.search.rank import postal_codes_first
+
+    # "10001": the ZIP Code before a famous Spanish railway station whose code is 10001
+    kind = _kinds("postal_code", "station", "station")
+    got = postal_codes_first(np.array([0.3, 0.8, 0.5]), kind, np.array([CODE, CODE, OFFICIAL]))
+    assert got.tolist() == pytest.approx([0.3, 0.3 * const.CODE_AFTER_POSTAL, 0.5])
+    alone = postal_codes_first(np.array([0.8, 0.5]), kind[1:], np.array([CODE, CODE]))
+    assert alone.tolist() == [0.8, 0.5]
+
+
+def test_while_typing_what_is_named_after_a_place_comes_after_it():
+    from placewise.search.rank import named_after_factors
+
+    # "San Fran": the city before the zoo, airport and bay named after it; a station called
+    # "San Francisco Centre" for a different reason is still named after it
+    kind = _kinds("locality", "park", "airport", "water", "park")
+    name_kind = np.array([OFFICIAL] * 5)
+    rank = np.array([0.7, 0.9, 0.9, 0.8, 0.9])
+    keys = np.array(
+        ["san francisco", "san francisco zoo", "san francisco international airport", "san francisco bay",
+         "san franciscan hills"], dtype=object,
+    )  # fmt: skip
+    s = const.SHADOW_FACTOR
+    assert named_after_factors(kind, name_kind, rank, keys, typed_word=True).tolist() == [1.0, s, s, s, 1.0]
+
+
+def test_while_typing_places_come_before_famous_buildings():
+    from placewise.search.rank import typing_factors
+
+    # "Toro": Toron (a famous castle, 4 of 5 letters typed) after Toronto (4 of 7)
+    kind = _kinds("locality", "building", "building")
+    got = typing_factors(kind, np.array([True, True, False]))
+    assert got.tolist() == [1.0, const.TYPING_FACILITY_FACTOR, 1.0]

@@ -43,7 +43,11 @@ class Gatherer:
         self.indexes = indexes
         self.parts = []
 
-    def add(self, pack, found, *, fuzzy=False, prefix=False, group=-1, factor=1.0):
+    def add(self, pack, found, *, fuzzy=False, prefix=False, group=-1, factor=1.0, kinds=None):
+        """Add `found` (Candidates) from pack position `pack`; `kinds` (PLACE_KINDS indexes) keeps
+        only candidates of those kinds."""
+        if kinds is not None and len(found):
+            found = found.take(np.flatnonzero(np.isin(np.asarray(found.kind), list(kinds))))
         if not len(found):
             return
         n = len(found)
