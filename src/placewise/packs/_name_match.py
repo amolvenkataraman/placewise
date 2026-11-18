@@ -105,9 +105,10 @@ class Trigrams:
         at = at[(at < len(self.codes)) & (self.codes[np.minimum(at, len(self.codes) - 1)] == mine)]
         if not len(at):
             return np.zeros(0, np.int64), np.zeros(0)
-        hits = self.postings[ranges(self.start[at], self.start[at + 1])]
-        keys, shared = np.unique(hits, return_counts=True)
         need = max(1, math.ceil(nc.FUZZY_MIN_SHARED * len(mine)))
+        if len(at) < need:
+            return np.zeros(0, np.int64), np.zeros(0)
+        keys, shared = self._shared(at, need)
         lengths = self.lengths[keys]
         bound = (nc.FUZZY_MAX_EDIT_RATIO * np.maximum(lengths, len(q))).astype(np.int64)
         ok = (shared >= need) & (np.abs(lengths - len(q)) <= bound)
@@ -127,6 +128,22 @@ class Trigrams:
                 out_score.append(1 - edits / longer)
         return np.array(out_keys, dtype=np.int64), np.array(out_score)
 
+    def _shared(self, at, need):
+        """(keys, shared) for every key holding at least `need` of the trigrams `at`, with how
+        many it holds. A key holding `need` of them holds one of the rarest len(at) - need + 1, so
+        only their postings are gathered; the commoner trigrams' postings (sorted) are only
+        searched for those candidates."""
+        at = at[np.argsort(self.start[at + 1] - self.start[at], kind="stable")]
+        rare, common = at[: len(at) - need + 1], at[len(at) - need + 1 :]
+        keys, shared = np.unique(
+            self.postings[ranges(self.start[rare], self.start[rare + 1])], return_counts=True
+        )
+        for t in common.tolist():
+            posting = self.postings[self.start[t] : self.start[t + 1]]
+            i = np.minimum(np.searchsorted(posting, keys), len(posting) - 1)
+            shared += posting[i] == keys
+        return keys, shared
+
 
 def _trigram_codes(padded, at):
     """21 bits per code point, three code points per trigram."""
@@ -135,25 +152,33 @@ def _trigram_codes(padded, at):
 
 def edit_distance(a, b, limit):
     """Damerau-Levenshtein distance (optimal string alignment: adjacent transpositions count as one
-    edit) between a and b, or limit + 1 once it must exceed `limit`."""
+    edit) between a and b, or limit + 1 once it must exceed `limit`. Only the diagonal band
+    |i - j| <= limit is filled: cells outside it are above the limit anyway."""
     if a == b:
         return 0
-    if abs(len(a) - len(b)) > limit:
+    n, m = len(a), len(b)
+    if abs(n - m) > limit:
         return limit + 1
-    before, prev = None, list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        cur = [i] + [0] * len(b)
-        low = i
-        for j, cb in enumerate(b, 1):
+    big = limit + 1
+    before, prev = None, [j if j <= limit else big for j in range(m + 1)]
+    for i in range(1, n + 1):
+        ca = a[i - 1]
+        cur = [big] * (m + 1)
+        if i <= limit:
+            cur[0] = i
+        low = cur[0]
+        for j in range(max(1, i - limit), min(m, i + limit) + 1):
+            cb = b[j - 1]
             v = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb))
             if i > 1 and j > 1 and ca == b[j - 2] and a[i - 2] == cb:
                 v = min(v, before[j - 2] + 1)
             cur[j] = v
-            low = min(low, v)
+            if v < low:
+                low = v
         if low > limit:
-            return limit + 1
+            return big
         before, prev = prev, cur
-    return prev[-1] if prev[-1] <= limit else limit + 1
+    return prev[m] if prev[m] <= limit else big
 
 
 def ranges(start, stop):
