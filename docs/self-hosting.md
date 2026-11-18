@@ -160,8 +160,9 @@ WantedBy=multi-user.target
 ```
 
 `--offline` means the server never downloads anything (the same as `[data] mode = "locked"`;
-the default mode, auto, would fetch a country pack in the middle of a request the first time a
-point in that country arrives, so a server should always run locked: install the packs it serves
+auto mode would fetch a country pack in the middle of a request the first time a point in that
+country arrives, and even the default manual mode installs the world pack on first use, so a server
+should always run locked: install the packs it serves
 first, `placewise data status` lists them with their size on disk). Updating data is a deliberate step
 (`placewise data update`, then `systemctl restart placewise`). On SIGTERM (`systemctl stop`) the
 server stops accepting connections, lets requests already in progress finish (up to 10 s) and
