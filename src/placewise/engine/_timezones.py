@@ -7,7 +7,8 @@ For every point on land or within the territorial sea (country known), in this o
    it, and that country has one zone, that zone (rule "worldview");
 2. country packs (usa, can ...), on ground whose data agrees, in that pack's country: a shape of
    its `timezones` layer containing the point, else the `tz` of the finest unit the naming rules
-   found it inside (a county, a census subdivision; rule "polygon");
+   found it inside (a county, a census subdivision; rule "polygon"); a point inside none of those
+   (a few by the shore), the first coarser unit containing it with a zone (division, province);
 3. the world pack: the point's own unit, found through the admin answer already made (a shape of
    its country containing it, else its admin-1 unit's zone, else its country's), so the zone nests
    exactly in the country and admin-1 answers (rule "polygon", or "offshore" when the country is
@@ -60,13 +61,14 @@ class Timezones:
                 self.country_keys.append((key, next(iter(countries_of))))
             else:
                 self.geometric.append(key)
-        # country packs whose finest units carry their zone: (rule, shapes key or None, unit key, label)
+        # country packs whose units carry their zone: (rule, shapes key or None, unit keys finest
+        # first, label)
         self.units = []
         for rule in naming.rules if naming else ():
-            unit = rule.tz_layer()
-            if unit is not None:
-                pack = unit.split("/")[0]
-                self.units.append((rule, shapes.get(pack), unit, f"{pack}/{const.TIMEZONES}"))
+            units = rule.tz_layers()
+            if units:
+                pack = units[0].split("/")[0]
+                self.units.append((rule, shapes.get(pack), units, f"{pack}/{const.TIMEZONES}"))
         self._candidates, self._zone_columns = {}, {}
 
     def __bool__(self):
@@ -167,8 +169,10 @@ class Timezones:
 
     def _country_units(self, a, lat, lon, todo, work):
         """Country packs whose units carry their zone: a shape containing the point, else the zone of
-        the finest unit the naming rules found the point inside."""
-        for rule, shapes, unit, label in self.units:
+        the finest unit the naming rules found the point inside; a point inside none (the layers
+        are simplified apart, so a few coastal points are in a province but no subdivision): the
+        first coarser unit containing it that has a zone."""
+        for rule, shapes, (finest, *coarser), label in self.units:
             for done_rule, pts, state in work:
                 if done_rule is not rule:
                     continue
@@ -178,7 +182,14 @@ class Timezones:
                     found = np.atleast_1d(self.layers.layer(shapes).query(lat[pts], lon[pts]))
                     self._fill(a, shapes, pts, found, const.POLYGON, lat, lon, todo, label)
                     pts, rows = pts[found < 0], rows[found < 0]
-                self._fill(a, unit, pts, rows, const.POLYGON, lat, lon, todo, label)
+                self._fill(a, finest, pts, rows, const.POLYGON, lat, lon, todo, label)
+                outside = pts[rows < 0]
+                for key in coarser:
+                    outside = outside[todo[outside]]
+                    if not len(outside):
+                        break
+                    found = np.atleast_1d(self.layers.layer(key).query(lat[outside], lon[outside]))
+                    self._fill(a, key, outside, found, const.POLYGON, lat, lon, todo, label)
 
     def _world_features(self, a, pts, lat, lon):
         """[(key, selection of pts, rows)]: each point's own world unit as the row of its zone in the

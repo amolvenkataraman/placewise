@@ -234,11 +234,12 @@ def named_places(rows=CA_NAMED):
 
 
 def write_ca(out, regions=None, tz=None):
-    """tz: {subdivision id: zone}."""
+    """tz: {province, division or subdivision id: zone} (the `tz` column on all three)."""
     provinces = polygons(
         "provinces", [((10, -149, 11, -148), "statcan:35", "Ontario", "ON")], ("id", "name", "code")
     )
-    cd = polygons("cd", CA_CD, ("id", "name", "cdtype", "province", "population"))
+    provinces = with_tz(provinces, tz)
+    cd = with_tz(polygons("cd", CA_CD, ("id", "name", "cdtype", "province", "population")), tz)
     csd = with_tz(polygons("csd", CA_CSD, ("id", "name", "csdtype", "province", "population")), tz)
     cma = polygons("cma", CA_CMA, ("id", "name", "kind", "province", "population"))
     fsa = polygons(

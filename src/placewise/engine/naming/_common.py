@@ -68,9 +68,14 @@ class Named:
         return found
 
 
-def tz_layer(layers, key):
-    """`key` when its layer carries a time-zone column (placewise.engine._timezones), else None."""
-    return key if lookup_const.TZ_FIELD in layers.layer(key).fields else None
+def tz_layers(layers, pack, finest, coarser):
+    """The keys of the layers carrying the time-zone column (placewise.engine._timezones), finest
+    first: `finest` (a key) and the `coarser` layers of `pack` (names) that it lies in; [] when the
+    finest units carry no zone (packs built before the column)."""
+    if lookup_const.TZ_FIELD not in layers.layer(finest).fields:
+        return []
+    found = [layers.add(pack, name) for name in coarser if name in pack]
+    return [finest, *(k for k in found if lookup_const.TZ_FIELD in layers.layer(k).fields)]
 
 
 def inside_rows(rows, rule):

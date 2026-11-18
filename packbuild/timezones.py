@@ -3,7 +3,7 @@ CC BY 4.0) checked and written as a `tz` column on the admin layers the packs al
 small `timezones` layer of the few hand-drawn shapes.
 
     countries, admin1, shapes = world_tables(load("world"), countries, admin1)   # Natural Earth units
-    counties, shapes = country_tables(load("usa"), states, [counties], parent, aiannh, ("uscensus",))
+    [counties, states], shapes = country_tables(load("usa"), states, [counties], parent, aiannh, ...)
 
 216 of the tz database's 247 countries have one zone, so most of the world is a country with its
 zone; the rest follow admin lines, so the tables map admin units to zones (`world.json`: Natural
@@ -265,16 +265,19 @@ def world_tables(doc, countries, admin1, sources=("naturalearth",)):
 
 
 def country_tables(doc, admin1, parts, parent, shapes, sources, container=lambda pid, row: None):
-    """(finest, shapes) from a country table (usa.json, can.json): `admin1` the pack's states or
+    """(layers, shapes) from a country table (usa.json, can.json): `admin1` the pack's states or
     provinces LayerData, `parts` its finer unit layers, coarse to fine (counties; census divisions
     then subdivisions), `parent(part id, part row)` the admin-1 id a part lies in, `container(part
     id, part row)` the id of the coarser part it lies in (a subdivision's division) or None,
     `shapes` {shape id: Feature} for the shapes drawn from the pack's sources (Census AIANNH
-    areas). `finest` is the last of `parts` with a `tz` column: each unit's own zone, else that of
-    the listed part it lies in, else its admin-1 unit's, as the first of the shapes, parts and
-    admin-1 units containing a point decided when each was drawn; `shapes` is the `timezones`
-    layer of the shapes alone (None when the table has none). A split zone (a list) is never
-    inherited: its nearest-town rule searches the unit it was given to."""
+    areas). `layers` are `parts` and `admin1` with a `tz` column, finest first. The finest units
+    carry their resolved zone: their own, else that of the listed part they lie in, else their
+    admin-1 unit's, as the first of the shapes, parts and admin-1 units containing a point decided
+    when each was drawn; coarser parts carry their own entry ("" for none) and admin-1 units their
+    zone, for points that lie in no finest unit (the layers are simplified apart, so a few
+    coastal points are in a province but no subdivision). `shapes` is the `timezones` layer of the
+    shapes alone (None when the table has none). A split zone (a list) is never inherited: its
+    nearest-town rule searches the unit it was given to."""
     problems = check_entries(doc)
     table = doc.get("admin1", {})
     country = f"iso:{doc.get('country', '')}"
@@ -314,6 +317,10 @@ def country_tables(doc, admin1, parts, parent, shapes, sources, container=lambda
         if isinstance(zone, list) and unit != pid:
             problems.append(f"{unit}: a split zone (a list) would pass to {pid}; list the zones of its parts")
         zones.append(_joined(zone) if unit is not None else "")
+    coarser = [
+        _with_zones(layer, [_joined(zone_of[u]) if u in zone_of else "" for u in layer.columns["id"]])
+        for layer in (*reversed(parts[:-1]), admin1)
+    ]
     shape_rows, features = [], []
     for shape in doc.get("shapes", ()):
         feature = shapes.get(shape.get("id")) if "aiannh" in shape else None
@@ -326,4 +333,4 @@ def country_tables(doc, admin1, parts, parent, shapes, sources, container=lambda
             shape_rows.append(_shape_row(shape, "", country))
             features.append(feature)
     _fail(problems)
-    return _with_zones(finest, zones), _shapes_layer(shape_rows, features, sources)
+    return [_with_zones(finest, zones), *coarser], _shapes_layer(shape_rows, features, sources)

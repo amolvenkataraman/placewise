@@ -95,6 +95,7 @@ def test_build_us_fetches_every_registry_url_and_hands_eight_layers_to_the_write
         "regions": ("placewise-regions", "uscensus"),
         "postal_cities": ("uscensus",),
         "counties": ("uscensus", "placewise-timezones"),
+        "states": ("uscensus", "placewise-timezones"),
         "timezones": ("placewise-timezones", "uscensus"),
     }
     for layer in layers:
@@ -160,6 +161,7 @@ def test_build_us_writes_a_real_pack_that_answers_the_spot_checks(tmp_path, offl
     assert at("counties", 39.5296, -119.8138)["tz"] == "America/Los_Angeles|America/Denver"  # Washoe
     assert at("counties", 36.1147, -115.1728)["tz"] == "America/Los_Angeles"  # Clark: Nevada's
     assert at("counties", *park)["tz"] == "America/Los_Angeles"
+    assert at("states", 36.1147, -115.1728)["tz"] == "America/Los_Angeles"  # for points in no county
 
 
 def test_a_region_member_missing_from_the_counties_fails_the_build(tmp_path, offline, monkeypatch):

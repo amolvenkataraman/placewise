@@ -42,7 +42,7 @@ class Usa:
 
     def __init__(self, pack, layers, admin, cities):
         names = const.USA_LAYERS
-        self.layers, self.admin, self.cities = layers, admin, cities
+        self.layers, self.admin, self.cities, self._pack = layers, admin, cities, pack
         self.county = layers.add(pack, names["county"], common.area_maker(PlaceKind.ADMIN2, "state"))
         self.place = layers.add(pack, names["place"], common.area_maker(PlaceKind.LOCALITY, "state", "class"))
         self.postal = self.postal_cities = self.cbsa = self.csa = self.regions = None
@@ -138,9 +138,9 @@ class Usa:
 
     # -- the rules ----------------------------------------------------------------------------------
 
-    def tz_layer(self):
-        """The counties' key when they carry their time zone (placewise.engine._timezones), else None."""
-        return common.tz_layer(self.layers, self.county)
+    def tz_layers(self):
+        """The counties' and states' keys when they carry their time zone (placewise.engine._timezones)."""
+        return common.tz_layers(self.layers, self._pack, self.county, (const.USA_STATES,))
 
     def tz_rows(self, state):
         """Per point of `boundaries`, the county it lies inside (-1: none, or only near one)."""

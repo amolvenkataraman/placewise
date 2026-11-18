@@ -171,6 +171,12 @@ def test_build_ca_puts_each_subdivisions_zone_on_it(tmp_path, offline):
     assert at(fx.MILTON_GO) == "America/Atikokan"  # the subdivision's own, inside Halton's
     assert at(fx.CN_TOWER) == "America/Toronto"  # Ontario's
     assert at(fx.BANFF) == "America/Edmonton"
+    pack = open_pack(csd_path := next((tmp_path / "out").glob("can-*")))
+    cd, provinces = pack["cd"], pack["provinces"]
+    assert cd.value("tz", cd.query(*fx.MILTON_GO)) == "America/Winnipeg"  # Halton's own entry
+    assert cd.value("tz", cd.query(*fx.CN_TOWER)) is None  # Toronto division: no entry ("")
+    assert provinces.value("tz", provinces.query(*fx.CN_TOWER)) == "America/Toronto"
+    assert csd_path.name == "can-2026.11"
 
 
 def test_build_ca_draws_regions_from_divisions_subdivisions_and_cmas(tmp_path, offline):

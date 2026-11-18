@@ -81,9 +81,9 @@ class Ind:
         rows, rule = common.polygon(self.layers.layer(key), lat, lon, snap_km=snap_km)
         return self.admin.view_only(a, pts, rows, self.layers.column(key, IND_VIEW_ONLY), "IN"), rule
 
-    def tz_layer(self):
+    def tz_layers(self):
         """None: India is one zone, which the world pack gives (placewise.engine._timezones)."""
-        return None
+        return []
 
     def boundaries(self, a, pts, lat, lon):
         pin, rule = self._rows(self.pin, a, pts, lat, lon)

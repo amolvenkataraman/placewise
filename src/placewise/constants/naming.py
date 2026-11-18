@@ -8,6 +8,7 @@ USA_LAYERS = {
     "county": "counties", "place": "places", "postal": "zcta", "cbsa": "cbsa", "csa": "csa",
     "postal_cities": "postal_cities",
 }  # fmt: skip
+USA_STATES, CAN_PROVINCES = "states", "provinces"  # admin-1 layers (their time zones, engine._timezones)
 # the optional pack holding the US ZIP Code areas (`zcta`); without it the usa pack's `postal_cities`
 # (the ZIP Codes' postal cities where they can name a locality) still corrects the locality
 USA_ZIP_PACK = "usa-zip"

@@ -90,14 +90,16 @@ def build_layers(
     ]
     named = cgndb.populated_places(get(url(cgndb.SOURCE, "populated_places")))
     regions = regions_layer_of(layers, curated, raw, tolerance_m)
-    csd, shapes = timezones_layer(layers)
-    layers = [csd if layer.name == "csd" else layer for layer in layers]
+    zoned, shapes = timezones_layer(layers)
+    zoned = {layer.name: layer for layer in zoned}
+    layers = [zoned.get(layer.name, layer) for layer in layers]
     return [*layers, named, regions, *([shapes] if shapes else [])]
 
 
 def timezones_layer(layers):
-    """The census subdivisions with their `tz` column (can.json's subdivision, else division, else
-    province zone) and the `timezones` layer of its shapes, None when it has none: (csd, shapes)."""
+    """The census subdivisions, divisions and provinces with their `tz` column (a subdivision's:
+    its own zone, else its division's, else its province's) and the `timezones` layer of can.json's
+    shapes, None when it has none: ([csd, cd, provinces], shapes)."""
     by_name = {layer.name: layer for layer in layers}
 
     def division(pid, row):

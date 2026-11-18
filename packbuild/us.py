@@ -91,14 +91,16 @@ def build_layers(cache_dir, refresh=False, regions=None):
     counties = next(layer for layer in layers if layer.name == "counties")
     curated = regions_layer.for_country(regions, "US")
     layers.append(regions_layer.from_features(curated, regions_layer.by_id(counties), counties.sources))
-    counties, shapes = timezones_layer(layers, shapefile("aiannh"))
-    layers = [counties if layer.name == "counties" else layer for layer in layers]
+    zoned, shapes = timezones_layer(layers, shapefile("aiannh"))
+    zoned = {layer.name: layer for layer in zoned}
+    layers = [zoned.get(layer.name, layer) for layer in layers]
     return [*layers, *([shapes] if shapes else [])]
 
 
 def timezones_layer(layers, aiannh_shp):
-    """The counties with their `tz` column and the `timezones` layer of usa.json's shapes (its
-    Census AIANNH areas read from `aiannh_shp` by AIANNHCE code): (counties, shapes)."""
+    """The counties and states with their `tz` column and the `timezones` layer of usa.json's
+    shapes (its Census AIANNH areas read from `aiannh_shp` by AIANNHCE code): ([counties, states],
+    shapes)."""
     doc = timezones.load("usa")
     codes = timezones.aiannh_codes(doc)
     areas = (

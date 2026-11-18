@@ -246,7 +246,7 @@ def parent(layer, field="statefp"):
 def test_country_tables_put_the_zone_on_the_finest_units_and_draw_only_the_shapes():
     states, counties = country_layers()
     navajo = box(35.5, -111.5, 37, -109)
-    finest, shapes = timezones.country_tables(
+    (finest, zoned_states), shapes = timezones.country_tables(
         country_doc(),
         states,
         [counties],
@@ -255,6 +255,7 @@ def test_country_tables_put_the_zone_on_the_finest_units_and_draw_only_the_shape
         sources=("uscensus",),
     )
     assert finest.name == "counties" and finest.sources == ("synthetic", "placewise-timezones")
+    assert zoned_states.columns["tz"] == ["America/Los_Angeles", "America/Phoenix"]  # outside every county
     # Elko County is split (its own list); Apache County takes Arizona's zone
     assert finest.columns["tz"] == ["America/Los_Angeles|America/Denver", "America/Phoenix"]
     assert shapes.sources == ("placewise-timezones", "uscensus")
@@ -297,11 +298,15 @@ def test_a_subdivision_takes_its_own_zone_else_its_divisions_else_its_provinces(
     doc, provinces, cd, csd = _saskatchewan(
         {"statcan:4717": "America/Swift_Current", "statcan:4717029": "America/Edmonton"}
     )
-    finest, shapes = timezones.country_tables(
+    layers, shapes = timezones.country_tables(
         doc, provinces, [cd, csd], parent(provinces, "pruid"), {}, ("statcan",), container=_division
     )
-    assert finest.name == "csd" and shapes is None
-    assert finest.columns["tz"] == ["America/Edmonton", "America/Swift_Current", "America/Regina"]
+    assert [layer.name for layer in layers] == ["csd", "cd", "provinces"] and shapes is None
+    assert layers[0].columns["tz"] == ["America/Edmonton", "America/Swift_Current", "America/Regina"]
+    # for points in no subdivision: each division's own entry, each province's zone
+    assert layers[1].columns["tz"] == ["America/Swift_Current"] and layers[2].columns["tz"] == [
+        "America/Regina"
+    ]
 
 
 def test_a_split_zone_is_never_passed_down():

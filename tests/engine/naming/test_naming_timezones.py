@@ -37,7 +37,10 @@ def geo(tmp_path_factory):
         "census:06081": "America/Los_Angeles|America/Phoenix",  # San Mateo: split, its towns decide
     }
     shape = [("tz:test-box", "America/Denver", (10.0, -149.5, 10.05, -149.45))]  # inside Clark
-    csd_zones = {"statcan:3520005": "America/Toronto", "statcan:3521005": "America/Winnipeg"}
+    csd_zones = {
+        "statcan:3520005": "America/Toronto", "statcan:3521005": "America/Winnipeg",
+        "statcan:3526": "America/Halifax", "statcan:35": "America/Toronto",  # Niagara division, Ontario
+    }  # fmt: skip
     return Geocoder(
         packs=[
             write_world(root, tz=WORLD_TZ),
@@ -76,6 +79,12 @@ def test_canadian_subdivisions_carry_their_zones_and_the_rest_fall_back(geo):
     assert tz(geo, 10.75, -148.75) == ("America/Toronto", "ca/timezones:polygon")
     assert tz(geo, 10.25, -148.9) == ("America/Winnipeg", "ca/timezones:polygon")  # Mississauga
     assert tz(geo, 10.1, -148.2) == ("America/Toronto", "world/timezones:polygon")  # Fort Erie: no tz
+
+
+def test_a_point_in_no_subdivision_takes_the_division_or_province_containing_it(geo):
+    # the river east of Niagara Falls: in Niagara division but no subdivision (nor within the
+    # 1 km shore snap of one)
+    assert tz(geo, 10.4, -148.005) == ("America/Halifax", "ca/timezones:polygon")
 
 
 def test_lookup_many_agrees_with_lookup(geo):
