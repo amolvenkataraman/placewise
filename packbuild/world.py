@@ -12,14 +12,20 @@ the pack is written to --out.
 """
 
 import argparse
+import dataclasses
 import datetime as dt
 import logging
+from collections import Counter
 from pathlib import Path
+
+from placewise.constants._keys import city_key
+from placewise.constants.lookup import CITY_EXCLUDED_FEATURE_CODES
 
 from . import country_profiles, names, served, timezones, world_aliases
 from .fetch import DEFAULT_CACHE, fetch, unzip
 from .layer import write_pack
 from .sources import geonames, naturalearth, ourairports, url
+from .sources.geonames import read_tsv
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +47,9 @@ def build_layers(cache_dir, refresh=False):
     cities_zip = get(url("geonames", "cities"))
     cities_txt = unzip(cities_zip) / f"{cities_zip.stem}.txt"
     country_info = get(url("geonames", "country_info"))
-    cities = geonames.cities(cities_txt, get(url("geonames", "admin1_codes")), country_info)
+    admin1_codes = get(url("geonames", "admin1_codes"))
+    cities = geonames.cities(cities_txt, admin1_codes, country_info)
+    admin1 = admin1_population(admin1, cities, admin1_codes)
     country_ids = {
         code: int(facts["geonameid"])
         for code, facts in geonames.read_country_facts(country_info).items()
@@ -67,6 +75,41 @@ def build_layers(cache_dir, refresh=False):
     )
     zones = timezones.world_layer(timezones.load("world"), countries, admin1)
     return [countries, admin1, worldviews, cities, airports, facts, zones]
+
+
+def admin1_population(admin1, cities, admin1_codes_path):
+    """admin1 + population: the people of the GeoNames cities in each unit (sections of a city,
+    already counted in it, left out), joined by the unit's GeoNames id through admin1CodesASCII;
+    null where no city is known. The name index ranks admin-1 units by it, so a small parish
+    named Portland doesn't come before Portland, Oregon."""
+    code_of = {}
+    for row in read_tsv(admin1_codes_path, 4, exact=False):
+        code, name, ascii_name, geonameid = row[:4]
+        country = code.partition(".")[0]
+        code_of[f"geonames:{geonameid}"] = code
+        for text in (name, ascii_name):
+            code_of.setdefault((country, city_key(text)), code)
+    cols = cities.columns
+    people = Counter()
+    rows = zip(cols["country"], cols["admin1"], cols["feature_code"], cols["population"], strict=True)
+    for country, code, feature, population in rows:
+        if feature not in CITY_EXCLUDED_FEATURE_CODES and population and population > 0:
+            people[f"{country}.{code}"] += int(population)
+    a1 = admin1.columns
+    keys = zip(a1["geonames"], a1["country"], a1["name"], strict=True)
+    codes = [code_of.get(g) or code_of.get((c, city_key(n))) for g, c, n in keys]
+    population = [people.get(code, 0) or None for code in codes]
+    log.info(
+        "admin1 with a population from their cities: %d of %d",
+        sum(p is not None for p in population),
+        len(population),
+    )
+    return dataclasses.replace(
+        admin1,
+        columns={**admin1.columns, "population": population},
+        types={**admin1.types, "population": "i8"},
+        nulls={**admin1.nulls, "population": -1},
+    )
 
 
 def build_world(cache_dir, out_dir, version, refresh=False):

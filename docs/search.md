@@ -36,6 +36,7 @@ geo = placewise.Geocoder(packs=[...])             # Geocoder.find / Geocoder.get
 | `Bangalore`, `Gurgaon`, `Bombay` | also the city location search knows by that alias (Bengaluru in Karnataka ...) |
 | `GTA`, `Delhi NCR` | also the curated region location search knows by that name (`region:gta`) |
 | `Peel Region`, `City of Toronto` | also without the generic words, when nothing matched exactly |
+| `Mississippi River`, `River Thames` | also the water named without the word |
 | `Torono`, `Missisauga` | typo-tolerant matches, when nothing prominent matched exactly |
 | `YYZ`, `CYYZ`, `M5V`, `94105`, `560001`, `CA-ON`, `US`, `IND`, `Q1049470` | codes (exact only): IATA, ICAO, postal codes, ISO 3166, Wikidata ids |
 | `census:0646870`, `wikidata:Q1049470`, `iso:IN-KA` | placewise ids |
@@ -71,17 +72,31 @@ layers at each place's point.
 
 ## Ranking
 
-`score = match ** 3 x name kind x (0.15 + 0.85 x rank) x context x near x factor`
+`score = match ** 3 x name kind x (0.15 + 0.85 x rank) x context x near x factor x namesake`
 
 - **match**: 1 for exact names and codes; prefix matches `0.6 + 0.4 x len(query) / len(name)` (not
   cubed: while typing, the prior decides); typo matches
   `1 - edits / length`, then x0.85. Aliases are worth x0.97, former names and abbreviations x0.95.
 - **rank**: the index's prior prominence, 0..1 and comparable across packs (population, area, park
-  tier, fame): countries 0.85-1, states 0.7-0.85, a 3M city ~0.85, a hamlet ~0.3.
+  tier, fame): countries 0.85-1, US, Canadian and Indian states 0.75-0.85, other admin-1 units
+  0.5-0.8 by the people of their cities (Portland, Jamaica's parish, comes after Portland, Oregon),
+  counties and census divisions 0.45-0.7 by population (Clark County is Nevada's), a 3M city
+  ~0.85, a hamlet ~0.3, a Canadian community shown at 1:1.2M (Scarborough) ~0.5.
 - **context**: the text's context: 1 in its likeliest reading, 0.9 in a later one ("CA" as Canada),
   0 outside, or 0.2 for everything when nothing is inside.
 - **near**: `0.25 + 0.75 x exp(-km / 250)`, km from the near point to the place's extent.
-- **factor**: city aliases from location search x0.98; places an override rule names x2.
+- **factor**: city aliases from location search x0.98; places an override rule names x2; waters
+  found without the word "river" ("Mississippi River" is Natural Earth's "Mississippi") x0.97.
+- **namesake**: x0.7 for what is named after a place the query also names, when that place
+  (a city, county, state, region, neighbourhood or country) has a rank of 0.3 or more: a station,
+  airport, university, building or landmark of that name (Richmond the station, Miami University
+  as "Miami"), anything else known by it as an alias (Boise National Forest as "Boise"), a code
+  that reads as the name when typed as a word ("Goa", Genoa's IATA code) or, unless it is an airport
+  code, that a place has as an abbreviation ("SF": San Francisco, not a station's code), and, while typing, anything not a place whose name is the place's name and
+  more words (San Francisco Zoo for "San Fran"). A city found only by its airport's code doesn't
+  count ("YYZ" still gives Toronto, then the airport). While typing, facilities also score x0.85
+  (Toronto before Toron, a castle, for "Toro"), and a code that is a postal code comes before
+  other codes ("10001": the ZIP Code, not a railway station's code).
 
 Typo matches are only gathered when no exact match has a prior of at least 0.35, so a typo of a big
 city ("Torono") still finds it while exact names of real places win.
@@ -138,3 +153,15 @@ country's outline has tens of thousands of vertices.
   disputed area is filtered by where it is administered, and only its reported `country` follows the
   worldview.
 - English names only.
+- Prominence comes from population, area, tiers and page views, not from what people search for:
+  Manali (Chennai's suburb) outnumbers Manali (the Himachal Pradesh hill town), and India Post's
+  neighbourhoods rank like hamlets.
+
+## Ranking evaluation
+
+`tests/e2e/test_e2e_search_quality.py` runs 354 queries (`search_quality_cases.json`: big and small
+cities, ambiguous names, states, districts, counties, neighbourhoods, parks, waters, landmarks,
+airport and postal codes, typos, prefixes, former names and transliterations, mostly in the US,
+Canada and India) and prints top-1 and top-3 accuracy per category and warm latency. On the
+2026.11 packs: top-1 98.3%, top-3 99.4% (before this evaluation's ranking work: 86.7% and 96.3%);
+warm median 1.5 ms, p95 5.7 ms.

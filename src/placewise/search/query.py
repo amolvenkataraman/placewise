@@ -25,7 +25,9 @@ class Query:
     names no country or region (a city: "Union Station, Toronto"). `aliases` are (key, (country,
     admin1)) of other names of the city (Bombay -> mumbai); `region_ids` the ids of curated
     regions the name means (GTA -> region:gta); `fallback_keys` the name without generic words
-    ("Peel Region" -> peel); `trailing` the query read with its last word as context ("Paris TX")."""
+    ("Peel Region" -> peel); `water_keys` the name without a water word, looked up among waters
+    ("Mississippi River" -> mississippi); `trailing` the query read with its last word as context
+    ("Paris TX")."""
 
     raw: str
     name: str
@@ -38,6 +40,7 @@ class Query:
     aliases: tuple[tuple[str, tuple[str, str | None]], ...] = ()
     region_ids: tuple[str, ...] = ()
     fallback_keys: tuple[str, ...] = ()
+    water_keys: tuple[str, ...] = ()
     trailing: "Query | None" = None
     code: str | None = None  # the text matched against codes ("YYZ" in "YYZ airport")
     airport: bool = False  # the text says "airport": an airport code means the airport
@@ -74,6 +77,7 @@ def parse_query(text):
         aliases=_aliases(name, key),
         region_ids=_region_ids(name),
         fallback_keys=_fallback_keys(key),
+        water_keys=_water_keys(key),
         trailing=_trailing(raw, name, context, place),
         code=code,
         airport=airport,
@@ -152,6 +156,16 @@ def _fallback_keys(key):
         if key.startswith(f"{prefix} "):
             found.append(key[len(prefix) + 1 :].strip())
     return tuple(k for k in dict.fromkeys(found) if k and k != key)
+
+
+def _water_keys(key):
+    found = []
+    for word in const.WATER_WORDS:
+        if key.endswith(f" {word}"):
+            found.append(key[: -len(word) - 1].strip())
+        if key.startswith(f"{word} "):
+            found.append(key[len(word) + 1 :].strip())
+    return tuple(k for k in dict.fromkeys(found) if k)
 
 
 def _trailing(raw, name, context, place):

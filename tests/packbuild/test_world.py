@@ -1,6 +1,7 @@
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 from facts_kit import fixture_for
 from timezones_kit import use_timezones
@@ -119,6 +120,15 @@ def test_build_world_writes_a_real_pack_that_reopens(tmp_path, offline):
     ] == ["geonames:1277333"]
     zones = pack["timezones"]
     assert zones.value("zone", zones.query(43.65, -79.38)) == "America/Toronto"
+    admin1 = pack["admin1"]
+    ontario = admin1.row(int(admin1.find("id", "iso:CA-ON")[0]))
+    assert ontario["population"] == 2794356 + 1017449  # Toronto and Ottawa
+
+    def admin1_rank(name):
+        found = pack.names.exact(name)
+        return found.rank[found.layer == pack.names.layers.index("admin1")][0]
+
+    assert admin1_rank("Ontario") > admin1_rank("Somaliland")  # no cities: the base
     facts = pack["country_facts"].row(0)
     assert (facts["id"], facts["capital"], facts["currency"], facts["point"]) == (
         "iso:CA",
@@ -126,6 +136,44 @@ def test_build_world_writes_a_real_pack_that_reopens(tmp_path, offline):
         "CAD",
         "capital",
     )
+
+
+def test_admin1_population_is_the_people_of_its_cities(tmp_path):
+    from placewise.packs import LayerData
+
+    codes = tmp_path / "admin1CodesASCII.txt"
+    rows = ("XX.01\tAlpha\tAlpha\t101", "XX.02\tBeta\tBeta\t102", "XX.03\tGámma\tGamma\t103")
+    codes.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    admin1 = LayerData(
+        "admin1", "point",
+        {"id": ["iso:XX-A", "iso:XX-B", "iso:XX-C", "iso:XX-D"], "name": ["Alpha", "Beta", "Gamma", "Delta"],
+         "country": ["XX"] * 4, "geonames": ["geonames:101", "geonames:102", "", ""]},
+        ("synthetic",), lat=[0.0, 1.0, 2.0, 3.0], lon=[0.0, 1.0, 2.0, 3.0],
+    )  # fmt: skip
+    cities = LayerData(
+        "cities", "point",
+        {"id": ["c1", "c2", "c3", "c4", "c5"], "country": ["XX", "XX", "XX", "YY", "XX"],
+         "admin1": ["01", "01", "01", "01", "03"], "feature_code": ["PPLA", "PPL", "PPLX", "PPL", "PPL"],
+         "population": [1000, 500, 300, 7000, 40]},
+        ("synthetic",), lat=[0.0] * 5, lon=[0.0] * 5,
+    )  # fmt: skip
+    out = world.admin1_population(admin1, cities, codes)
+    # sections of a city (PPLX) are already in it; another country's 01 is not this one; without a
+    # GeoNames id the unit is found by its name in its country; Beta and Delta have no cities
+    assert out.columns["population"] == [1500, None, 40, None]
+    assert out.types["population"] == "i8"
+
+
+def test_world_admin1_rank_by_population_below_cities_of_their_size():
+    from packbuild import name_specs
+    from packbuild.names import rank_of
+
+    specs = {spec.layer: spec for spec in name_specs.SPECS["world"]}
+    people = {"population": np.array([20_000_000, 2_000_000, 80_000, -1])}
+    admin1 = rank_of(specs["admin1"].rank, people, 4).tolist()
+    assert admin1[0] > admin1[1] > admin1[2] == admin1[3]
+    city = rank_of(specs["cities"].rank, people, 4).tolist()
+    assert admin1[1] < city[1]  # Paris, the city, before Paris, the département
 
 
 def test_every_source_licence_is_a_known_id():

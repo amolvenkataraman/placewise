@@ -42,7 +42,10 @@ former names, and GeoNames names to suppress; it also generates
 names that aren't nicknames, `abbr`, IATA codes attached to cities and English short names;
 historic names only for cities of 100,000+ people and only where a curated dataset lists them, and
 never a name another city of the same country has. `admin1` also gets `geonames`, Natural Earth's
-GeoNames id for the unit.
+GeoNames id for the unit, and `population` (`world.admin1_population`): the people of the GeoNames
+cities in it (sections of cities left out), joined by that id through admin1CodesASCII or by name
+in its country; null for units GeoNames doesn't have as admin-1 (England's counties, France's
+départements). The name index ranks admin-1 units by it.
 
 **City served** (`packbuild.served`): `airports.served_city` is the `cities` id of the city an
 airport serves (YYZ -> Toronto, not Mississauga), from `datasets/airports/served.json` (curated, every
@@ -106,7 +109,7 @@ postal city names of the ZIP Codes the Census files lack (GeoNames, `geonames`, 
 | Layer | Kind | Source | Key columns |
 |---|---|---|---|
 | `states` | polygon | CB 2025 state 1:500k | `usps`, `statefp` |
-| `counties` | polygon | CB 2025 county 1:500k + delineation list 1 (2023) | `name` with LSAD, `state`, `cbsa`, `csa`, `central` |
+| `counties` | polygon | CB 2025 county 1:500k + delineation list 1 (2023) + ACS 5-year B01003 | `name` with LSAD, `state`, `cbsa`, `csa`, `central`, `population` (ACS; ranks counties in the name index) |
 | `places` | polygon | CB 2025 place 1:500k + 2025 gazetteer + SUB-EST2025 + ACS 2020-2024 B01003 + delineation list 2 | `lsad`, `class` (incorporated / cdp), `funcstat`, `state`, `population`, `population_source`, `principal`, `intpt_lat/lon` |
 | `cbsa` | polygon | CB 2025 CBSA 1:500k + delineation lists 1 and 2 | `type` (metro / micro), `csa`, `counties`, `principal_cities` |
 | `csa` | polygon | CB 2025 CSA 1:500k + delineation list 1 | `cbsas`, `counties` |
@@ -500,7 +503,9 @@ pipe-separated `aliases` (short capitals such as "GTA" become abbreviations; col
 are skipped, so world `aliases` columns are picked up as soon as they exist), former names, exact
 codes (columns or templates such as `CA-{code}`, plus id prefixes such as `iso:` whose remainder
 is a code), name suffixes to drop (India Post's "S.O", "B.O"), a label point for polygon layers
-(Census `intpt_lat/lon`) and a rank on one scale across packs. Ids are always indexed. A layer of mixed
+(Census `intpt_lat/lon`) and a rank on one scale across packs: populated places, counties, census
+divisions and admin-1 units by population, CGNDB places by their scale and generic term (a
+community or neighbourhood shown at 1:1.2M ranks like a town). Ids are always indexed. A layer of mixed
 kinds names a `kind_column` and maps its values to PlaceKinds (`kind_values`): world-notable's
 `kind` column, so a museum is found as a building and a station as a station; its rank is
 0.15 + 0.7 x (fame - 0.5) / 0.5 for fame 0.5+, its codes IATA, ICAO, station codes and the bare

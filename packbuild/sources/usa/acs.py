@@ -3,15 +3,15 @@ Bureau's table-based summary file (public domain; registry `uscensus`, download 
 
 One pipe-separated file covers every geography: `GEO_ID|B01003_E001|B01003_M001`, where GEO_ID is
 a summary-level prefix ("1600000US" places, incorporated and CDP alike; "860Z200US" ZCTAs;
-"0600000US" county subdivisions) followed by the geography's GEOID. Negative estimates are the
-summary file's jam codes (no estimate) and are skipped. The keyless summary file needs no API key,
-unlike api.census.gov.
+"0500000US" counties; "0600000US" county subdivisions) followed by the geography's GEOID.
+Negative estimates are the summary file's jam codes (no estimate) and are skipped. The keyless
+summary file needs no API key, unlike api.census.gov.
 """
 
 import re
 from pathlib import Path
 
-PLACE, ZCTA, COUSUB = "1600000US", "860Z200US", "0600000US"
+PLACE, ZCTA, COUNTY, COUSUB = "1600000US", "860Z200US", "0500000US", "0600000US"
 ESTIMATE = "B01003_E001"
 
 

@@ -39,6 +39,26 @@ NEAR_SCALE_KM = 250.0  # near=(lat, lon): the boost halves about every 0.7 x thi
 NEAR_FLOOR = 0.25  # ... down to this factor far away
 OVERRIDE_BOOST = 2.0  # entities an alias, rename, region or add rule names for the text
 
+# -- what is named after a place -------------------------------------------------------------------
+
+# a station, airport, university, building or landmark called Richmond, a park known as Boise, a
+# code that reads like a word ("Goa" is Genoa's airport code) are rarely what someone typing the
+# name means when a place of that name also matches: they score SHADOW_FACTOR times as much
+SHADOWING_KINDS = ("country", "admin1", "admin2", "locality", "borough", "sublocality", "region")
+FACILITY_KINDS = ("airport", "station", "university", "building", "landmark")
+SHADOW_MIN_RANK = 0.3  # ... a place this prominent or more (a hamlet called Times Square isn't)
+SHADOW_FACTOR = 0.7
+SHADOW_CANDIDATES = 64  # the best this many candidates are compared by name
+# while typing (prefix matches), people mostly want places: FACILITY_KINDS score this much less
+TYPING_FACILITY_FACTOR = 0.85
+# a code that is a postal code means the postal area ("10001"): other code matches score at most
+# this times the best postal code match
+CODE_AFTER_POSTAL = 0.99
+# "Mississippi River" is also looked up as "Mississippi" among waters (Natural Earth's river names
+# leave the word off), worth an alias
+WATER_WORDS = ("river",)
+WATER_WORD_FACTOR = 0.97
+
 # -- merging the same place found in several packs -------------------------------------------------
 
 DEDUPE_POINT_KM = 15.0  # two point features with the same name this close are one place

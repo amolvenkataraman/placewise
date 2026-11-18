@@ -1,8 +1,8 @@
 # ruff: noqa: E501  (rows copied from the real files are longer than a line)
 """The US pack's naming inputs beside us_fixtures' boundaries: ACS B01003, OMB list 2, ZIP Code
 Business Patterns, GeoNames US postal codes and the ZCTA-to-place relationship file, cut to the
-fixture places (Paradise, San Francisco, Oakland, Las Vegas, Reno) and ZCTAs (89109, 94117,
-95389). Values are copied from the real files."""
+fixture places (Paradise, San Francisco, Oakland, Las Vegas, Reno), counties (all but Mariposa)
+and ZCTAs (89109, 94117, 95389). Values are copied from the real files."""
 
 from pathlib import Path
 
@@ -11,6 +11,10 @@ from us_fixtures import write_xlsx
 ACS = """\
 GEO_ID|B01003_E001|B01003_M001
 0100000US|334922499|-555555555
+0500000US06001|1649473|-555555555
+0500000US06075|830235|-555555555
+0500000US32003|2329548|-555555555
+0500000US32031|497200|-555555555
 1600000US0653000|436504|-555555555
 1600000US0667000|836321|-555555555
 1600000US3240000|660400|126

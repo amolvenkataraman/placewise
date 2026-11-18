@@ -115,3 +115,11 @@ def test_a_trailing_place_word_after_a_longer_name_is_a_fallback_place():
 def test_empty_query_is_an_error():
     with pytest.raises(ValueError, match="empty"):
         parse_query("   ")
+
+
+def test_a_river_is_also_looked_up_without_the_word():
+    # Natural Earth names the Mississippi "Mississippi"
+    assert parse_query("Mississippi River").water_keys == ("mississippi",)
+    assert parse_query("River Thames").water_keys == ("thames",)
+    assert parse_query("Mississippi").water_keys == ()
+    assert parse_query("River").water_keys == ()

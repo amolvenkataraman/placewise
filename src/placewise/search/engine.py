@@ -29,6 +29,7 @@ from .query import parse_query
 _AIRPORT = PLACE_KINDS.index("airport")
 _PARK = PLACE_KINDS.index("park")
 _COUNTRY = PLACE_KINDS.index("country")
+_WATER = PLACE_KINDS.index("water")
 _SETTLEMENTS = frozenset(PLACE_KINDS.index(k) for k in const.SETTLEMENT_PREFERENCE)
 
 
@@ -131,6 +132,8 @@ class Search:
             spatial = ctx.within is not None or ctx.bbox is not None or ctx.radius_km is not None
             many = const.PREFIX_FILTERED_LIMIT if spatial else const.CANDIDATES_PER_PACK
             g.each("prefix", q.key, many, prefix=True, group=0)
+        for key in q.water_keys:
+            g.each("exact", key, group=0, factor=const.WATER_WORD_FACTOR, kinds=(_WATER,))
         for key, reading in q.aliases:
             contexts.append(ctx_mod.text_context((reading,), ctx.countries, ctx.admin1))
             g.each("exact", key, group=len(contexts) - 1, factor=const.CITY_ALIAS_FACTOR)
@@ -156,6 +159,10 @@ class Search:
             g.each("fuzzy", q.key, const.CANDIDATES_PER_PACK, fuzzy=True, group=0)
         pool = g.pool()
         scores = self._score(pool, contexts, ctx)
+        word = any(c.islower() for c in q.raw)  # "Goa" is a name, "GOA" may be a code
+        scores = rank.namesakes_after(
+            scores, pool, lambda i: self.packs[pool.pack[i]].names.key(pool.entry[i]), word
+        )
         pool, scores = self._served(q, ctx, pool, scores)
         order = rank.best_first(scores, pool.rank)
         order = order[scores[order] > 0][: const.POOL_FACTOR * limit + const.POOL_FACTOR]
