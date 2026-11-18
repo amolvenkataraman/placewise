@@ -45,6 +45,8 @@ def office_area_name(name):
 
 def fold(name):
     """A name for comparison: case and accents ignored."""
+    if name and name.isascii():  # nothing to decompose
+        return name.casefold().strip()
     decomposed = unicodedata.normalize("NFKD", name or "")
     return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold().strip()
 

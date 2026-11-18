@@ -66,7 +66,7 @@ class Contexts:
         view = [o for o in order if o != "locked"]
         full = [i for i, w in enumerate(want_city) if w or view != ["de_facto"]]
         if full:
-            results = self.geocoder.lookup_many(lat[full], lon[full], worldview=view or None, near=False)
+            results = self.geocoder._lookup_places(lat[full], lon[full], worldview=view or None)
             for i, r in zip(full, results, strict=True):
                 city = r.city or r.locality
                 admin1 = r.admin1.codes.get("iso", "").partition("-")[2] if r.admin1 else None

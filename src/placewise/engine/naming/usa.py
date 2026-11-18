@@ -182,14 +182,15 @@ class Usa:
     def _locality(self, place, prule, postal):
         """(locality, city, their rules, which points' CDP gave way to its postal city), by the
         module's rules. Rows are place rows, -1 for none."""
-        tables, names = self._place, self.layers.column(self.place, "name")
+        tables = self._place
         inc = tables["incorporated"]
         has, safe, psafe = place >= 0, np.maximum(place, 0), np.maximum(postal, 0)
         cdp = has & ~inc[safe]
         postal_inc = (postal >= 0) & inc[psafe]
         extends = np.zeros(len(place), dtype=bool)
         for i in np.flatnonzero(cdp & postal_inc).tolist():
-            extends[i] = rules.extends(names[place[i]], names[postal[i]])
+            names = [self.layers.value(self.place, "name", int(r)) for r in (place[i], postal[i])]
+            extends[i] = rules.extends(*names)
         small = tables["population"][safe] < const.CDP_KEEP_POPULATION  # NaN (unknown): not small
         rolled = cdp & (postal >= 0) & ((postal_inc & ~extends) | (~postal_inc & small))
         takes = rolled | (~has & (postal >= 0))

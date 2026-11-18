@@ -28,7 +28,7 @@ from placewise.constants import naming as naming_const
 from placewise.constants import notable as notable_const
 from placewise.constants import parks as parks_const
 from placewise.constants import water as water_const
-from placewise.model import PlaceKind, Settings
+from placewise.model import CityRule, PlaceKind, Settings
 from placewise.packs import Pack, open_pack
 
 from . import _nearby, _results
@@ -126,6 +126,16 @@ class Geocoder:
 
     def lookup_many(self, lats, lons, *, worldview=None, near=True):
         """Results for many points, one per point, in order. Vectorised: much faster per point."""
+        return self._lookup(lats, lons, worldview, near, everything=True)
+
+    def _lookup_places(self, lats, lons, *, worldview=None):
+        """Results whose country, admin1 ... postal and regions are as lookup_many(near=False) has
+        them, without airport or water, the time zone only as the nearest city has it, and parks
+        (`within`) only when an override rule could read them to set the city. Forward search's
+        context: it skips the water step, whose shore index takes seconds to build on first use."""
+        return self._lookup(lats, lons, worldview, False, everything=False)
+
+    def _lookup(self, lats, lons, worldview, near, everything):
         lat = np.asarray(lats, dtype=np.float64).ravel()
         lon = np.asarray(lons, dtype=np.float64).ravel()
         if lat.shape != lon.shape:
@@ -137,7 +147,7 @@ class Geocoder:
         order, locked = self._order(worldview)
         if not len(lat):
             return []
-        a, named = self._answer(lat, lon, order, near)
+        a, named = self._answer(lat, lon, order, near, everything)
         results = _results.build(self, lat, lon, a, named, order, locked)
         if self.overrides is not None:
             apply = self.overrides.apply
@@ -149,31 +159,41 @@ class Geocoder:
 
     # -- the steps ----------------------------------------------------------------------------------
 
-    def _answer(self, lat, lon, order, near):
+    def _answer(self, lat, lon, order, near, everything=True):
+        """(a, named): the steps' arrays; without `everything`, only the places a point is in."""
         a = {}
         self.admin.answer(a, lat, lon, order)
         named = {}
         naming = self.naming
         work = naming.boundaries(a, lat, lon) if naming else ()
-        if self.timezones is not None:
+        if everything and self.timezones is not None:
             self.timezones.answer(a, lat, lon)
         if self.cities is not None:
             k_notable = max(const.NOTABLE_CANDIDATES, self.settings.near.max_near + 1)
             self.cities.answer(a, lat, lon, near, self._near_km(PlaceKind.LOCALITY), k_notable)
         if work:
             named = naming.names(a, lat, lon, work)
-        if self.layers.has(const.AIRPORTS):
+        if everything and self.layers.has(const.AIRPORTS):
             _nearby.airports(a, self.layers.layer(const.AIRPORTS), lat, lon, self._near_km(PlaceKind.AIRPORT))
         _nearby.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
-        if self.parks is not None:
+        if (everything or self._rules_read_parks) and self.parks is not None:
             a["parks"] = self.parks.answer(lat, lon, near)
-        if self.water:
+        if everything and self.water:
             self.water.answer(a, lat, lon, self.layers.layer(const.COUNTRIES))
         if near and self.notable is not None:
             a["notable_places"] = self.notable.answer(lat, lon)
         return a, named
 
     # -- worldview, settings, overrides -------------------------------------------------------------
+
+    @cached_property
+    def _rules_read_parks(self):
+        """Whether the overrides could set a city from the parks a point is in: a city rule (its
+        area may name a park), or a hook whose rules can't be seen."""
+        if self.overrides is None:
+            return False
+        rules = getattr(self.overrides, "rules", None)
+        return rules is None or any(isinstance(r, CityRule) for r in rules)
 
     def _order(self, worldview):
         """(order, locked): the request's spelling normalised ("xa", "XAA" -> "XA"), then the

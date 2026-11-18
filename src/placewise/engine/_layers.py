@@ -62,6 +62,20 @@ class Layers:
             self._columns[cache_key] = layer.column(field).tolist() if field in layer.fields else None
         return self._columns[cache_key]
 
+    def value(self, key_or_role, field, row):
+        """column(key_or_role, field)[row] ("" when the layer lacks the field), reading only that
+        row unless the whole column is read already: a few Places needn't decode every name."""
+        key = self._world.get(key_or_role, key_or_role)
+        values = self._columns.get((key, field))
+        if values is not None:
+            return values[row]
+        layer = self._by_key[key]
+        if field not in layer.fields:
+            return ""
+        if layer.fields[field] == "str":
+            return layer.value(field, row) or ""  # string 0 is the empty string, as column() has it
+        return layer.column(field)[row].item()
+
     # -- places -------------------------------------------------------------------------------------
 
     def place(self, key_or_role, row):
@@ -83,8 +97,7 @@ class Layers:
         layer = self._by_key[key]
 
         def get(field):
-            values = self.column(key, field)
-            return values[row] if values is not None else ""
+            return self.value(key, field, row)
 
         maker = self._makers.get(key)
         if maker is not None:

@@ -22,7 +22,7 @@ from placewise.geo import normalize_lon
 from placewise.model import BBox, Outline
 
 from . import _geometry as gm
-from ._name_match import IdView, KeyTable, Trigrams, ranges
+from ._name_match import IdView, KeyTable, PackedTrigrams, Trigrams, ranges
 
 # prefix lookups over many entries rank only the best `limit` x this by rank
 _PREFIX_POOL = 8
@@ -106,8 +106,9 @@ class Resolved:
 
 
 class NameIndex:
-    """One pack's name index (`Pack.names`). Arrays are memory-mapped on first use; the fuzzy
-    trigram index is built in memory on the first fuzzy lookup."""
+    """One pack's name index (`Pack.names`). Arrays are memory-mapped on first use; so are the
+    fuzzy trigram postings, which packs written before they were stored build in memory on the
+    first fuzzy lookup instead."""
 
     def __init__(self, path, pack):
         self.path = Path(path)
@@ -253,7 +254,9 @@ class NameIndex:
 
     @cached_property
     def _trigrams(self):
-        return Trigrams.build(self._names)
+        if PackedTrigrams.present(self.path):
+            return PackedTrigrams(self.path, self._names)
+        return Trigrams.build(self._names)  # a pack written before the postings were stored
 
     def _by_id(self, text):
         """Best entries of the rows whose id is exactly `text`, in every indexed layer."""

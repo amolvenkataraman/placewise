@@ -160,12 +160,24 @@ class Layer:
         if field not in self._decoded:
             # decode each distinct string once, however many rows share it
             unique, inverse = np.unique(np.asarray(codes), return_inverse=True)
-            strings = np.empty(len(unique), dtype=object)
-            strings[:] = [self._string(k) for k in unique]
-            decoded = strings[inverse.ravel()]
+            decoded = self._strings_of(unique)[inverse.ravel()]
             decoded.flags.writeable = False  # it's cached: one caller mustn't change another's
             self._decoded[field] = decoded
         return self._decoded[field]
+
+    def distinct(self, field):
+        """(values, inverse) of a string field, as np.unique(column(field), return_inverse=True)
+        gives them (values sorted, an object array; column(field) == values[inverse]), but found
+        from the stored string ids, without sorting every row's string."""
+        if self._kind(field) != "str":
+            raise TypeError(f"field {field!r} of layer {self.name!r} is not a string field")
+        codes = np.asarray(self._array(f"{consts.COL_DIR}/{field}.npy"))
+        unique, inverse = np.unique(codes, return_inverse=True)  # one id per distinct string
+        strings = self._strings_of(unique)
+        order = np.array(sorted(range(len(strings)), key=strings.__getitem__), dtype=np.int64)
+        rank = np.empty(len(order), dtype=np.int64)
+        rank[order] = np.arange(len(order))
+        return strings[order], rank[inverse.ravel()]
 
     def value(self, field, i):
         """One value as a plain Python object; nulls (sentinel, NaN, empty string) become None."""
@@ -219,6 +231,15 @@ class Layer:
     def _string(self, k):
         blob, idx = self._strings
         return blob[idx[k] : idx[k + 1]].decode("utf-8")
+
+    def _strings_of(self, ids):
+        """The strings with ids `ids`, as an object array."""
+        blob, idx = self._strings
+        ids = np.asarray(ids, dtype=np.int64)
+        out = np.empty(len(ids), dtype=object)
+        starts, stops = idx[ids].tolist(), idx[ids + 1].tolist()
+        out[:] = [blob[a:b].decode("utf-8") for a, b in zip(starts, stops, strict=True)]
+        return out
 
     @cached_property
     def _string_ids(self):

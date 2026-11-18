@@ -13,6 +13,7 @@ from placewise.constants import names as nc
 from placewise.constants._keys import city_key, key
 
 from . import _inside
+from ._name_match import Trigrams, decode_keys
 
 
 @dataclass
@@ -61,6 +62,12 @@ class _Table:
     offsets: np.ndarray  # int32, keys + 1
     start: np.ndarray  # int32, keys + 1: entries of key k are start[k]:start[k + 1]
 
+    def __len__(self):
+        return len(self.offsets) - 1
+
+    def decode_all(self):
+        return decode_keys(self.blob, self.offsets)
+
 
 @dataclass
 class Plan:
@@ -71,6 +78,7 @@ class Plan:
     codes: _Table
     entries: dict  # file stem -> array
     per_layer: dict  # (subdir, layer) -> array
+    trigrams: dict  # file name -> array or bytes: the names' fuzzy postings, packed
 
 
 def prepare(data, layers):
@@ -146,7 +154,8 @@ def prepare(data, layers):
     names = _table(uniq[key_id[name_entries]], 0)
     codes = _table(uniq[key_id[code_entries]], split)
     meta["names"], meta["codes"] = len(names.offsets) - 1, len(codes.offsets) - 1
-    return Plan(meta=meta, names=names, codes=codes, entries=entries, per_layer=per_layer)
+    trigrams = Trigrams.build(names).packed()
+    return Plan(meta=meta, names=names, codes=codes, entries=entries, per_layer=per_layer, trigrams=trigrams)
 
 
 def write(names_dir, plan, save, write_json):
@@ -159,6 +168,11 @@ def write(names_dir, plan, save, write_json):
         save(names_dir / f"{prefix}_start.npy", table.start)
     for stem, array in plan.entries.items():
         save(names_dir / f"{stem}.npy", array)
+    for name, contents in plan.trigrams.items():
+        if isinstance(contents, bytes):
+            (names_dir / name).write_bytes(contents)
+        else:
+            save(names_dir / name, contents)
     for (sub, layer), array in plan.per_layer.items():
         (names_dir / sub).mkdir(exist_ok=True)
         save(names_dir / sub / f"{layer}.npy", array)
