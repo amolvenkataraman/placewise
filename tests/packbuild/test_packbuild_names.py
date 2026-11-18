@@ -123,7 +123,7 @@ def test_built_names_write_and_answer(tmp_path):
 
 
 def test_for_pack_knows_every_builder():
-    assert {"world", "usa", "can", "ind", "world-water", "parks", "lka", "are"} <= set(name_specs.SPECS)
+    assert {"world", "usa", "can", "ind", "world-water", "parks"} <= set(name_specs.SPECS)
     assert len(for_pack("world", [_cities()]).text) > 0
     with pytest.raises(KeyError, match="no name index spec"):
         for_pack("atlantis", [])
@@ -133,13 +133,6 @@ def test_spec_kinds_are_place_kinds():
     for specs in name_specs.SPECS.values():
         for spec in specs:
             assert spec.kind in nc.PLACE_KINDS, spec.layer
-
-
-def test_codab_levels_follow_the_country_table():
-    kinds = [spec.kind for spec in name_specs.SPECS["lka"]]
-    assert kinds == ["admin1", "admin2", "admin2", "sublocality"]
-    assert [spec.kind for spec in name_specs.SPECS["npl"]] == ["admin1", "admin2", "locality"]
-    assert [spec.layer for spec in name_specs.SPECS["are"]] == ["admin1"]
 
 
 def test_a_kind_column_sets_each_row_s_kind():

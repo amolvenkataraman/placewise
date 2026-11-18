@@ -123,27 +123,6 @@ back to the PIN areas alone.
 - Features flagged `india_view_only` (PIN areas and units on ground only India's view puts in
   India) answer only when the IN worldview decided the country (docs/worldviews.md).
 
-## COD-AB countries (Sri Lanka, Nepal, Bangladesh, Thailand, ...)
-
-One rule (`engine/naming/codab.py`) serves every COD-AB pack, configured per country in
-`placewise.constants.codab.COUNTRIES`. The point is looked up once, in the pack's deepest level
-(with the `SHORE_KM` snap); the levels above are that unit's parents, so the answers nest (sources
-`npl/admin3:polygon`, `npl/admin2:parent`).
-
-- **admin1**: where the world pack's admin1 is the same kind of unit and one has the ADM1's name,
-  the world one stays (it has the ISO code; `bgd/admin3:state`); otherwise the ADM1 answers, by
-  its COD-AB name (Sri Lanka's provinces, as "Western Province", where Natural Earth has
-  districts; Nepal's seven provinces, not the old zones; Viet Nam's 34 provinces after 2025).
-- **admin2**: the configured level (district, amphoe, municipio, ilce).
-- **locality**: the municipal level where there is one named as people name the place: only
-  Nepal's local levels (Kathmandu, Pokhara, Lalitpur). Elsewhere the municipal unit is named
-  otherwise than its town (Benito Juarez for Cancun, City of Tshwane for Pretoria) or isn't
-  municipal (Sri Lanka's divisional secretariats), and the GeoNames score stays. **city**: the
-  GeoNames score.
-- **sublocality**: a configured level below (Sri Lanka's Grama Niladhari divisions: Fort,
-  Pettah; Thailand's tambon) unless named like the locality or city; in Nepal, the nearest
-  GeoNames place inside the municipality.
-
 ## Labels
 
 `label.style = "locality"` (the default) gives "<locality>, <admin1>, <country>", falling back to

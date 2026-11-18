@@ -61,7 +61,6 @@ CODE_COLUMNS = (
     "usps",
     "code",
     "pincode",
-    "pcode",
     "wikidata",
     "state_code",
 )
