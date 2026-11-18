@@ -140,6 +140,58 @@ or column (180 is not wrapped to −180). Features earlier in the layer win
 when several contain a point; builders order features so the most specific comes first when that
 matters.
 
+## Name index
+
+A pack may carry a **name index** for forward search (name in, place out) in the reserved
+directory `names/` (no layer may be called `names`; it is not listed in `pack.json`'s `layers`,
+but its files are in `files` like every other). Readers that don't know it ignore it. It is built
+from the pack's own layers (`packbuild/names.py`, specs per pack in `packbuild/name_specs.py`).
+
+```
+names/
+├─ names.json
+├─ name_keys.bin  name_keys.idx.npy  name_start.npy    # names, aliases, abbreviations
+├─ code_keys.bin  code_keys.idx.npy  code_start.npy    # codes: matched exactly only
+├─ layer.npy  row.npy  kind.npy  rank.npy  name_kind.npy   # one row per entry
+├─ entry/<layer>.npy   ids/<layer>.npy                 # per indexed layer
+└─ inside/<layer>.npy  radius/<layer>.npy              # per indexed polygon layer
+```
+
+`names.json`: `{"format": 1, "layers": [...], "kinds": [...], "name_kinds": [...], "entries": E,
+"names": Kn, "codes": Kc}`. `layers` are the indexed layers (an entry's `layer` indexes it),
+`kinds` the place kinds (`PlaceKind` values) an entry's `kind` indexes, `name_kinds` = official,
+alias, former, abbreviation, code (an entry's `name_kind` indexes it).
+
+**Entries** are one per (normalised text, feature): `layer` (u1, or u2 past 256 layers), `row`
+(i4), `kind` (u1), `rank` (f4, the feature's prior prominence in [0, 1]: population, area, tier,
+fame) and `name_kind` (u1). Name entries come first, sorted by key, then rank descending, then
+layer and row; code entries follow, sorted the same way. A (text, feature) pair appears once,
+with its most official name kind.
+
+**Keys.** Names are normalised with `placewise.constants._keys.city_key` (lower case, accents and
+dots dropped, `&` as "and", hyphens and space runs as one space, St/Ft/Mt spelled out), codes with
+`key` (the same without the St/Ft/Mt expansion). Each table (`name_`, `code_`) holds its distinct
+keys in ascending UTF-8 byte order (= code point order): `*_keys.bin` is their UTF-8 bytes
+concatenated, `*_keys.idx.npy` (int32, K + 1) their byte offsets, and `*_start.npy` (int32,
+K + 1) each key's entry range: key k's entries are `start[k]:start[k + 1]`. Exact lookup is a
+binary search; prefix lookup is the range from the prefix to the prefix followed by byte 0xFF.
+
+**Ids.** Every row of every indexed layer can be found by its `id`: `ids/<layer>.npy` (int32,
+the layer's count) lists the layer's rows in ascending id order (code point order), and
+`entry/<layer>.npy` (int32, the layer's count) gives each row's most official entry (−1 when it
+has none), whose kind and rank an id match reports.
+
+**Inside points.** `inside/<layer>.npy` (int32 e7, shape (n, 2): lat, lon) is a point inside
+each feature of an indexed polygon layer (the layer's label point when the builder gave one and
+it is inside, else the middle of the widest inside stretch of a few parallels across the
+feature's largest polygon), checked with the even-odd test after rounding; `radius/<layer>.npy`
+(f4, km) is the distance from it to the feature's farthest vertex. Point layers need neither:
+their point is the feature, and their radius comes from a `radius_km` or `radius_m` column, else
+a disc of 2,000 people per km² for a `population` column (0.5 to 40 km), else 1 km.
+
+**Fuzzy matching** needs no files: readers build padded character trigram postings over the
+name keys in memory on first use.
+
 ## Distribution
 
 A release publishes, per pack, `<name>-<version>.tar.xz` (the directory, compressed with the

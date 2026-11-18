@@ -53,7 +53,8 @@ def offline(tmp_path, monkeypatch):
 def test_build_world_fetches_every_source_and_hands_six_layers_to_the_writer(tmp_path, offline, monkeypatch):
     calls = []
 
-    def fake_write_pack(out_dir, name, version, layers, created=None):
+    def fake_write_pack(out_dir, name, version, layers, created=None, names=None):
+        assert names is not None and len(names) > 0  # every pack carries a name index
         calls.append((out_dir, name, version, layers))
         return Path(out_dir) / f"{name}-{version}"
 
@@ -89,6 +90,9 @@ def test_build_world_writes_a_real_pack_that_reopens(tmp_path, offline):
     assert cities.row(int(cities.find("id", "geonames:7262586")[0]))["elevation"] is None
     countries = pack["countries"]
     assert countries.value("id", countries.query(43.65, -79.38)) == "iso:CA"
+    toronto = pack.names.exact("Toronto")
+    assert [pack.names.layers[x] for x in toronto.layer] == ["cities"]
+    assert pack.names.codes("CA").layer.tolist() == [pack.names.layers.index("countries")]
     zones = pack["timezones"]
     assert zones.value("zone", zones.query(43.65, -79.38)) == "America/Toronto"
     facts = pack["country_facts"].row(0)

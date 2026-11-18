@@ -35,6 +35,8 @@ def test_usa_parks_pack(inputs):
     hits = national.query_all(0.75, -139.75)
     assert [national.value("id", i) for i in hits] == ["nps:ALPH"]
     assert national.value("aliases", hits[0]) == "Alpha" and national.value("code", hits[0]) == "ALPH"
+    assert pack.names.exact("Alpha").row.tolist()[:1] == [hits[0]]
+    assert {pack.names.layers[x] for x in pack.names.codes("ALPH").layer} == {"parks_national"}
     state = pack["parks_state"]
     assert {state.value("park", i) for i in state.query_all(0.75, -139.75)} == {"usfs:0101"}
     local = pack["parks_local"]

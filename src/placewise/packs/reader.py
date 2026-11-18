@@ -16,6 +16,7 @@ from pathlib import Path, PurePosixPath
 
 import numpy as np
 
+from placewise.constants import names as names_consts
 from placewise.constants import packs as consts
 from placewise.constants.earth import MEAN_RADIUS_KM
 from placewise.geo import haversine, lines
@@ -24,6 +25,7 @@ from placewise.model import BBox, Feature, Outline
 from . import _geometry as gm
 from ._boundary import Boundary
 from ._edges import EdgeCaps
+from ._names import NameIndex
 from ._points import PointIndex
 from ._refine import Refinement
 
@@ -91,6 +93,13 @@ class Pack:
 
     def __contains__(self, name):
         return name in self.layers
+
+    @cached_property
+    def names(self):
+        """The pack's name index (a NameIndex for forward search), or None when it has none."""
+        if not (self.path / names_consts.NAMES_DIR / names_consts.NAMES_JSON).is_file():
+            return None
+        return NameIndex(self.path / names_consts.NAMES_DIR, self)
 
     def __iter__(self):
         return iter(self.layers.values())
