@@ -1,3 +1,4 @@
+import json
 import zipfile
 from pathlib import Path
 
@@ -179,6 +180,8 @@ def test_build_usa_zip_writes_the_zip_code_areas(tmp_path, offline):
     pack = open_pack(us_zip.build(tmp_path / "cache", tmp_path / "out", "2026.11"), verify=True)
     assert (pack.name, [layer.name for layer in pack]) == ("usa-zip", ["zcta"])
     assert len(pack["zcta"]) == 3 and set(pack.sources) == {"uscensus", "geonames"}
+    manifest = json.loads((pack.path / "pack.json").read_text())
+    assert (manifest["kind"], manifest["covers"], manifest["requires"]) == ("postal", ["US"], ["usa"])
 
     def at(lat, lon):
         i = pack["zcta"].query(lat, lon)

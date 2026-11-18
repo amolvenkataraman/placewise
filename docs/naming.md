@@ -10,7 +10,8 @@ One "city" field can't serve both "where in town" and "where in the world", so a
 | `city` | what you'd tell someone far away | Toronto for Pickering, San Francisco for SFO |
 
 Beside them: `admin2` (county, census division), `borough` (New York City), `postal` (ZIP Code
-area, forward sortation area, PIN code area) and `regions` (smallest first). `Result.sources` names
+area, from the optional `usa-zip` pack; forward sortation area, PIN code area) and `regions`
+(smallest first). `Result.sources` names
 the layer and rule behind every field (`"usa/places:metro"`, `"can/csd:nearest"`).
 
 ## How each name was found
@@ -60,8 +61,8 @@ shape but in none (a pier, Horseshoe Falls) takes the nearest one, with rule `ne
 - **admin1**: the county's state (`usa/counties:state`), finer than Natural Earth's line.
 - **locality**: the census place (incorporated place or CDP) containing the point, corrected
   inside a metropolitan area by the **postal city**: the city USPS addresses the point's ZIP Code
-  to (the ZCTA's `postal_city`, matched to a census place as `postal_place`; see the US pack),
-  used only when that place's boundary is within `POSTAL_CITY_KM` (20 km) of the point.
+  to (the ZCTA's `postal_city`, matched to a census place as `postal_place`; see the US pack;
+  the usa pack's `postal_cities` carries it, so this works without `usa-zip`), used only when that place's boundary is within `POSTAL_CITY_KM` (20 km) of the point.
   - An incorporated place is always itself (Emeryville stays Emeryville, Brooklyn's ZIP Codes
     don't make New York "Brooklyn").
   - A CDP takes its postal city when that is an incorporated place: the Strip and Harry Reid

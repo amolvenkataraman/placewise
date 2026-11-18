@@ -12,7 +12,7 @@
         "used_in": [
           "usa-parks/parks_national",
           "usa-parks/parks_regional",
-          "usa-parks/parks_local"
+          "usa-parks-local/parks_local"
         ],
         "downloads": {
           "boundary": "https://services1.arcgis.com/fBc8EJBxQRMcHlei/arcgis/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2"
@@ -42,7 +42,7 @@
         "used_in": [
           "usa-parks/parks_state",
           "usa-parks/parks_regional",
-          "usa-parks/parks_local"
+          "usa-parks-local/parks_local"
         ],
         "downloads": {
           "fee": "https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/Fee_Managers_PADUS/FeatureServer/0",

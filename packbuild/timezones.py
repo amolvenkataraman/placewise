@@ -43,6 +43,9 @@ from .layer import LayerData
 LAYER = "timezones"
 CURATED_SOURCE = "placewise-timezones"  # the curated dataset itself (CC BY 4.0), in the registry
 SHAPE_PREFIX = "tz:"
+# a few small shapes scattered over the world: coarse grid cells keep their index a few KB (1-degree
+# cells would cost 0.8 MB for 23 boxes), and each cell holds one or two shapes to test
+SHAPES_CELL_DEG = 10.0
 COLUMNS = ("id", "name", "zone", "zones", "basis", "unit", "within", "country")
 _ENTRY_KEYS = {"zone", "admin1", "parts", "sources", "notes"}
 _SHAPE_KEYS = {"id", "name", "zone", "within", "boxes", "polygon", "aiannh", "sources", "notes"}
@@ -183,6 +186,7 @@ def _shapes_layer(rows, features, sources):
         (CURATED_SOURCE, *dict.fromkeys(sources)),
         features=[Feature(f.outlines, {}, r["id"]) for r, f in zip(rows, features, strict=True)],
         types={c: "str" for c in COLUMNS},
+        cell_deg=SHAPES_CELL_DEG,
     )
 
 

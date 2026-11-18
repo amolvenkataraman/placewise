@@ -326,3 +326,14 @@ def test_same_input_same_bytes(tmp_path):
 
     a, b = build(tmp_path / "a"), build(tmp_path / "b")
     assert (a / "pack.json").read_bytes() == (b / "pack.json").read_bytes()
+
+
+def test_about_adds_coverage_fields_to_pack_json_but_never_the_formats_own(tmp_path):
+    about = {"kind": "postal", "covers": ["US"], "requires": ["usa"]}
+    pack = write_pack(
+        tmp_path, "usa-zip", "2026.11", [point_layer([1.0], [2.0])], created=CREATED, about=about
+    )
+    manifest = json.loads((pack / "pack.json").read_text())
+    assert {k: manifest[k] for k in about} == about and manifest["name"] == "usa-zip"
+    with pytest.raises(ValueError, match="name"):
+        write_pack(tmp_path / "b", "x", "2026.11", [point_layer([1.0], [2.0])], about={"name": "y"})

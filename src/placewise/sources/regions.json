@@ -15,7 +15,8 @@
           "usa/places",
           "usa/cbsa",
           "usa/csa",
-          "usa/zcta",
+          "usa/postal_cities",
+          "usa-zip/zcta",
           "usa/regions"
         ],
         "downloads": {

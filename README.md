@@ -64,9 +64,9 @@ world-wide datasets, so answers are sensible but coarser. ●●● official bou
 | City / locality | ●●● incorporated places + CDPs, ZIP postal city | ●●● municipalities + named places (CGNDB) | ●● city corporations / ULBs (from PIN areas) | ● nearest GeoNames city | ● | ● | ● |
 | Neighbourhood | ●● GeoNames sections | ●● CGNDB neighbourhoods | ●● post-office areas | ● GeoNames sections | ● | ● | ● |
 | Metro / region | ●●● metro areas (CBSA/CSA) + curated (Bay Area …) | ●●● CMAs + curated (GTA, GTHA …) | ●● curated (Delhi NCR, MMR, BMR) | — | — | — | — |
-| Postal code | ●●● ZIP areas (ZCTA) | ●● FSA (first 3 characters) | ●●● PIN-code areas | — | — | — | — |
+| Postal code | ●●● ZIP areas (ZCTA), optional pack `usa-zip` | ●● FSA (first 3 characters) | ●●● PIN-code areas | — | — | — | — |
 | Time zone | ●●● by county | ●●● by division | ●●● | ●● by admin1 | ●● | ●● | ●● |
-| Parks & protected areas | ●●● NPS, USFS, state and local (PAD-US) | ●●● CPCAD (no city parks) | ● Wikidata points ("near" only) | ● Wikidata points | ● | ● | ● |
+| Parks & protected areas | ●●● NPS, USFS, state (PAD-US); city and county parks: optional pack `usa-parks-local` | ●●● CPCAD (no city parks) | ● Wikidata points ("near" only) | ● Wikidata points | ● | ● | ● |
 | Lakes, rivers, seas | ●● Natural Earth + HydroLAKES ≥ 10 km² | ●● | ●● (many lakes unnamed) | ●● | ●● | ●● | ●● |
 | Airports | ●●● OurAirports + city served | ●●● | ●●● | ●●● | ●●● | ●●● | ●●● |
 | Notable places | ●●● ~38k (Wikidata) | ●● ~4k | ●● ~12k | ●●● | ●● | ●● | ● |

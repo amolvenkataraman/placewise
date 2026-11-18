@@ -28,6 +28,7 @@ from .layer import LayerData, write_pack
 log = logging.getLogger(__name__)
 
 PACK = "usa-zip"
+ABOUT = {"kind": "postal", "covers": ["US"], "requires": ["usa"]}  # pack.json: what it covers, what it needs
 LAYER = "postal_cities"
 POSTAL_MARGIN_DEG = 0.05  # 5.5 km of latitude, 1.8 km of longitude at 71 N: past the 1 km shore snap
 _CHUNK = 2048  # ZCTAs tested against every metro county at once
@@ -92,7 +93,7 @@ def split(layers):
 def build(cache_dir, out_dir, version, refresh=False):
     """Fetch the sources, build the US layers and write `<out_dir>/usa-zip-<version>/`."""
     _, zips = split(us.build_layers(cache_dir, refresh=refresh))
-    return write_pack(Path(out_dir), PACK, version, zips, names=names.for_pack(PACK, zips))
+    return write_pack(Path(out_dir), PACK, version, zips, names=names.for_pack(PACK, zips), about=ABOUT)
 
 
 def main(argv=None):

@@ -64,11 +64,18 @@ class _Prepared:
     cell_deg: float
 
 
-def write_pack(out_dir, name, version, layers, created=None, names=None):
+_MANIFEST_KEYS = frozenset({"schema", "name", "version", "created", "layers", "sources", "files"})
+
+
+def write_pack(out_dir, name, version, layers, created=None, names=None, about=None):
     """Write `<out_dir>/<name>-<version>/` and return its path. `created` is an ISO 8601 UTC
     timestamp (or datetime); it defaults to now, so pass it for reproducible output. `names`
-    (a NameData) adds the name index, `names/`."""
+    (a NameData) adds the name index, `names/`. `about` adds fields to pack.json that describe the
+    pack (its coverage: kind, covers, requires; docs/pack-format.md), never the format's own."""
     _check_name(name, "pack")
+    about = dict(about or {})
+    if clash := sorted(set(about) & _MANIFEST_KEYS):
+        raise ValueError(f"pack.json fields {', '.join(clash)} are the format's own")
     if not isinstance(version, str) or not re.fullmatch(consts.VERSION_PATTERN, version):
         raise ValueError(f"pack version {version!r} must be CalVer YYYY.MM or YYYY.MM.N")
     layers = list(layers)
@@ -100,6 +107,7 @@ def write_pack(out_dir, name, version, layers, created=None, names=None):
             "layers": layer_names,
             "sources": sources,
             "files": {rel: _file_entry(tmp / rel) for rel in _relative_files(tmp)},
+            **about,
         }
         _write_json(tmp / consts.PACK_JSON, manifest)
         os.chmod(tmp, 0o755)  # mkdtemp makes it private; a pack is ordinary data

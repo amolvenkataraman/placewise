@@ -104,6 +104,7 @@ def test_world_tables_put_each_units_zone_on_its_row_and_draw_only_the_shapes():
     ]
     assert got == [("tz:north-tip", "North tip", "Pacific/Fiji", "", "shape", "", "iso:XA-N", "iso:XA")]
     assert set(shapes.columns) == set(shapes.types)
+    assert shapes.cell_deg == 10.0  # a coarse grid for a few small shapes
     (ring,) = shapes.features[0].outlines[0].rings
     assert sorted(set(ring)) == [(0.9, -140.0), (0.9, -139.9), (1.0, -140.0), (1.0, -139.9)]
 

@@ -5,13 +5,13 @@ Skipped when a pack isn't built.
 
 import numpy as np
 import pytest
-from e2e_kit import geocoder
+from e2e_kit import geocoder, us_parks
 
 import placewise.model as model
 from placewise.engine._within import generic_name
 from placewise.model import PlaceKind
 
-US = ("world", "usa", "usa-parks")
+US = ("world", "usa", *us_parks())
 CA = ("world", "can", "can-parks")
 
 
