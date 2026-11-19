@@ -15,6 +15,15 @@ NOTABLE = [
     ("wikidata:Q911", "Beta Town", "", "station", 1.0, "11111", 0.25, -138.96),
     ("wikidata:Q912", "University of Beta", "Beta Town", "university", 1.0, "", 0.26, -138.95),
     ("wikidata:Q913", "Beta Tower", "", "landmark", 1.0, "", 0.24, -138.97),
+    # an airport known by its name without the words "International Airport", a station named
+    # after it, and an airport named after a city
+    ("wikidata:Q914", "Gamma International Airport", "", "airport", 1.0, "", 0.6, -139.2),
+    ("wikidata:Q915", "Gamma", "", "station", 0.8, "", 0.61, -139.2),
+    ("wikidata:Q916", "Beta Town Airport", "", "airport", 1.0, "", 0.27, -138.9),
+    ("wikidata:Q917", "Delta Airport", "", "airport", 1.0, "", 0.45, -139.6),
+    # a famous landmark known as Barabar Hill, two letters from a neighbourhood's name
+    ("wikidata:Q918", "Barabar Caves", "Barabar Hill", "landmark", 1.0, "", 0.85, -138.7),
+    ("wikidata:Q919", "Epsilon International Airport", "", "airport", 1.0, "", 0.9, -139.9),
 ]
 # places of the extra pack: (id, name, aliases, abbreviations, kind, rank, lat, lon)
 EXTRA = [
@@ -24,6 +33,19 @@ EXTRA = [
     ("extra:xai", "Xai", "", "", "locality", 0.6, 0.1, -139.9),
     ("extra:zone", "Zeta Zone", "", "XAI", "region", 0.6, 0.9, -138.6),
     ("extra:zip", "11111", "", "", "postal_code", 0.2, 0.26, -138.97),
+    # a province the world pack ranks low and abbreviates IPR, and a town called Ipr
+    ("extra:isle", "Isle Province", "", "IPR", "admin1", 0.5, 0.62, -139.1),
+    ("extra:ipr", "Ipr", "", "", "locality", 0.55, 0.05, -139.0),
+    # a neighbourhood (ranked low, as India Post's are) beside an airport named after it
+    ("extra:delta", "Delta", "", "", "sublocality", 0.2, 0.46, -139.6),
+    ("extra:kalabar", "Kalabar Hill", "", "", "sublocality", 0.2, 0.47, -139.6),
+    ("extra:epsilon", "Epsilon", "", "", "locality", 0.1, 0.1, -138.6),  # a hamlet far from it
+]
+# a country pack: the same province, ranked as its country ranks its provinces, and a province of
+# the same name elsewhere
+COUNTRY = [
+    ("land:isle", "Isle Province", "", "", "admin1", 0.8, 0.621, -139.1),
+    ("land:other-isle", "Isle Province", "", "", "admin1", 0.9, 0.1, -138.5),
 ]
 
 
@@ -51,25 +73,25 @@ def _notable(tmp_path):
     )
 
 
-def _extra(tmp_path):
+def _extra(tmp_path, name="extra", places=EXTRA):
     layer = LayerData(
         "things",
         "point",
-        {"id": [r[0] for r in EXTRA], "name": [r[1] for r in EXTRA]},
+        {"id": [r[0] for r in places], "name": [r[1] for r in places]},
         ("synthetic",),
-        lat=np.array([r[6] for r in EXTRA]),
-        lon=np.array([r[7] for r in EXTRA]),
+        lat=np.array([r[6] for r in places]),
+        lon=np.array([r[7] for r in places]),
     )
     rows = []
-    for i, (ident, name, alias, abbreviation, kind, rank, *_) in enumerate(EXTRA):
-        rows.append((name, "things", i, kind, rank, "code" if kind == "postal_code" else "official"))
+    for i, (ident, label, alias, abbreviation, kind, rank, *_) in enumerate(places):
+        rows.append((label, "things", i, kind, rank, "code" if kind == "postal_code" else "official"))
         rows.append((ident, "things", i, kind, rank, "code"))
         if alias:
             rows.append((alias, "things", i, kind, rank, "alias"))
         if abbreviation:
             rows.append((abbreviation, "things", i, kind, rank, "abbreviation"))
     pack = open_pack(
-        write_pack(tmp_path, "extra", "2026.11", [layer], created=CREATED, names=NameData.from_rows(rows))
+        write_pack(tmp_path, name, "2026.11", [layer], created=CREATED, names=NameData.from_rows(rows))
     )
     if _real_index(pack) is None:
         pack.__dict__["names"] = FakeNameIndex(pack, rows)
@@ -79,7 +101,7 @@ def _extra(tmp_path):
 @pytest.fixture(scope="module")
 def geo(tmp_path_factory):
     tmp = tmp_path_factory.mktemp("ranking")
-    return Geocoder(packs=[*write_packs(tmp), _notable(tmp), _extra(tmp)])
+    return Geocoder(packs=[*write_packs(tmp), _notable(tmp), _extra(tmp), _extra(tmp, "land", COUNTRY)])
 
 
 def ids(entities):
@@ -112,3 +134,30 @@ def test_a_postal_code_comes_before_a_station_code(geo):
 def test_a_river_is_found_without_the_word(geo):
     found = ids(geo.find("Alpha River"))
     assert found[0] == "extra:river" and "extra:river-park" in found
+
+
+def test_an_airport_is_found_by_its_name_without_the_words_airport(geo):
+    # "Gamma": Gamma International Airport before the station named after it; a city's name
+    # means the city, not an airport named after it
+    assert ids(geo.find("Gamma"))[:2] == ["wikidata:Q914", "wikidata:Q915"]
+    assert "wikidata:Q916" not in ids(geo.find("Beta Town"))
+    # a small place: the airport at it is named after it, one elsewhere is meant by its name
+    assert ids(geo.find("Delta"))[0] == "extra:delta"
+    assert ids(geo.find("Epsilon"))[:2] == ["wikidata:Q919", "extra:epsilon"]
+
+
+def test_a_place_known_by_an_abbreviation_ranks_as_its_best_pack_ranks_it(geo):
+    # "IPR": the world pack's Isle Province (abbreviated so, ranked low) is the country pack's Isle
+    # Province (ranked as provinces are), which comes before the town called Ipr; the province of
+    # that name elsewhere isn't pulled in
+    found = geo.find("IPR")
+    assert {"extra:isle", "land:isle"} & ({found[0].place.id} | {a.id for a in found[0].alternates})
+    assert "extra:ipr" in ids(found)
+    assert "land:other-isle" not in ids(found)
+
+
+def test_a_name_typed_exactly_lets_only_one_letter_typos_compete(geo):
+    # "Kalabar Hill", a neighbourhood ranked low, before Barabar Caves (famous, known as Barabar
+    # Hill: two letters off); a typo with nothing exact still finds the landmark
+    assert ids(geo.find("Kalabar Hill"))[0] == "extra:kalabar"
+    assert ids(geo.find("Barabar Hil"))[0] == "wikidata:Q918"

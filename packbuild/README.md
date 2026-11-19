@@ -538,7 +538,7 @@ Registry `sources/notable.json` (`wikidata`, `qrank`).
 | Column | |
 |---|---|
 | `id` | `wikidata:Q...` |
-| `name`, `aliases` | English label; English aliases and short names, `|`-separated, at most 6 (`sources/notable/aliases.py`: short forms like "UW" first, web addresses and the place's own codes dropped; "X railway station" also "X station") |
+| `name`, `aliases` | English label; English aliases and short names, `|`-separated, at most 6 (`sources/notable/aliases.py`: short forms like "UW" first, spelling variants of the name ("Harimandir") last, web addresses and the place's own codes dropped; "X railway station" also "X station") |
 | `kind` | `airport`, `station`, `university`, `campus`, `stadium`, `museum`, `religious_site`, `bridge`, `park`, `beach`, `landmark`, `viewpoint`, `building` (`placewise.constants.notable.KINDS` maps each to a `PlaceKind`) |
 | `fame` | 0..1: the place's percentile within its kind among the pack's places, averaged with its percentile within (kind, country) |
 | `country` | ISO alpha-2 from Wikidata P17 when it names exactly one country, else "": informational only, never used to say where a place is (the boundary layers and the worldview do that) |

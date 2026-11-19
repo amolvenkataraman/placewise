@@ -16,7 +16,7 @@ import numpy as np
 from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
 from placewise.constants.countries.conventions import ALPHA3_ANY_CASE
-from placewise.constants.names import CODE, PLACE_KINDS
+from placewise.constants.names import CODE, NAME_KINDS, PLACE_KINDS
 from placewise.engine._within import generic_name
 from placewise.geo.distances import haversine
 from placewise.model import Add, BBox, Entity, Hide, Place, Point, RegionRule, Rename
@@ -31,6 +31,9 @@ _PARK = PLACE_KINDS.index("park")
 _COUNTRY = PLACE_KINDS.index("country")
 _WATER = PLACE_KINDS.index("water")
 _SETTLEMENTS = frozenset(PLACE_KINDS.index(k) for k in const.SETTLEMENT_PREFERENCE)
+_PLACES = frozenset(PLACE_KINDS.index(k) for k in const.SHADOWING_KINDS)
+_TWIN_KINDS = frozenset(PLACE_KINDS.index(k) for k in const.TWIN_KINDS)
+_TWIN_NAME_KINDS = frozenset(NAME_KINDS.index(k) for k in const.TWIN_NAME_KINDS)
 
 
 class Search:
@@ -148,6 +151,7 @@ class Search:
             g.ids(ident)
         for ident in self._override_ids(q, ctx):
             g.ids(ident, factor=const.OVERRIDE_BOOST)
+        _other_names(g, q)
         if g.best_prior() < const.FUZZY_BELOW_PRIOR:
             for key in q.fallback_keys:
                 g.each("exact", key, group=0)
@@ -158,8 +162,9 @@ class Search:
             elif q.trailing is not None:
                 contexts.append(ctx_mod.text_context(q.trailing.context, ctx.countries, ctx.admin1))
                 g.each("exact", q.trailing.key, group=len(contexts) - 1)
-        if g.best_prior() < const.FUZZY_BELOW_PRIOR:
-            g.each("fuzzy", q.key, const.CANDIDATES_PER_PACK, fuzzy=True, group=0)
+        if g.best_prior() < const.FUZZY_BELOW_PRIOR:  # with an exact match, typos of one letter
+            least = (1.0 - 1.0 / len(q.key)) if g.has_exact() and len(q.key) > 2 else 0.0
+            g.each("fuzzy", q.key, const.CANDIDATES_PER_PACK, fuzzy=True, group=0, min_match=least)
         pool = g.pool()
         scores = self._score(pool, contexts, ctx)
         word = any(c.islower() for c in q.raw)  # "Goa" is a name, "GOA" may be a code
@@ -190,7 +195,7 @@ class Search:
             scores = scores * rank.context_factors(pool.group, contexts, where.country, where.admin1)
         scores = scores * ctx_mod.factors(ctx, pool.lat, pool.lon, pool.radius_km, pool.kind, where)
         if ctx.near is not None:
-            scores = scores * rank.near_factors(pool.lat, pool.lon, pool.radius_km, ctx.near)
+            scores = scores * rank.near_factors(pool.lat, pool.lon, pool.radius_km, ctx.near, pool.rank)
         # one feature matched by several names counts once, by its best
         ident = pool.pack * (1 << 40) + pool.layer.astype(np.int64) * (1 << 32) + pool.row
         order = np.lexsort((-scores, ident))
@@ -422,6 +427,19 @@ class Search:
             )
         clat, clon, radius = float(pool.lat[i]), float(pool.lon[i]), float(pool.radius_km[i])
         return lambda lat, lon: np.asarray(haversine(clat, clon, lat, lon)) <= radius
+
+
+def _other_names(g, q):
+    """Gather what the text names by another name: a region found by its abbreviation under its
+    own name in every pack ("PEI": Prince Edward Island as the Canada pack ranks it), and, unless
+    the text names a place of some size, an airport called by its name without "(International)
+    Airport" ("O'Hare"), but not at a small place of that name (gather.Gatherer.tails)."""
+    g.twins(_TWIN_KINDS, _TWIN_NAME_KINDS, const.TWIN_CANDIDATES, rank.NAME_KIND_WORTH)
+    if q.code or q.airport or g.has_place(_PLACES, const.SHADOW_MIN_RANK):
+        return
+    g.tails(
+        q.key, const.AIRPORT_TAILS, (_AIRPORT,), const.AIRPORT_TAIL_FACTOR, _PLACES, const.DEDUPE_POINT_KM
+    )
 
 
 def _point(near):

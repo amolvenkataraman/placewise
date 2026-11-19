@@ -40,6 +40,8 @@ geo = placewise.Geocoder(packs=[...])             # Geocoder.find / Geocoder.get
 | `Peel Region`, `City of Toronto` | also without the generic words, when nothing matched exactly |
 | `Mississippi River`, `River Thames` | also the water named without the word |
 | `Torono`, `Missisauga` | typo-tolerant matches, when nothing prominent matched exactly |
+| `PEI` | an abbreviation of a country, state or county: also that place under its own name in every pack (Prince Edward Island as the Canada pack ranks it) |
+| `O'Hare`, `Kempegowda` | also an airport called so with "International Airport" or "Airport" after it, unless the text names a place ("Denver" is the city) |
 | `YYZ`, `CYYZ`, `M5V`, `94105`, `560001`, `CA-ON`, `US`, `IND`, `Q1049470` | codes (exact only): IATA, ICAO, postal codes, ISO 3166, Wikidata ids |
 | `census:0646870`, `wikidata:Q1049470`, `iso:IN-KA` | placewise ids |
 | `43.6426, -79.3871`, map URLs, DMS | coordinates (`geo.parse`): one Entity for the point, named by a reverse lookup, id `geo:lat,lon` |
@@ -112,7 +114,9 @@ distance: True when its country and admin1 hold the point.
 
 - **match**: 1 for exact names and codes; prefix matches `0.6 + 0.4 x len(query) / len(name)` (not
   cubed: while typing, the prior decides); typo matches
-  `1 - edits / length`, then x0.85. Aliases are worth x0.97, former names and abbreviations x0.95.
+  `1 - edits / length`, then x0.85, and x0.85 again for a typo of an alias, former name or
+  abbreviation (big places have many alternate spellings: "Colaba" is the Mumbai neighbourhood,
+  not Cuiabá, once spelled Culaba). Aliases are worth x0.97, former names and abbreviations x0.95.
 - **rank**: the index's prior prominence, 0..1 and comparable across packs (population, area, park
   tier, fame): countries 0.85-1, US, Canadian and Indian states 0.75-0.85, other admin-1 units
   0.5-0.8 by the people of their cities (Portland, Jamaica's parish, comes after Portland, Oregon),
@@ -120,9 +124,14 @@ distance: True when its country and admin1 hold the point.
   ~0.85, a hamlet ~0.3, a Canadian community shown at 1:1.2M (Scarborough) ~0.5.
 - **context**: the text's context: 1 in its likeliest reading, 0.9 in a later one ("CA" as Canada),
   0 outside, or 0.2 for everything when nothing is inside.
-- **near**: `0.25 + 0.75 x exp(-km / 250)`, km from the near point to the place's extent.
+- **near**: `0.25 + 0.75 x exp(-km / scale)`, km from the near point to the place's extent; a
+  place's reach grows with its rank: `scale = 250 x min(1, rank / 0.8) ** 2` km (at least 5): a
+  neighbourhood ~16 km, a town ~60 km, a 500k city ~165 km, a big city or a state 250 km, so
+  typing "Kora" near Bengaluru gives Koramangala before Koratagere, a town 70 km away.
 - **factor**: city aliases from location search x0.98; places an override rule names x2; waters
-  found without the word "river" ("Mississippi River" is Natural Earth's "Mississippi") x0.97.
+  found without the word "river" ("Mississippi River" is Natural Earth's "Mississippi") x0.97;
+  airports found with "(International) Airport" added x0.97; a place found under its own name
+  for an abbreviation ("PEI") the abbreviation's x0.95.
 - **namesake**: x0.7 for what is named after a place the query also names, when that place
   (a city, county, state, region, neighbourhood or country) has a rank of 0.3 or more: a station,
   airport, university, building or landmark of that name (Richmond the station, Miami University
@@ -135,7 +144,9 @@ distance: True when its country and admin1 hold the point.
   other codes ("10001": the ZIP Code, not a railway station's code).
 
 Typo matches are only gathered when no exact match has a prior of at least 0.35, so a typo of a big
-city ("Torono") still finds it while exact names of real places win.
+city ("Torono") still finds it while exact names of real places win; and when the text matches
+anything exactly, only typos of one letter compete ("Malabar Hill", the Mumbai neighbourhood, not
+Barabar Caves, known as Barabar Hill).
 
 ## One place, several packs
 
@@ -195,9 +206,10 @@ country's outline has tens of thousands of vertices.
 
 ## Ranking evaluation
 
-`tests/e2e/test_e2e_search_quality.py` runs 354 queries (`search_quality_cases.json`: big and small
+`tests/e2e/test_e2e_search_quality.py` runs 364 queries (`search_quality_cases.json`: big and small
 cities, ambiguous names, states, districts, counties, neighbourhoods, parks, waters, landmarks,
 airport and postal codes, typos, prefixes, former names and transliterations, mostly in the US,
 Canada and India) and prints top-1 and top-3 accuracy per category and warm latency. On the
-2026.11 packs: top-1 98.3%, top-3 99.4% (before this evaluation's ranking work: 86.7% and 96.3%);
-warm median 1.5 ms, p95 5.7 ms.
+2026.11 packs: top-1 99.7%, top-3 100% (before this evaluation's ranking work: 86.7% and 96.3%;
+98.3% and 99.4% on the first 354 before the fixes for abbreviations, airports by name, typos
+against exact names and nearby small places); warm median 2.1 ms, p95 8 ms.
