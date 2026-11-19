@@ -22,6 +22,7 @@ from placewise.store.coverage import Coverage, derive, from_entry
         ("world-parks", "parks", ("*",), ()),
         ("world-notable", "notable", ("*",), ()),
         ("world-notable-sa", "notable", ("*",), ()),
+        ("world-towns", "towns", ("*",), ()),
     ],
 )
 def test_derived_from_the_name(name, kind, covers, requires):
