@@ -1,12 +1,5 @@
-"""Map projections and grids on WGS84: UTM, UPS, MGRS, ECEF, local east-north-up frames and Web
-Mercator. Coordinates are (lat, lon) degrees; projected and Cartesian values are metres.
-
-UTM uses Karney's (2011) Krüger series to order n^6, accurate to about 5 nm within 3900 km of
-the central meridian, so a whole zone and well beyond it. UTM covers -80 <= lat < 84; `to_utm`
-refuses the polar caps rather than quietly returning a distorted grid, and `to_utm_ups` picks
-UTM or UPS by the standard rule (zone 0 meaning UPS, as in GeographicLib). Other datums are out
-of scope.
-"""
+"""UTM, UPS and MGRS on WGS84 (the rules are in the package's docstring): Karney's (2011) Krüger
+series for the transverse Mercator, the polar stereographic UPS, and MGRS references over both."""
 
 import math
 import re
@@ -14,13 +7,11 @@ import re
 import numpy as np
 
 from placewise.constants import utm as _g
-from placewise.constants.web_mercator import MAX_LAT as _MERCATOR_MAX_LAT
 from placewise.constants.wgs84 import A_M, E2, F
 
-from ._arrays import as_floats, out, wrap_lon
+from .._arrays import as_floats, out, wrap_lon
 
 _E = math.sqrt(E2)
-_E4 = E2 * E2
 _TM_SCALE = _g.UTM_K0 * _g.RECTIFYING_RADIUS_M
 # distance from the pole in UPS is 2 k0 a / c * tan(pi/4 - chi/2), chi the conformal latitude
 _UPS_SCALE = 2 * _g.UPS_K0 * A_M / ((1 - F) * math.exp(_E * math.atanh(_E)))
@@ -202,94 +193,6 @@ def from_mgrs(text, centre=True):
     raise ValueError(f"square {col}{row} does not fall in band {zone}{band}: {text!r}")
 
 
-# --- ECEF and local frames ---
-
-
-def to_ecef(lat, lon, h_m=0):
-    """Earth-centred, Earth-fixed (x, y, z) in metres; h_m is height above the ellipsoid."""
-    return tuple(out(v) for v in _to_ecef(*as_floats(lat, lon, h_m)))
-
-
-def from_ecef(x, y, z):
-    """(lat, lon, h_m) from ECEF metres, by Vermeille's closed form (2011 revision, as in
-    GeographicLib), which stays exact everywhere including deep inside the Earth."""
-    x, y, z = np.broadcast_arrays(*as_floats(x, y, z))
-    r = np.hypot(x, y)
-    p = (r / A_M) ** 2
-    q = (1 - E2) * (z / A_M) ** 2
-    rr = (p + q - _E4) / 6
-    with np.errstate(divide="ignore", invalid="ignore"):
-        s = _E4 * p * q / 4
-        r2, r3 = rr * rr, rr**3
-        disc = s * (2 * r3 + s)
-        t3 = s + r3
-        t3 = t3 + np.where(t3 < 0, -1.0, 1.0) * np.sqrt(np.maximum(disc, 0.0))
-        t = np.cbrt(t3)
-        u_cubic = rr + t + np.where(t != 0, r2 / np.where(t != 0, t, 1.0), 0.0)
-        u_trig = rr + 2 * rr * np.cos(np.arctan2(np.sqrt(np.maximum(-disc, 0.0)), -(s + r3)) / 3)
-        u = np.where(disc >= 0, u_cubic, u_trig)
-        v = np.sqrt(u * u + _E4 * q)
-        uv = np.where(u < 0, _E4 * q / (v - u), u + v)  # avoids cancellation when u < 0
-        w = np.maximum(0.0, E2 * (uv - q) / (2 * v))
-        k = uv / (np.sqrt(uv + w * w) + w)
-        d = k * r / (k + E2)
-        lat = np.degrees(np.arctan2(z / k, r / (k + E2)))
-        h = (1 - (1 - E2) / k) * np.hypot(d, z)
-    # on the equatorial plane inside the evolute (|r| <= e^2 a) the general formula is 0/0;
-    # take its limit instead
-    inner = (_E4 * q == 0) & (rr <= 0)
-    zz = np.sqrt(np.maximum(_E4 - p, 0.0) / (1 - E2))
-    xx = np.sqrt(p)
-    lat = np.where(inner, np.degrees(np.arctan2(np.copysign(zz, z), xx)), lat)
-    h = np.where(inner, -A_M * (1 - E2) * np.hypot(zz, xx) / E2, h)
-    return out(lat), out(np.degrees(np.arctan2(y, x))), out(h)
-
-
-def ecef_to_enu(x, y, z, lat0, lon0, h0=0):
-    """(east, north, up) metres of an ECEF point relative to the observer at (lat0, lon0, h0)."""
-    return tuple(out(v) for v in _ecef_to_enu(*as_floats(x, y, z, lat0, lon0, h0)))
-
-
-def enu_to_ecef(east, north, up, lat0, lon0, h0=0):
-    """ECEF (x, y, z) metres of a point given as (east, north, up) from (lat0, lon0, h0)."""
-    east, north, up, lat0, lon0, h0 = as_floats(east, north, up, lat0, lon0, h0)
-    sp, cp, sl, cl = _sincos(lat0, lon0)
-    x0, y0, z0 = _to_ecef(lat0, lon0, h0)
-    x = x0 - sl * east - sp * cl * north + cp * cl * up
-    y = y0 + cl * east - sp * sl * north + cp * sl * up
-    z = z0 + cp * north + sp * up
-    return out(x), out(y), out(z)
-
-
-def aer(lat0, lon0, h0, lat, lon, h):
-    """(azimuth_deg from north, elevation_deg above the observer's horizon, slant_range_m) of
-    (lat, lon, h) seen from (lat0, lon0, h0); heights in metres above the ellipsoid."""
-    lat0, lon0, h0, lat, lon, h = as_floats(lat0, lon0, h0, lat, lon, h)
-    east, north, up = _ecef_to_enu(*_to_ecef(lat, lon, h), lat0, lon0, h0)
-    horizontal = np.hypot(east, north)
-    azimuth = np.degrees(np.arctan2(east, north)) % 360.0
-    elevation = np.degrees(np.arctan2(up, horizontal))
-    return out(azimuth), out(elevation), out(np.hypot(horizontal, up))
-
-
-# --- Web Mercator ---
-
-
-def to_web_mercator(lat, lon):
-    """EPSG:3857 (x, y) metres. Latitude is clamped to the projection's limit (about 85.05
-    degrees); longitude is not wrapped, so 180 gives x = pi * a."""
-    lat, lon = as_floats(lat, lon)
-    phi = np.radians(np.clip(lat, -_MERCATOR_MAX_LAT, _MERCATOR_MAX_LAT))
-    # EPSG:3857 is spherical Mercator on a sphere of radius a, applied to WGS84 coordinates
-    return out(A_M * np.radians(lon)), out(A_M * np.arcsinh(np.tan(phi)))
-
-
-def from_web_mercator(x, y):
-    """(lat, lon) of EPSG:3857 metres."""
-    x, y = as_floats(x, y)
-    return out(np.degrees(np.arctan(np.sinh(y / A_M)))), out(np.degrees(x / A_M))
-
-
 # --- internals ---
 
 
@@ -389,27 +292,6 @@ def _mgrs(lat, zone, hemisphere, easting, northing, precision):
     de = int((easting - ix * _g.MGRS_SQUARE_M) // unit)
     dn = int((northing - iy * _g.MGRS_SQUARE_M) // unit)
     return f"{head}{de:0{precision}d}{dn:0{precision}d}"
-
-
-def _to_ecef(lat, lon, h):
-    sp, cp, sl, cl = _sincos(lat, lon)
-    n = A_M / np.sqrt(1 - E2 * sp * sp)  # prime-vertical radius of curvature
-    return (n + h) * cp * cl, (n + h) * cp * sl, (n * (1 - E2) + h) * sp
-
-
-def _ecef_to_enu(x, y, z, lat0, lon0, h0):
-    sp, cp, sl, cl = _sincos(lat0, lon0)
-    x0, y0, z0 = _to_ecef(lat0, lon0, h0)
-    dx, dy, dz = x - x0, y - y0, z - z0
-    east = -sl * dx + cl * dy
-    north = -sp * cl * dx - sp * sl * dy + cp * dz
-    up = cp * cl * dx + cp * sl * dy + sp * dz
-    return east, north, up
-
-
-def _sincos(lat, lon):
-    phi, lam = np.radians(lat), np.radians(lon)
-    return np.sin(phi), np.cos(phi), np.sin(lam), np.cos(lam)
 
 
 def _out_int(value):
