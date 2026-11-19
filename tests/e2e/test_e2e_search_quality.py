@@ -31,9 +31,9 @@ PACKS = (
 CASES = json.loads((Path(__file__).with_name("search_quality_cases.json")).read_text(encoding="utf-8"))[
     "cases"
 ]
-# accuracy over the cases the packs can run (known failures included): 98.3% top-1 and 99.4%
-# top-3 on the 2026.11 packs; the floors leave room for a case or two
-TOP1_FLOOR = 0.97
+# accuracy over the cases the packs can run (known failures included): 99.7% top-1 and 100%
+# top-3 on the 2026.11 packs (364 cases); the floors leave room for a few cases
+TOP1_FLOOR = 0.98
 TOP3_FLOOR = 0.99
 LATENCY_REPEATS = 3
 
