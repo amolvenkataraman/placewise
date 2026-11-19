@@ -12,8 +12,7 @@ from .model import ParsedLocation
 from .modes import _work_modes
 from .patterns import ANY_POSTAL_CODE, DASHES, LEVEL1, LEVEL2, MORE, POSTAL_CODES, SPACES
 from .resolve import _embedded, _resolve
-from .spans import _protected_and, _split, _Text
-from .tokenize import _Token, _tokens
+from .tokenize import _protected_and, _split, _Text, _Token, _tokens
 
 
 def _contexts(context):

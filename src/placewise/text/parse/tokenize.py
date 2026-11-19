@@ -1,4 +1,6 @@
-"""One place-string into its parts: hierarchy splits, codes peeled off, parentheses, noise dropped."""
+"""One place-string into its parts: hierarchy splits, codes peeled off, parentheses, noise dropped;
+and the working copy of the location string they are read from, split while offsets into the raw
+text survive."""
 
 import functools
 import re
@@ -13,9 +15,9 @@ from .patterns import LEADING as _LEADING
 from .patterns import NOISE as _NOISE
 from .patterns import NOT_A_CITY as _NOT_A_CITY
 from .patterns import PARENS as _PARENS
-from .readings import _readings
-from .spans import _split, _Text, _trim
+from .readings import _and_names, _readings
 
+_NAME_WORDS = re.compile(r"[\w'.]+")
 # location strings repeat the same pieces ("Toronto, ON", "Remote - US"): each piece is read once
 _PIECE_CACHE = 1 << 14
 
@@ -243,3 +245,78 @@ def _plain_tokens(text, start, end):
 def _broadest_first(tokens):
     places = [t for t in tokens if t.kind != "junk"]
     return len(places) >= 2 and places[0].kind == "region" and places[-1].kind in ("city", "alias")
+
+
+# --- the working copy and its splits ---
+
+
+class _Text:
+    """The working copy of the raw string; same length, so spans stay valid as text is blanked."""
+
+    __slots__ = ("text",)
+
+    def __init__(self, text):
+        self.text = text
+
+    def get(self, start, end):
+        return self.text[start:end]
+
+    def blank(self, start, end):
+        if end > start:
+            self.text = f"{self.text[:start]}{' ' * (end - start)}{self.text[end:]}"
+
+    def put(self, start, chunk):
+        """Write `chunk` back over text[start:start + len(chunk)] (undoing a blank)."""
+        self.text = f"{self.text[:start]}{chunk}{self.text[start + len(chunk) :]}"
+
+
+def _trim(text, start, end):
+    """(start, end) with surrounding whitespace removed."""
+    chunk = text.get(start, end)
+    stripped = chunk.strip()
+    if not stripped:
+        return start, start
+    lead = len(chunk) - len(chunk.lstrip())
+    return start + lead, start + lead + len(stripped)
+
+
+def _split(text, start, end, pattern, keep=None):
+    """Spans between matches of `pattern` in text[start:end], outside parentheses; `keep(match)`
+    returning True skips a separator."""
+    chunk = text.get(start, end)
+    inside = _inside_parens(chunk) if "(" in chunk else None
+    spans, last = [], 0
+    for m in pattern.finditer(chunk):
+        if m.end() == m.start() and m.start() in (0, len(chunk)):
+            continue
+        if (inside is not None and inside[m.start()]) or (keep and keep(chunk, m)):
+            continue
+        spans.append((start + last, start + m.start()))
+        last = m.end()
+    spans.append((start + last, end))
+    return [s for s in spans if s[1] > s[0]]
+
+
+def _inside_parens(chunk):
+    """Per character: is it inside parentheses?"""
+    depth, inside = 0, []
+    for c in chunk:
+        depth += c == "("
+        inside.append(depth > 0)
+        depth -= c == ")" and depth > 0
+    return inside
+
+
+def _protected_and(chunk, m):
+    """Is this " and " / "&" inside a name such as "Trinidad and Tobago"?"""
+    sep = m.group().strip().lower()
+    if sep not in {"and", "&"}:
+        return False
+    left = _NAME_WORDS.findall(chunk[: m.start()])[-8:]
+    right = _NAME_WORDS.findall(chunk[m.end() :])[:8]
+    names = _and_names()
+    for i in range(len(left)):
+        for j in range(1, len(right) + 1):
+            if key(" ".join([*left[i:], "and", *right[:j]])) in names:
+                return True
+    return False
