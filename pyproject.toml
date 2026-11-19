@@ -1,6 +1,6 @@
 [project]
 name = "placewise"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "Offline, two-way geocoding and geo toolkit: the place people would name, plus distances, bearings, shapes and coordinates."
 readme = "README.md"
 license = "Apache-2.0"

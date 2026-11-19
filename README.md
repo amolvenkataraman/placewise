@@ -37,13 +37,17 @@ placewise is the third option: the answer a person would give, computed on your 
 > National Park"), worldviews (default de facto; `IN` answers India for every area India claims),
 > forward search (`placewise.find("Yosemite")`, codes, typos, context such as `country="USA"`;
 > `docs/search.md`), location-string parsing, the geo toolkit, track files, privacy tools, a local
-> service and a self-hosted web server.
+> service and a self-hosted web server. Also: 177k notable places (landmarks, stations,
+> universities, stadiums), park outlines in 35 European countries, postcodes in 116 more countries,
+> town outlines worldwide, precise US/Canada/India borders and islands (a point in Niagara Falls, NY
+> is never Canada; Treasure Island is land, not "On San Francisco Bay"), and a readable result card
+> (`print(result)`, `placewise lookup 43.65 -79.38`). The first lookup takes well under a second;
+> search answers in about 2 ms.
 >
-> **Doesn't work yet:** notable places and
-> universities, India state/district/city outlines (India uses PIN-code areas for now), UK,
-> Europe, Australia and most other countries beyond the world baseline, elevation, roads and
-> trails, the `reverse`/`explain` CLI commands, Docker. Expect slow first lookups (indexes
-> are built on first use) and roughly 25–50k points/s after that.
+> **Doesn't work yet:** India state/district/city outlines (India uses PIN-code areas for now),
+> UK parks (the European data has had no UK since 2021), full detail for countries beyond the US,
+> Canada and India, terrain elevation, roads and trails, the `reverse`/`explain` CLI commands,
+> Docker.
 >
 > **Install:** `pip install --pre placewise` (alpha). Only the world pack installs on first use;
 > add country packs with `placewise data install usa can ind`, or turn on auto mode
@@ -61,12 +65,12 @@ world-wide datasets, so answers are sensible but coarser. ●●● official bou
 | Country | ●●● | ●●● | ●●● | ●● | ●● | ●● | ●● |
 | State / province (admin1) | ●●● Census | ●●● StatCan | ●●● states from PIN + LGD | ●● Natural Earth 1:10m | ●● | ●● | ●● |
 | County / district (admin2) | ●●● Census counties | ●●● census divisions | ●● districts (LGD, from PIN areas) | — | — | — | — |
-| City / locality | ●●● incorporated places + CDPs, ZIP postal city | ●●● municipalities + named places (CGNDB) | ●● city corporations / ULBs (from PIN areas) | ● nearest GeoNames city | ● | ● | ● |
+| City / locality | ●●● incorporated places + CDPs, ZIP postal city | ●●● municipalities + named places (CGNDB) | ●● city corporations / ULBs (from PIN areas) | ●● town outline (GHS-SMOD, optional pack `world-towns`) or nearest GeoNames city | ●● | ●● | ●● |
 | Neighbourhood | ●● GeoNames sections | ●● CGNDB neighbourhoods | ●● post-office areas | ● GeoNames sections | ● | ● | ● |
 | Metro / region | ●●● metro areas (CBSA/CSA) + curated (Bay Area …) | ●●● CMAs + curated (GTA, GTHA …) | ●● curated (Delhi NCR, MMR, BMR) | — | — | — | — |
 | Postal code | ●●● ZIP areas (ZCTA), optional pack `usa-zip` | ●● FSA (first 3 characters) | ●●● PIN-code areas | ● nearest GeoNames postcode point, optional pack `world-postal` (UK: outward codes) | ● | ● | ● (few countries) |
 | Time zone | ●●● by county | ●●● by division | ●●● | ●● by admin1 | ●● | ●● | ●● |
-| Parks & protected areas | ●●● NPS, USFS, state (PAD-US); city and county parks: optional pack `usa-parks-local` | ●●● CPCAD (no city parks) | ● Wikidata points ("near" only) | ● Wikidata points | ● | ● | ● |
+| Parks & protected areas | ●●● NPS, USFS, state (PAD-US); city and county parks: optional pack `usa-parks-local` | ●●● CPCAD (no city parks) | ● Wikidata points ("near" only) | ●●● EEA nationally designated areas, 35 countries (no UK), optional pack `eur-parks` | ● Wikidata points | ● | ● |
 | Lakes, rivers, seas | ●● Natural Earth + HydroLAKES + Global Dam Watch reservoirs ≥ 10 km² | ●● | ●● (many lakes unnamed) | ●● | ●● | ●● | ●● |
 | Airports | ●●● OurAirports + city served | ●●● | ●●● | ●●● | ●●● | ●●● | ●●● |
 | Notable places | ●●● ~38k (Wikidata) | ●● ~4k | ●● ~12k | ●●● | ●● | ●● | ● |
@@ -88,7 +92,8 @@ with its state, for every area India claims; `"CN"` puts Taiwan, Hong Kong and M
 - Canada's postal data stops at the FSA (M5V); full six-character postcodes aren't open data.
 - Lakes under 10 km² and rivers below Natural Earth's detail are missing; HydroLAKES names are sparse
   outside North America.
-- Parks outside the US and Canada are points with a radius, so they're "near", never "within".
+- Parks outside the US, Canada and Europe are points with a radius, so they're "near", never "within";
+  Europe's outlines skip the UK and Türkiye, and some national parks keep their local-language name.
 - Search ranks well-known places first; very small or ambiguous names may need a `country=` or
   `near=` hint. English names only.
 - No street addresses or house numbers (not a goal).
@@ -99,10 +104,11 @@ with its state, for every area India claims; `"CN"` puts Taiwan, Hong Kong and M
   park outlines if an openly licensed source appears.
 - US and Canada: county subdivisions (New England towns), city neighbourhood polygons from open city
   portals, smaller lakes.
-- World: municipal outlines from openly licensed global sources (e.g. GHS settlement areas,
-  geoBoundaries where the licence allows), better parks, reservoirs.
-- Speed: faster boundary queries and first lookups; a readable result card and `placewise lookup` in
-  the terminal.
+- World: municipal outlines where an openly licensed global source allows (geoBoundaries), a fame
+  signal for towns so search ranks famous small places (Manali) over bigger namesakes, park outlines
+  for the UK.
+- A few more countries at full depth only where the government data is as good and stable as the US
+  and Canada's (candidates: New Zealand, Australia, UK).
 
 ## Why
 
@@ -278,14 +284,27 @@ placewise attribution                 # the installed packs' sources, licences a
 
 The default keeps the base lean: only the world pack until you install more. Auto mode with its
 default kinds fetches only country packs, and only for the countries you look up. Sizes for the
-2026.11 data on disk: `world` 50 MB, `usa` 71 MB, `can` 90 MB, `ind` 70 MB, `usa-parks` 64 MB,
-`can-parks` 33 MB, `world-water` 52 MB, `world-parks` 0.6 MB, `world-postal` 59 MB (postcode
-points outside the US, Canada and India: `docs/postal.md`), and two packs that are optional even
-beside their own: `usa-zip` 53 MB (US ZIP Code areas: `postal`, and search by ZIP Code; without it
-US points have no postal code and everything else is the same) and `usa-parks-local` 43 MB (city
-and county parks); and `world-towns` (town and city outlines outside the US, Canada and India, so
-a point in Paris' suburbs or a village near Florence is named from the outline it is in rather
-than the nearest town's point); `placewise data status` shows the current ones.
+2026.11 data on disk:
+
+| Pack | On disk | What it adds |
+|---|---|---|
+| `world` (base) | 49 MB | countries, states/provinces, 172k cities, airports, time zones, worldviews, search |
+| `usa` | 69 MB | states, counties, places, metro areas, ZIP postal cities |
+| `can` | 88 MB | provinces, divisions, municipalities, metro areas, FSAs, named places |
+| `ind` | 68 MB | states, districts, cities, PIN-code areas, post offices, neighbourhoods |
+| `usa-zip` | 53 MB | US ZIP Code areas (without it US points have no postal code) |
+| `usa-parks` | 63 MB | national, state and regional parks and forests (PAD-US) |
+| `usa-parks-local` | 42 MB | city and county parks |
+| `can-parks` | 18 MB | protected and conserved areas (CPCAD) |
+| `eur-parks` | 38 MB | park outlines in 35 European countries (EEA) |
+| `world-parks` | 2 MB | national parks and reserves elsewhere, as points |
+| `world-water` | 52 MB | seas, rivers, lakes ≥ 10 km², named reservoirs, surface elevations |
+| `world-notable` | 46 MB | 177k landmarks, stations, universities, stadiums |
+| `world-postal` | 57 MB | postcode points in 116 countries outside the US, Canada and India (`docs/postal.md`) |
+| `world-towns` | 8 MB | town and city outlines outside the US, Canada and India (GHS-SMOD) |
+
+Everything together is about 650 MB; the US, Canada and India core (`world`, `usa`, `can`, `ind`)
+about 275 MB. `placewise data status` shows the current ones.
 
 Everything placewise downloads lives in `~/.placewise/` unless configured otherwise (`--data-dir`,
 `PLACEWISE_DATA_DIR` or `data.data_dir` in `placewise.toml`; `placewise data where` prints it).
