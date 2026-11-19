@@ -1,5 +1,5 @@
 """Time zones from the zones the packs give their admin units (packbuild/timezones.py,
-docs/timezones.md).
+docs/naming.md, "Time zones").
 
 For every point on land or within the territorial sea (country known), in this order:
 
@@ -17,7 +17,8 @@ For every point on land or within the territorial sea (country known), in this o
 A unit whose zone lists several zones is split along a line the packs don't draw: the nearest
 GeoNames city inside that unit whose zone is one of them decides (rule "split"), else its first
 zone. A unit with no zone (tzdb records none) is left to the next rule. Points left without a zone
-keep the nearest-city rule (placewise.engine._cities, "world/cities:nearest"); far at sea, none.
+keep the nearest-city rule (placewise.engine._cities, "world/cities:nearest"); far at sea
+(beyond the territorial sea) the Result takes the nautical zone of the longitude (nautical.py).
 Result.sources names the pack's `timezones` ("world/timezones:polygon"), whichever layer holds the
 zone.
 
