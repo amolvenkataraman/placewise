@@ -64,6 +64,31 @@ def test_near_decays_from_the_extent_not_the_point():
     assert wide == pytest.approx(1.0)
 
 
+def test_a_typo_of_an_alternate_name_is_worth_less_than_a_typo_of_the_name():
+    typo = scores([5 / 6], [0.7], fuzzy=True)[0]
+    alias_typo = scores([5 / 6], [0.7], name_kind=ALIAS, fuzzy=True)[0]
+    worth = const.NAME_KIND_FACTOR["alias"] * const.FUZZY_ALIAS_FACTOR
+    assert alias_typo == pytest.approx(typo * worth)
+    # "Colaba": the Mumbai neighbourhood (prior 0.2) before Cuiaba, a big city (0.68) one letter
+    # from its alternate spelling Culaba
+    assert scores([1.0], [0.2])[0] > scores([5 / 6], [0.683], name_kind=ALIAS, fuzzy=True)[0]
+
+
+def test_a_small_place_reaches_less_far_than_a_big_one():
+    near = (12.97, 77.59)  # central Bengaluru
+    # a town 80 km away and a neighbourhood 3 km away, both with no extent
+    far_town, close_hood = near_factors([13.69, 12.94], [77.59, 77.62], [0.0, 0.0], near, [0.4, 0.2])
+    big_far = near_factors([13.69], [77.59], [0.0], near, [const.NEAR_FULL_REACH_RANK])[0]
+    unranked = near_factors([13.69], [77.59], [0.0], near)[0]
+    assert big_far == pytest.approx(unranked)  # a big place reaches as far as before
+    assert far_town < big_far - 0.25 and close_hood > 0.75
+    # "Kora" typed near Bengaluru: Koramangala (prior 0.2, 3 km) before Koratagere (0.4, 80 km)
+    hood, town = base_scores(
+        [4 / 11, 4 / 10], [0.2, 0.4], [OFFICIAL] * 2, [False] * 2, [1.0] * 2, prefix=[True] * 2
+    )
+    assert hood * close_hood > town * far_town
+
+
 def test_best_first_breaks_ties():
     assert best_first([1.0, 2.0, 1.0], [0.1, 0.0, 0.5]).tolist() == [1, 2, 0]
 

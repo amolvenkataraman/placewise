@@ -1,12 +1,13 @@
 """Ranking candidates: score = match quality x prior x context, all vectorised.
 
-    match term    match_score ** MATCH_POWER x the name kind's worth (x FUZZY_FACTOR for typos);
+    match term    match_score ** MATCH_POWER x the name kind's worth (x FUZZY_FACTOR for typos,
+                  x FUZZY_ALIAS_FACTOR more for typos of an alias, abbreviation or former name);
                   prefix matches PREFIX_FLOOR + (1 - PREFIX_FLOOR) x match_score instead
     prior term    PRIOR_FLOOR + (1 - PRIOR_FLOOR) x rank (the index's prominence, 0..1)
     context       "Name, Context": 1 inside the first reading, CONTEXT_LATER_READING inside a later
                   one, 0 outside (CONTEXT_MISS_FACTOR when nothing at all is inside)
-    near          NEAR_FLOOR + (1 - NEAR_FLOOR) x exp(-km / NEAR_SCALE_KM), km from the near
-                  point to the place's extent (its point less its radius)
+    near          NEAR_FLOOR + (1 - NEAR_FLOOR) x exp(-km / scale), km from the near point to
+                  the place's extent (its point less its radius), scale growing with the prior
     factor        per candidate: city aliases from location search, override rules
     named after   SHADOW_FACTOR for what is named after a place the query also names (a station
                   called Richmond), a code read as a word ("Goa"), 1 otherwise
@@ -19,10 +20,11 @@ Constants: placewise.constants.search.
 import numpy as np
 
 from placewise.constants import search as const
-from placewise.constants.names import ABBREVIATION, ALIAS, CODE, NAME_KINDS, PLACE_KINDS
+from placewise.constants.names import ABBREVIATION, ALIAS, CODE, NAME_KINDS, OFFICIAL, PLACE_KINDS
 from placewise.geo.distances import haversine
 
-_NAME_KIND_FACTOR = np.array([const.NAME_KIND_FACTOR[k] for k in NAME_KINDS])
+# what each name kind (constants.names.NAME_KINDS) is worth as a match
+NAME_KIND_WORTH = np.array([const.NAME_KIND_FACTOR[k] for k in NAME_KINDS])
 _PLACES = [PLACE_KINDS.index(k) for k in const.SHADOWING_KINDS]
 _FACILITIES = [PLACE_KINDS.index(k) for k in const.FACILITY_KINDS]
 _POSTAL = PLACE_KINDS.index("postal_code")
@@ -38,8 +40,11 @@ def base_scores(match, rank, name_kind, fuzzy, factor, prefix=None):
     if prefix is not None:
         soft = const.PREFIX_FLOOR + (1.0 - const.PREFIX_FLOOR) * match
         term = np.where(np.asarray(prefix, dtype=bool), soft, term)
-    term = term * _NAME_KIND_FACTOR[np.asarray(name_kind)]
-    term = np.where(np.asarray(fuzzy, dtype=bool), term * const.FUZZY_FACTOR, term)
+    name_kind = np.asarray(name_kind)
+    term = term * NAME_KIND_WORTH[name_kind]
+    fuzzy = np.asarray(fuzzy, dtype=bool)
+    term = np.where(fuzzy, term * const.FUZZY_FACTOR, term)
+    term = np.where(fuzzy & (name_kind != OFFICIAL), term * const.FUZZY_ALIAS_FACTOR, term)
     prior = const.PRIOR_FLOOR + (1.0 - const.PRIOR_FLOOR) * np.clip(np.asarray(rank, dtype=np.float64), 0, 1)
     return term * prior * np.asarray(factor, dtype=np.float64)
 
@@ -62,11 +67,19 @@ def context_factors(group, contexts, country, admin1):
     return out
 
 
-def near_factors(lat, lon, radius_km, near):
-    """The boost for being near `near` ((lat, lon)), from each place's extent, not its point."""
+def near_factors(lat, lon, radius_km, near, rank=None):
+    """The boost for being near `near` ((lat, lon)), from each place's extent, not its point. A
+    place's reach grows with its prior (`rank`; full reach without it): the decay distance is
+    NEAR_SCALE_KM x (rank / NEAR_FULL_REACH_RANK) ** 2, at most NEAR_SCALE_KM and at least
+    NEAR_MIN_SCALE_KM, so a town 80 km away matters less than a neighbourhood next door while a
+    big city that far still counts."""
     km = np.asarray(haversine(near[0], near[1], np.asarray(lat), np.asarray(lon)), dtype=np.float64)
     km = np.maximum(km - np.asarray(radius_km, dtype=np.float64), 0.0)
-    return const.NEAR_FLOOR + (1.0 - const.NEAR_FLOOR) * np.exp(-km / const.NEAR_SCALE_KM)
+    scale = const.NEAR_SCALE_KM
+    if rank is not None:
+        reach = np.clip(np.asarray(rank, dtype=np.float64) / const.NEAR_FULL_REACH_RANK, 0.0, 1.0)
+        scale = np.maximum(const.NEAR_SCALE_KM * reach**2, const.NEAR_MIN_SCALE_KM)
+    return const.NEAR_FLOOR + (1.0 - const.NEAR_FLOOR) * np.exp(-km / scale)
 
 
 def served_city_scores(population, km):

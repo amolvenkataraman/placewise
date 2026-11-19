@@ -21,7 +21,26 @@ CANDIDATES_PER_PACK = 200  # prefix and fuzzy candidates asked of each pack's na
 # fuzzy matches are gathered too when the best exact match's prior is below this (a typo of a big
 # place can beat a tiny place spelled exactly like the typo)
 FUZZY_BELOW_PRIOR = 0.35
+# ... and when anything matched exactly, only fuzzy matches one letter off (match_score
+# 1 - edits / max(len) >= 1 - 1 / len(query key)): "Malabar Hill" is the Mumbai neighbourhood, not
+# Barabar Caves (known as Barabar Hill, two letters off)
 POOL_FACTOR = 4  # candidates ranked and deduplicated per result asked for
+
+# a country, state or county found by an abbreviation ("PEI") is looked up under its own name in
+# every pack too, so it ranks as its best pack ranks it (the world pack ranks admin-1 units by the
+# people of their cities, the Canada pack ranks provinces as provinces): the best this many such
+# candidates. Not former names or aliases: a state's old name is often a city's ("Mysore", the
+# state Karnataka was, is the city Mysuru), and the city should keep it
+TWIN_KINDS = ("country", "admin1", "admin2")
+TWIN_NAME_KINDS = ("abbreviation",)
+TWIN_CANDIDATES = 3
+# an airport is called by its name without these words ("O'Hare" is O'Hare International Airport),
+# looked up when the text names no place of SHADOWING_KINDS with a prior of SHADOW_MIN_RANK or more
+# ("Denver" is the city), and not kept within DEDUPE_POINT_KM of a smaller place of that name
+# ("Begumpet" is the Hyderabad neighbourhood, not the airport there; "Pearson" is Toronto's airport,
+# not a small town in Georgia), worth an alias
+AIRPORT_TAILS = ("international airport", "airport")
+AIRPORT_TAIL_FACTOR = 0.97
 
 # -- ranking: score = match ** MATCH_POWER x prior term x context ---------------------------------
 
@@ -32,6 +51,10 @@ PREFIX_FLOOR = 0.6  # a prefix match's term: PREFIX_FLOOR + (1 - PREFIX_FLOOR) x
 # radius_km=) will drop most of them ("Lake" within the Bay Area)
 PREFIX_FILTERED_LIMIT = 20_000
 FUZZY_FACTOR = 0.85  # a fuzzy match's score is further multiplied by this
+# ... and a fuzzy match of an alias, abbreviation or former name by this too: places have many
+# alternate spellings (Culaba for Cuiaba), so a typo lands near one of a big place's far more
+# often than the person meant it ("Colaba" is the Mumbai neighbourhood)
+FUZZY_ALIAS_FACTOR = 0.85
 # name kinds (official, alias, former, code, abbreviation): how much each is worth as a match
 NAME_KIND_FACTOR = {"official": 1.0, "alias": 0.97, "former": 0.95, "abbreviation": 0.95, "code": 1.0}
 CONTEXT_MISS_FACTOR = 0.2  # a candidate outside the "Name, Context" context, when nothing is inside
@@ -39,6 +62,11 @@ CONTEXT_LATER_READING = 0.9  # inside the context's second (or later) reading ("
 CITY_ALIAS_FACTOR = 0.98  # a match through a city alias ("Bombay" -> Mumbai) from location search
 NEAR_SCALE_KM = 250.0  # near=(lat, lon): the boost halves about every 0.7 x this many km
 NEAR_FLOOR = 0.25  # ... down to this factor far away
+# a place's reach grows with its prior: the decay distance is NEAR_SCALE_KM x (rank /
+# NEAR_FULL_REACH_RANK) ** 2 (a neighbourhood at 0.2 ~16 km, a town at 0.4 ~60 km, a 500k city at
+# 0.65 ~165 km, a big city or a state the full 250 km), never below NEAR_MIN_SCALE_KM
+NEAR_FULL_REACH_RANK = 0.8
+NEAR_MIN_SCALE_KM = 5.0
 OVERRIDE_BOOST = 2.0  # entities an alias, rename, region or add rule names for the text
 
 # -- what is named after a place -------------------------------------------------------------------
