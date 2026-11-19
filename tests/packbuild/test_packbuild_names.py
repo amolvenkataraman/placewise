@@ -184,6 +184,12 @@ def test_india_specs_index_the_lgd_layers():
     assert all(layers[k].skip == "india_view_only" for k in ("states", "districts", "cities"))
 
 
+def test_india_post_neighbourhoods_rank_above_hamlets():
+    # Colaba, Koramangala: a named neighbourhood of a city outranks a GeoNames hamlet (~0.2)
+    layers = {spec.layer: spec for spec in name_specs.SPECS["ind"]}
+    assert layers["neighbourhoods"].rank.base == 0.35
+
+
 def test_usa_counties_rank_by_population_below_cities_of_their_size():
     layers = {spec.layer: spec for spec in name_specs.SPECS["usa"]}
     people = {"population": np.array([10_000_000, 2_300_000, 900, -1])}
