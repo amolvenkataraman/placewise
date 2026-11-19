@@ -22,7 +22,7 @@ from pathlib import Path
 from placewise.constants import water as const
 
 from . import names as name_index
-from .fetch import DEFAULT_CACHE, fetch, unzip
+from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads, fetch, unzip
 from .layer import write_pack
 from .sources import url
 from .sources.water import hydrolakes, names
@@ -85,6 +85,7 @@ def main(argv=None):
     parser.add_argument(
         "--tolerance-m", type=float, default=const.LAKE_TOLERANCE_M, help="lake outline simplification"
     )
+    add_keep_downloads(parser)
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     path = build_water(
@@ -92,6 +93,7 @@ def main(argv=None):
         min_lake_km2=args.min_lake_km2, tolerance_m=args.tolerance_m,
     )  # fmt: skip
     print(path)
+    delete_downloads(args)  # the raw downloads, once the pack is written
 
 
 if __name__ == "__main__":

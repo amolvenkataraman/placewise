@@ -20,6 +20,18 @@ Downloads are cached once in `~/.placewise/packbuild/` (`packbuild.fetch.DEFAULT
 the URL, SHA-256, size and retrieval date; `--refresh` downloads again. Nothing downloaded is
 committed.
 
+**Raw downloads are deleted once the pack is built** (no duplicate data on disk): every raw file or
+folder a build fetches or extracts is noted (`packbuild.fetch.track`: `fetch`, `unzip`, the ArcGIS
+and REST page folders, HydroLAKES, LGD's 7z extracts), and each builder's `main` ends with
+`delete_downloads(args)`, which deletes exactly those and their `.json` sidecars, then the folders
+that left empty. It never touches `--out` (even when it sits inside the cache), anything outside
+`--cache-dir`, or files this build didn't use; a file another build also reads (Natural Earth's
+countries, GeoNames) is downloaded again by the next build. A failed build stops before the
+cleanup, so its downloads stay cached for the retry. `--keep-downloads` keeps them (for
+iterating on a builder). A new builder does the same: `add_keep_downloads(parser)` before parsing,
+`delete_downloads(args)` as the last line of `main`, and any downloader of its own returns
+`track(path)`.
+
 ## World pack
 
 | Layer | Kind | Source | Licence |
@@ -506,7 +518,8 @@ Registry `sources/notable.json` (`wikidata`, `qrank`).
   big; the Wikidata API rate-limits) as TSV, about 110 MB for all kinds, each cached with its
   sidecar in `notable-<kind>/wikidata`; a cached result whose sidecar names another query is
   fetched again. QRank is pinned to one dated file (2026-11-15, SHA-256 in the registry notes);
-  QRank keeps only its three newest, so rebuilds read the cached copy.
+  QRank keeps only its three newest, so a rebuild after that needs the pin moved, or
+  `--keep-downloads` on the build before to keep the cached copy.
 - **Selection** (`sources/notable/rank.py`), 2026.11: 881,484 candidates; a floor of 1,000 page
   views a year (200 in India, the US and Canada) leaves 239,045; places with the same name key
   within 300 m are merged (a station and its building; the subway's "Union" and the railway's

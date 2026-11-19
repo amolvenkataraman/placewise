@@ -22,7 +22,7 @@ from pathlib import Path
 import numpy as np
 
 from . import names, us
-from .fetch import DEFAULT_CACHE
+from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads
 from .layer import LayerData, write_pack
 
 log = logging.getLogger(__name__)
@@ -102,9 +102,11 @@ def main(argv=None):
     parser.add_argument("--out", type=Path, default=DEFAULT_CACHE / "out", help="output directory")
     parser.add_argument("--version", default=dt.date.today().strftime("%Y.%m"), help="CalVer, e.g. 2026.11")
     parser.add_argument("--refresh", action="store_true", help="download the sources again")
+    add_keep_downloads(parser)
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     print(build(args.cache_dir, args.out, args.version, refresh=args.refresh))
+    delete_downloads(args)  # the raw downloads, once the pack is written
 
 
 if __name__ == "__main__":

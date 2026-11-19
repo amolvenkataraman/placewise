@@ -20,6 +20,7 @@ from pathlib import Path
 
 from placewise.constants import water as const
 
+from ...fetch import track
 from ...layer import LayerData
 from . import shapes
 from . import shp as _shp
@@ -35,7 +36,7 @@ def fetch_largest(url, cache_dir, min_area_km2, refresh=False, opener=open_range
     """(shp, dbf, count): a .shp holding the first `count` records, those of at least
     min_area_km2, and the archive's full .dbf; cached in <cache_dir>/HydroLAKES_polys_v10_shp/,
     each prefix with a .json sidecar (url, records, bytes, sha256, retrieval date)."""
-    folder = Path(cache_dir) / FOLDER
+    folder = track(Path(cache_dir) / FOLDER, sidecar=False)
     folder.mkdir(parents=True, exist_ok=True)
     remote = RemoteZip(url, opener=opener)
     whole = {}

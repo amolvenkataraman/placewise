@@ -23,7 +23,7 @@ from placewise.constants._keys import city_key
 from placewise.constants.lookup import CITY_EXCLUDED_FEATURE_CODES
 
 from . import country_profiles, names, served, timezones, world_aliases
-from .fetch import DEFAULT_CACHE, fetch, unzip
+from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads, fetch, unzip
 from .layer import write_pack
 from .sources import geonames, naturalearth, ourairports, url
 from .sources.geonames import read_tsv
@@ -127,10 +127,12 @@ def main(argv=None):
     parser.add_argument("--out", type=Path, default=DEFAULT_CACHE / "out", help="output directory")
     parser.add_argument("--version", default=dt.date.today().strftime("%Y.%m"), help="CalVer, e.g. 2026.11")
     parser.add_argument("--refresh", action="store_true", help="download the sources again")
+    add_keep_downloads(parser)
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     path = build_world(args.cache_dir, args.out, args.version, refresh=args.refresh)
     print(path)
+    delete_downloads(args)  # the raw downloads, once the pack is written
 
 
 if __name__ == "__main__":

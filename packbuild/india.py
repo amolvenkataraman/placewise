@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import names, regions_layer
-from .fetch import DEFAULT_CACHE, fetch, unzip
+from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads, fetch, unzip
 from .ind import crosswalk, defacto, lgd, places
 from .ind import layers as ind_layers
 from .ind import names as ind_names
@@ -196,6 +196,7 @@ def main(argv=None):
     parser.add_argument("--pincode-directory", type=Path, help="All India Pincode Directory CSV")
     parser.add_argument("--states", type=Path, help="state boundaries, WGS84 (needs a cleared licence)")
     parser.add_argument("--districts", type=Path, help="district boundaries, WGS84 (needs a cleared licence)")
+    add_keep_downloads(parser)
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     path = build_india(
@@ -209,6 +210,7 @@ def main(argv=None):
         districts=args.districts,
     )
     print(path)
+    delete_downloads(args)  # the raw downloads, once the pack is written
 
 
 if __name__ == "__main__":
