@@ -4,7 +4,8 @@ one answer: the best-shaped candidate, with the others listed as its alternates.
 
 Two candidates are the same place when they share a name (the key they matched or their own
 name), their kinds can describe one place (both settlements of some kind, else the same kind), and
-they overlap: one's point lies inside the other's outline, or both are points within
+they overlap: one's point lies inside the other's outline (a park's point within DEDUPE_PARK_KM of
+its outline's box: Wikidata's park coordinates are rough), or both are points within
 DEDUPE_POINT_KM of each other.
 """
 
@@ -84,3 +85,16 @@ def _km(lat1, lon1, lat2, lon2):
         + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
     )
     return 2 * MEAN_RADIUS_KM * math.asin(min(1.0, math.sqrt(a)))
+
+
+def in_box(box, lat, lon):
+    """Whether a point lies in a (south, west, north, east) box (west > east: across 180°)."""
+    s, w, n, e = box
+    return s <= lat <= n and (w <= lon <= e if w <= e else (lon >= w or lon <= e))
+
+
+def park_box(s, w, n, e):
+    """A park outline's box widened by DEDUPE_PARK_KM (longitude degrees shrink with latitude)."""
+    dlat = math.degrees(const.DEDUPE_PARK_KM / MEAN_RADIUS_KM)
+    dlon = dlat / max(math.cos(math.radians(max(abs(s), abs(n)))), 0.01)
+    return s - dlat, w - dlon, n + dlat, e + dlon

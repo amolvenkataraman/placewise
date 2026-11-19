@@ -44,7 +44,9 @@ loaders, `packbuild/packs/` one builder per pack, release tooling); `tests/` mir
 - **Country naming:** anything named after a country (folders, files, registry region keys, pack
   names) uses the lower-case ISO 3166-1 alpha-3 code: `constants/countries/usa/`,
   placewise-data's `datasets/regions/can.json`, `ind`. Alpha-3 codes are never Python keywords (alpha-2 `in` is).
-  Data values keep the standard alpha-2 (`iso2`, ids like `iso:IN-KA`).
+  Data values keep the standard alpha-2 (`iso2`, ids like `iso:IN-KA`). A pack or registry region
+  for a group of countries uses a short name from `constants.packs.MULTI_COUNTRY_REGIONS` (`eur`:
+  `eur-parks`), its pack.json listing the countries (`covers`).
 - **No app names:** placewise is general-purpose; features are described by what they do
   ("location search"), never by an app that uses them.
 - **Data lives with its purpose:** reference tables in `constants/countries/`, the source registry

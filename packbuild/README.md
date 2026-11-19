@@ -512,16 +512,19 @@ mode fetches it for those only. Lookup rules and the countries left out: `docs/p
 - **Reach.** Per country, 2 x the 90th percentile of the distance from each distinct point to its
   nearest neighbour, within 2 .. 30 km (`constants.postal`).
 
-## Park packs (`usa-parks`, `usa-parks-local`, `can-parks`, `world-parks`)
+## Park packs (`usa-parks`, `usa-parks-local`, `can-parks`, `eur-parks`, `world-parks`)
 
 ```
-uv run python -m packbuild.parks usa usa-local can world --version 2026.11
+uv run python -m packbuild.parks usa usa-local can eur world --version 2026.11
 ```
 
-NPS, USFS and PAD-US 4.1 (US), CPCAD (Canada) as one polygon layer per tier, Wikidata points
-elsewhere; the US's local parks (`parks_local`, tier 4) are the optional `usa-parks-local` pack,
-whose pack.json says `kind` parks, `covers` US, `requires` usa-parks. Tiers, ids, sources and gaps
-in `docs/parks.md`.
+NPS, USFS and PAD-US 4.1 (US), CPCAD (Canada) and the EEA's Nationally designated areas (37
+European countries) as one polygon layer per tier, Wikidata points elsewhere; the US's local parks
+(`parks_local`, tier 4) are the optional `usa-parks-local` pack, whose pack.json says `kind` parks,
+`covers` US, `requires` usa-parks. `eur-parks` is optional too: `kind` parks, `covers` the
+countries with sites (its name names no country: `constants.packs.MULTI_COUNTRY_REGIONS`, which
+also lets the source registry list sources under `eur`). Tiers, ids, sources and gaps in
+`docs/parks.md`.
 
 ## Notable pack (`world-notable`)
 

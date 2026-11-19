@@ -38,6 +38,15 @@ def test_within_lists_every_park_most_significant_first(geo):
     assert parks_near(r) == []  # nothing it is inside is also "near"
 
 
+def test_a_point_park_drawn_as_an_outline_is_not_listed_again(geo):
+    # world-parks has Alpha National Park as a point; the outline pack's park of that name answers
+    r = geo.lookup(0.75, -139.75)
+    assert "Alpha National Park" in [p.name for p in r.within] and parks_near(r) == []
+    r = geo.lookup(0.97, -139.75)  # near the outline (7.8 km) and the point's circle (19.7 km)
+    assert [n for n, _ in parks_near(r)].count("Alpha National Park") == 1
+    assert not any(n.place.id in ("wikidata:Q4", "wikidata:Q5") for n in r.near)  # by name or alias
+
+
 def test_parcels_of_one_park_are_one_place(geo):
     for lat in (0.105, 0.125):
         r = geo.lookup(lat, -139.295)

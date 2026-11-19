@@ -69,3 +69,71 @@ def test_short_names_slugs_and_name_tiers():
     assert tiers.name_tier("Corbett Tiger Reserve") == NATIONAL
     assert tiers.name_tier("Bhimashankar Wildlife Sanctuary") == STATE
     assert tiers.name_tier("Sundarbans") is None
+
+
+@pytest.mark.parametrize(
+    ("category", "english", "iucn", "km2", "expected"),
+    [
+        ("A", "National Park", "II", 300.0, (NATIONAL, "National Park")),
+        ("A", "Nacional Park", "II", 300.0, (NATIONAL, "National Park")),  # ES08, as the EEA spells it
+        ("A", "National Park - Core Area", "II", 900.0, (NATIONAL, "National Park")),  # FR01
+        ("A", "Swiss National Park", "Ia", 170.0, (NATIONAL, "National Park")),
+        ("A", "National Park (category II)", "II", 100.0, (NATIONAL, "National Park")),
+        ("C", "National Park", "notApplicable", 50.0, (NATIONAL, "National Park")),  # NL22: still one
+        ("A", "National Park - Buffer zone/Area of adhesion", "V", 1500.0, None),  # whole towns: FR16
+        ("A", "National Park - Peripheral zone", "V", 500.0, None),
+        ("C", "National Park to be established", "V", 50.0, None),
+        ("A", "Strict nature reserve of national park", "Ia", 10.0, (REGIONAL, "Strict nature reserve of national park")),  # noqa: E501
+        ("A", "Regional Nature Park", "V", 1000.0, (STATE, "Nature Park")),  # tier 2: a few kinds
+        ("A", "Regional/Provincial Nature Park", "V", 30.0, (STATE, "Nature Park")),
+        ("A", "Landscape Park", "V", 30.0, (STATE, "Landscape Park")),
+        ("A", "Protected Landscape Area", "V", 30.0, (STATE, "Protected Landscape Area")),
+        ("A", "Naturpark", "V", 30.0, (STATE, "Nature Park")),
+        ("A", "biosphere reserve", "V", 300.0, (STATE, "Biosphere Reserve")),
+        ("A", "Nature park IIIb (FBiH law)", "V", 30.0, (STATE, "Nature Park")),
+        ("A", "Managed Nature Reserve (category IV IUCN)", "IV", 3.0, (REGIONAL, "Managed Nature Reserve")),
+        ("A", "Nature Reserve (Svalbard)", "IV", 3.0, (REGIONAL, "Nature Reserve")),
+        ("A", "special conservation areas", "IV", 3.0, (REGIONAL, "Special Conservation Areas")),
+        ("A", "biosphere reserve - transition area", "V", 300.0, None),
+        ("A", "Nature Reserve", "IV", 2.0, (REGIONAL, "Nature Reserve")),
+        ("A", "Nature Reserve", "IV", 0.5, None),  # too small to name from afar
+        ("A", "Strict Nature Reserve", "II", 150.0, (STATE, "Strict Nature Reserve")),  # IUCN II, large
+        ("A", "Strict Nature Reserve", "II", 20.0, (REGIONAL, "Strict Nature Reserve")),
+        ("A", "Landscape Protection Area", "V", 500.0, None),  # Landschaftsschutzgebiet: everywhere
+        ("A", "Natura 2000 SCI", "notApplicable", 50.0, None),
+        ("A", "Ramsar Sites", "notApplicable", 50.0, None),
+        ("A", "No Protection Status", "notApplicable", 50.0, None),
+        ("B", "Forest Reserves", "IV", 50.0, None),  # sectoral
+        ("C", "Private Nature Reserve", "IV", 50.0, None),
+        ("A", "Biotope Protection Order", "IV", 50.0, None),
+    ],
+)  # fmt: skip
+def test_eea_designation_types(category, english, iucn, km2, expected):
+    assert tiers.eea_tier(category, english, iucn, km2) == expected
+
+
+def test_eea_code_overrides():
+    # Poland's and Latvia's "protected landscape areas" are light designations over farmland and towns
+    assert tiers.eea_tier("A", "Protected Landscape Area", "V", 500.0, code="PL04")[0] == REGIONAL
+    assert tiers.eea_tier("A", "Protected Landscape Area", "V", 500.0, code="CZ09")[0] == STATE
+    denmark = "Protected by conservation order, excl. Church surroundings"
+    assert tiers.eea_tier("A", denmark, "IV", 3.0, code="DK01") == (REGIONAL, denmark)
+    assert tiers.eea_tier("A", "Biotope Protection Order", "IV", 3.0, code="FR05") is None
+
+
+@pytest.mark.parametrize(
+    ("raw", "clean"),
+    [("2001221 Sarek", "Sarek"), ("Gaujas Nacionālais parks NZ 3822", "Gaujas Nacionālais parks"),
+     ("P N DELLE DOLOMITI BELLUNESI", "P N Delle Dolomiti Bellunesi"),
+     ("  Plitvička   jezera ", "Plitvička jezera"),
+     ("Ecrins", "Ecrins"), ("12345", "")],
+)  # fmt: skip
+def test_eea_names(raw, clean):
+    assert tiers.eea_name(raw) == clean
+
+
+def test_eea_nature_parks_are_never_labels():
+    # nature parks, biosphere reserves and protected landscapes take in whole towns, like national forests
+    from placewise.constants.parks import LABEL_SKIP_DESIGNATIONS
+
+    assert set(tiers.EEA_STATE_DESIGNATIONS) <= LABEL_SKIP_DESIGNATIONS

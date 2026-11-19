@@ -64,6 +64,11 @@ WATER_WORD_FACTOR = 0.97
 # -- merging the same place found in several packs -------------------------------------------------
 
 DEDUPE_POINT_KM = 15.0  # two point features with the same name this close are one place
+# a park point (world-parks: Wikidata's coordinate, often a rough one) with an outline park's name
+# within this distance of the outline's box is that park (Swiss National Park's point is 0.5 km
+# outside its outline)
+DEDUPE_PARK_KM = 5.0
+PARK_KIND = "park"
 # kinds that may describe one real place under one name (Toronto the city, its census
 # subdivision, its census division and its metro area), and how strongly each is preferred as the
 # answer the others are listed under

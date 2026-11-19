@@ -1,7 +1,8 @@
 """The source registry: one JSON file per purpose in `sources/` (boundaries.json, places.json,
-postal.json ...), each listing, per region (`world`, or a country's lower-case ISO 3166-1 alpha-3
-code: `usa`, `can`, `ind` ...), the sources used for that purpose there, with their attribution
-and that purpose's download URLs. A region's sources go in the pack of the same name (or `world`).
+postal.json ...), each listing, per region (`world`, a country's lower-case ISO 3166-1 alpha-3
+code: `usa`, `can`, `ind` ..., or a group of countries: `eur`), the sources used for that purpose
+there, with their attribution and that purpose's download URLs. A region's sources go in the pack
+of the same name (or `world`).
 
 Organising by purpose shows at a glance what each region is covered with, and where it isn't (a
 file's `gaps` says why a region has nothing). A source used for several purposes appears in each
@@ -16,6 +17,7 @@ from functools import cache
 from pathlib import Path
 
 from placewise.constants.countries.countries import BY_ALPHA3
+from placewise.constants.packs import MULTI_COUNTRY_REGIONS
 from placewise.model import Source
 
 SOURCES_DIR = Path(__file__).with_name("sources")
@@ -69,7 +71,8 @@ def _load(folder):
         for region, entries in doc.get("regions", {}).items():
             if not _is_region(region):
                 raise ValueError(
-                    f"{path.name}: region {region!r} is not 'world' or a lower-case ISO 3166-1 alpha-3 code"
+                    f"{path.name}: region {region!r} is not 'world', a lower-case ISO 3166-1 alpha-3 code "
+                    f"or one of {sorted(MULTI_COUNTRY_REGIONS)}"
                 )
             where = f"{path.name} [{region}]"
             registry[purpose][region] = tuple(_entry(item, where) for item in entries)
@@ -80,7 +83,11 @@ def _load(folder):
 
 
 def _is_region(region):
-    return region == "world" or (region.islower() and region.upper() in BY_ALPHA3)
+    return (
+        region == "world"
+        or region in MULTI_COUNTRY_REGIONS
+        or (region.islower() and region.upper() in BY_ALPHA3)
+    )
 
 
 def _entry(item, where):

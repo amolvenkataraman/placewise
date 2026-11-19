@@ -22,12 +22,13 @@ should still read each licence for its own obligations.
 | [placewise curated datasets: names and airports (datasets/names, datasets/airports)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | ind/states, ind/districts, ind/cities, world/cities (alias columns), world/admin1 (alias columns), world/countries (alias columns), world/airports (served_city), package: constants/countries/city_aliases.py (generated) |
 | [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, world-towns/towns (names), world/admin1 (alias columns), world/countries (alias columns), package: constants/countries/<country>/cities.py (generated), world-postal/postal, usa-zip/zcta |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
-| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-notable/notable, world-parks/park_points, world-water/lakes |
+| [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-notable/notable, eur-parks/parks_national, eur-parks/parks_state, eur-parks/parks_regional, world-parks/park_points, world-water/lakes |
 | [QRank](https://qrank.toolforge.org) | CC0-1.0 | world-notable/notable |
 | [National Park Service Administrative Boundaries of National Park System Units](https://irma.nps.gov/DataStore/Reference/Profile/2321443) | LicenseRef-public-domain | usa-parks/parks_national, usa-parks/parks_regional, usa-parks-local/parks_local |
 | [USDA Forest Service Administrative Forest Boundaries](https://data.fs.usda.gov/geodata/edw/datasets.php) | LicenseRef-public-domain | usa-parks/parks_state |
 | [Protected Areas Database of the United States (PAD-US) 4.1](https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e) | LicenseRef-public-domain | usa-parks/parks_state, usa-parks/parks_regional, usa-parks-local/parks_local |
 | [Canadian Protected and Conserved Areas Database (CPCAD), December 2025](https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c) | OGL-Canada-2.0 | can-parks/parks_national, can-parks/parks_state, can-parks/parks_regional, can-parks/parks_local |
+| [Nationally designated areas for public access (vector data), July 2026 (version 24)](https://sdi.eea.europa.eu/catalogue/srv/eng/catalog.search#/metadata/028003e7-7585-4d69-92fc-7f81e0cc2340) | CC-BY-4.0 | eur-parks/parks_national, eur-parks/parks_state, eur-parks/parks_regional |
 | [GHSL Settlement Model grid (GHS-SMOD R2023A), European Commission Joint Research Centre](https://human-settlement.emergency.copernicus.eu/ghs_smod2023.php) | CC-BY-4.0 | world-towns/towns |
 | [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
 | [Canadian Geographical Names Database (CGNDB), Natural Resources Canada](https://open.canada.ca/data/en/dataset/e27c6eba-3c5d-4051-9db2-082dc6411c2c) | OGL-Canada-2.0 | can/populated_places |
@@ -51,6 +52,8 @@ should still read each licence for its own obligations.
 | notable | world | Wikidata, QRank |
 | parks | world | Wikidata |
 | parks | can | Canadian Protected and Conserved Areas Database (CPCAD), December 2025 |
+| parks | eur | Nationally designated areas for public access (vector data), July 2026 (version 24), Wikidata |
+| parks | gbr | none: The EEA's Nationally designated areas have no United Kingdom sites since 2021, and the UK agencies' own outlines (Natural England, NatureScot, NRW, DAERA; OGL v3) aren't read yet. UK national parks are Wikidata points in world-parks. |
 | parks | ind | none: No openly licensed outlines: WII/ENVIS publishes lists marked All Rights Reserved, and Bhuvan, PARIVESH and NTCA maps are view-only; OpenStreetMap's outlines are ODbL (share-alike pack only, not built yet). India's national parks, tiger reserves and sanctuaries are Wikidata points in world-parks. |
 | parks | usa | National Park Service Administrative Boundaries of National Park System Units, USDA Forest Service Administrative Forest Boundaries, Protected Areas Database of the United States (PAD-US) 4.1 |
 | places | world | GeoNames, GHSL Settlement Model grid (GHS-SMOD R2023A), European Commission Joint Research Centre, placewise curated datasets: names and airports (datasets/names, datasets/airports) |
@@ -185,6 +188,8 @@ Driving side (property P1622, values Q11920728 left and Q14565199 right) of ever
 
 One SPARQL query per kind of place (packbuild/sources/notable/kinds.py holds the class allowlist and builds these URLs; a test keeps them equal), run on QLever's Wikidata endpoint (qlever.dev, University of Freiburg; an academic service without an SLA, much faster than WDQS, which times out on classes this big) and cached as TSV with a sidecar (URL, SHA-256, retrieval date), so a rebuild reads the cache offline. Items of the classes or their subclasses with a coordinate, an English label and at least one sitelink, never dissolved, demolished or closed (P576, P3999). Country (P17) is informational only: the boundary layers and the chosen worldview decide where a place is.
 
+English names for eur-parks: the English label of the item whose WDPA id (P809) is the site's natDAId ('Plitvice Lakes National Park' for Plitvička jezera, 'Swiss National Park' for Nationalpark), the oldest item when several share one id. Run on QLever's Wikidata endpoint as TSV (WDQS cuts the 112k-row answer off at its 60 s limit when busy).
+
 Parks known only by a point: items that are national parks or tiger reserves of India (or subclasses), wildlife refuges, and India's protected areas, with an English label, a coordinate (P625) and no dissolution date, outside the US and Canada (whose parks have outlines in usa-parks and can-parks). The radius is that of a circle of the item's area (P2046), capped at 30 km; such parks are only ever 'near' (in the area of), never 'within'. Country (P17) is read only to leave out the US and Canada: the packs carry no park's country, which comes from the boundary layers and the chosen worldview.
 
 English names of lakes (Q23397), reservoirs (Q131681), lagoons (Q187223), salt lakes (Q188025), marine lakes (Q1898470), artificial lakes (Q3215290) and crater lakes (Q204324) that have coordinates and an English Wikipedia article, two queries (about 14,000 and 4,000 items, November 2026). An item names a HydroLAKES outline its point falls in when neither Natural Earth nor another item already names it (Dal Lake, Wular Lake, Loktak Lake).
@@ -228,6 +233,14 @@ ScienceBase rights: 'Public Domain.' The credit is USGS's requested citation (no
 - Website: https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c
 
 The Open Government Portal record and the map service's copyright text give the Open Government Licence - Canada. The database is published as a File Geodatabase, so the build reads ECCC's map service of it in its native EPSG:3978 (NAD83 / Canada Atlas Lambert), generalised by the service to 10 m, and unprojects it (packbuild/projection.py; NAD83 used as WGS84). Only public protected areas are kept: private, NGO and habitat-only designations and OECMs are dropped (docs/parks.md). Ids are cpcad:<PARENT_ID>. CPCAD has no city parks apart from some municipal natural areas and British Columbia's municipal parks.
+
+## Nationally designated areas for public access (vector data), July 2026 (version 24)
+
+- Credit: European Environment Agency (EEA), Nationally designated areas for public access (vector data) - July 2026, https://doi.org/10.2909/028003e7-7585-4d69-92fc-7f81e0cc2340 (CC BY 4.0)
+- Licence: CC-BY-4.0
+- Website: https://sdi.eea.europa.eu/catalogue/srv/eng/catalog.search#/metadata/028003e7-7585-4d69-92fc-7f81e0cc2340
+
+The record's licence: 'License CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Copyright holder: European Environment Agency (EEA).' The nationally designated areas (formerly CDDA) the 38 Eionet countries report, the official European source behind the WDPA; the public version leaves out sites the EEA may not publish (some or all of Estonia's, Ireland's and Türkiye's: Türkiye has none) and has no United Kingdom since 2021. The continental-Europe GeoPackage (1.7 GB, EPSG:3035 ETRS89-LAEA, read with sqlite3 and unprojected by packbuild/projection.py, ETRS89 used as WGS84), its ProtectedSite outlines joined to DesignatedArea and DesignationType; simplified by the build to 10 m. Each new version has a new catalogue record and share link (look up 'Nationally designated areas for public access (vector data)'). Ids are eea:<natDAId> (the site code, which is also its WDPA id); names are the national ones as reported, English where Wikidata has an English label for the WDPA id (docs/parks.md). Natura 2000 is not used: it repeats these sites under habitat names, and NatDA already holds the national parks, nature parks and reserves people name.
 
 ## GHSL Settlement Model grid (GHS-SMOD R2023A), European Commission Joint Research Centre
 

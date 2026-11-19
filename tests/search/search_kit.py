@@ -168,7 +168,7 @@ def parks_layers():
             "point",
             {"id": ["wikidata:Q900001"], "name": ["Alpha Falls National Park"], "radius_km": np.array([5.0])},
             ("synthetic",),
-            lat=np.array([0.35]),
+            lat=np.array([0.42]),  # 2.2 km north of the outline: Wikidata's park points are rough
             lon=np.array([-139.8]),
         )
     ]

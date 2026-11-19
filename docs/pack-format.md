@@ -275,10 +275,10 @@ reader of an older index or pack derives the same values. The name rules (`place
 alpha-2 names `us`, `ca`, `in`) is `country` for that country; `<country>-<suffix>` and
 `world-<suffix>` cover that country or the world with the suffix's kind (`parks`, `parks-local`:
 parks; `water`; `notable`; `zip`, `postal`, `postcodes`: postal, requiring the country pack;
-`towns`); a
-trailing `-sa` (share-alike) is ignored; failing that, the layers decide (`parks_*` and
-`park_points`: parks; `marine`, `lakes`, `rivers`: water; `notable`; `zcta`, `postal`: postal;
-`towns`), else
+`towns`); a trailing `-sa` (share-alike) is ignored; a group of countries (`eur-parks`,
+`constants.packs.MULTI_COUNTRY_REGIONS`) gets its kind from the suffix but its `covers` only from
+pack.json; failing that, the layers decide (`parks_*` and `park_points`: parks; `marine`, `lakes`,
+`rivers`: water; `notable`; `zcta`, `postal`: postal; `towns`), else
 `other`. Readers ignore fields they don't know, so these additions keep index schema 1. The archive holds one
 top-level directory `<name>-<version>/` with only regular files and directories. The store downloads to a temporary file, checks the archive's
 SHA-256, unpacks to a temporary directory (refusing absolute paths, `..` and links), checks every

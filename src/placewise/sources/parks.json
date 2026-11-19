@@ -1,6 +1,6 @@
 {
   "purpose": "parks",
-  "description": "Parks and protected areas: national, state / provincial, regional and local parks, forests, refuges and reserves, as outlines in the usa-parks and can-parks packs and as points with an approximate radius in world-parks (docs/parks.md).",
+  "description": "Parks and protected areas: national, state / provincial, regional and local parks, forests, refuges and reserves, as outlines in the usa-parks, can-parks and eur-parks packs and as points with an approximate radius in world-parks (docs/parks.md).",
   "regions": {
     "usa": [
       {
@@ -70,6 +70,40 @@
         "notes": "The Open Government Portal record and the map service's copyright text give the Open Government Licence - Canada. The database is published as a File Geodatabase, so the build reads ECCC's map service of it in its native EPSG:3978 (NAD83 / Canada Atlas Lambert), generalised by the service to 10 m, and unprojects it (packbuild/projection.py; NAD83 used as WGS84). Only public protected areas are kept: private, NGO and habitat-only designations and OECMs are dropped (docs/parks.md). Ids are cpcad:<PARENT_ID>. CPCAD has no city parks apart from some municipal natural areas and British Columbia's municipal parks."
       }
     ],
+    "eur": [
+      {
+        "id": "eea-natda",
+        "name": "Nationally designated areas for public access (vector data), July 2026 (version 24)",
+        "url": "https://sdi.eea.europa.eu/catalogue/srv/eng/catalog.search#/metadata/028003e7-7585-4d69-92fc-7f81e0cc2340",
+        "licence": "CC-BY-4.0",
+        "credit": "European Environment Agency (EEA), Nationally designated areas for public access (vector data) - July 2026, https://doi.org/10.2909/028003e7-7585-4d69-92fc-7f81e0cc2340 (CC BY 4.0)",
+        "used_in": [
+          "eur-parks/parks_national",
+          "eur-parks/parks_state",
+          "eur-parks/parks_regional"
+        ],
+        "downloads": {
+          "sites": "https://sdi.eea.europa.eu/datashare/public.php/dav/files/8ribwpg4cZNkC3T/NatDA_2026_v01_public_EuropeEPSG3035.gpkg"
+        },
+        "notes": "The record's licence: 'License CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Copyright holder: European Environment Agency (EEA).' The nationally designated areas (formerly CDDA) the 38 Eionet countries report, the official European source behind the WDPA; the public version leaves out sites the EEA may not publish (some or all of Estonia's, Ireland's and Türkiye's: Türkiye has none) and has no United Kingdom since 2021. The continental-Europe GeoPackage (1.7 GB, EPSG:3035 ETRS89-LAEA, read with sqlite3 and unprojected by packbuild/projection.py, ETRS89 used as WGS84), its ProtectedSite outlines joined to DesignatedArea and DesignationType; simplified by the build to 10 m. Each new version has a new catalogue record and share link (look up 'Nationally designated areas for public access (vector data)'). Ids are eea:<natDAId> (the site code, which is also its WDPA id); names are the national ones as reported, English where Wikidata has an English label for the WDPA id (docs/parks.md). Natura 2000 is not used: it repeats these sites under habitat names, and NatDA already holds the national parks, nature parks and reserves people name."
+      },
+      {
+        "id": "wikidata",
+        "name": "Wikidata",
+        "url": "https://www.wikidata.org",
+        "licence": "CC0-1.0",
+        "credit": "Wikidata (wikidata.org), CC0",
+        "used_in": [
+          "eur-parks/parks_national",
+          "eur-parks/parks_state",
+          "eur-parks/parks_regional"
+        ],
+        "downloads": {
+          "parks_wdpa": "https://qlever.dev/api/wikidata?action=tsv_export&query=PREFIX%20wdt%3A%20%3Chttp%3A%2F%2Fwww.wikidata.org%2Fprop%2Fdirect%2F%3E%20PREFIX%20rdfs%3A%20%3Chttp%3A%2F%2Fwww.w3.org%2F2000%2F01%2Frdf-schema%23%3E%20SELECT%20%3Fwdpa%20%3Fitem%20%3Fname%20WHERE%20%7B%20%3Fitem%20wdt%3AP809%20%3Fwdpa%20%3B%20rdfs%3Alabel%20%3Fname%20.%20FILTER%28LANG%28%3Fname%29%20%3D%20%22en%22%29%20%7D"
+        },
+        "notes": "English names for eur-parks: the English label of the item whose WDPA id (P809) is the site's natDAId ('Plitvice Lakes National Park' for Plitvička jezera, 'Swiss National Park' for Nationalpark), the oldest item when several share one id. Run on QLever's Wikidata endpoint as TSV (WDQS cuts the 112k-row answer off at its 60 s limit when busy)."
+      }
+    ],
     "world": [
       {
         "id": "wikidata",
@@ -91,6 +125,7 @@
     ]
   },
   "gaps": {
-    "ind": "No openly licensed outlines: WII/ENVIS publishes lists marked All Rights Reserved, and Bhuvan, PARIVESH and NTCA maps are view-only; OpenStreetMap's outlines are ODbL (share-alike pack only, not built yet). India's national parks, tiger reserves and sanctuaries are Wikidata points in world-parks."
+    "ind": "No openly licensed outlines: WII/ENVIS publishes lists marked All Rights Reserved, and Bhuvan, PARIVESH and NTCA maps are view-only; OpenStreetMap's outlines are ODbL (share-alike pack only, not built yet). India's national parks, tiger reserves and sanctuaries are Wikidata points in world-parks.",
+    "gbr": "The EEA's Nationally designated areas have no United Kingdom sites since 2021, and the UK agencies' own outlines (Natural England, NatureScot, NRW, DAERA; OGL v3) aren't read yet. UK national parks are Wikidata points in world-parks."
   }
 }
