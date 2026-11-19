@@ -210,6 +210,16 @@ Packs built without OurAirports' `type` read every airport as medium, without `s
 served. Airport outlines (OSM aeroway areas, or boxes from runway ends) would replace the radius;
 they are a future data item.
 
+## Time zones
+
+`Result.tz` is the IANA zone of the point: on land and within the territorial sea (12 nmi), from
+the zones the packs give their admin units (`placewise.engine._timezones`), else the nearest
+city's. Farther out at sea it is the nautical zone of the longitude, 15-degree bands centred on
+multiples of 15 degrees (UTC-10 from 157.5 W to 142.5 W), named as tzdb's fixed zones with their
+inverted sign (`Etc/GMT+10` for UTC-10, `Etc/GMT` for UTC), and `sources["tz"]` is
+`"nautical:longitude"` so a caller can tell it from a land zone. Ships and aircraft keep other
+times in practice; this is the zone a local date at sea is usually computed in.
+
 ## Labels
 
 `label.style = "locality"` (the default) gives "<locality>, <admin1>, <country>", falling back to

@@ -4,7 +4,8 @@ The label is "<name>, <admin1>, <country>", consecutive repeats dropped ("New Yo
 where <name> is the locality (label.style "locality", the default) or the city (style "city"),
 each falling back to the other; in a national or state park (_nearby.parks.label_park) it is "<name>,
 <park>", or the park alone without one (label.parks, on by default); label.template formats any
-field instead. Far offshore, the label names a reference place: "Offshore, 15 km S of Toronto".
+field instead. Far offshore, the label names a reference place: "Offshore, 15 km S of Toronto",
+and the time zone is the nautical zone of the longitude (Etc/GMT+10 at 150 W; source "nautical:longitude").
 On a sea or lake, the label names it ("On Lake Ontario"; placewise.engine._nearby.water).
 """
 
@@ -17,6 +18,7 @@ from placewise.model import Nearby, PlaceKind, Relation, Result
 from .._nearby import references as nearby
 from .._nearby.notable import RADIUS
 from .._nearby.parks import label_park
+from .._timezones import nautical
 from ..naming.rules import same_name
 from .matches import matches
 
@@ -49,6 +51,7 @@ def build(geo, lat, lon, a, named, order, locked):
     admin1_l = _places(layers, const.ADMIN1, a["aidx"])
     city_l0 = _places(layers, const.CITIES, np.where(land, city, -1))
     tz_l = _tz(geo, a, land, minus)
+    sea_tz = _sea_tz(lon, land)
     if town is not None:
         town_city_l = _places(layers, const.CITIES, a["town_city"])
         town_loc_l = _places(layers, const.CITIES, a["town_locality"])
@@ -114,7 +117,10 @@ def build(geo, lat, lon, a, named, order, locked):
             elif tz_l[i]:
                 tz = tz_l[i]
                 sources["tz"] = src_tz
-        elif water[i] >= 0:
+        else:  # beyond every territorial sea: the nautical zone of the longitude
+            tz = sea_tz[i]
+            sources["tz"] = const.TZ_NAUTICAL
+        if ci < 0 and water[i] >= 0:
             w = view_rows[water[i]]
             water_near = Nearby(
                 place(const.COUNTRIES, w if w >= 0 else water[i]), Relation.OFFSHORE,
@@ -214,6 +220,15 @@ def _places(layers, key, rows):
         made[:] = [layers.place(key, r) for r in unique.tolist()]
         out[have] = made[inverse.ravel()]
     return out.tolist()
+
+
+def _sea_tz(lon, land):
+    """The nautical zone of each point at sea (None on land)."""
+    out = [None] * len(land)
+    sea = np.flatnonzero(~land)
+    for i, zone in zip(sea.tolist(), nautical.zone_names(lon[sea]), strict=True):
+        out[i] = zone
+    return out
 
 
 def _tz(geo, a, land, minus):

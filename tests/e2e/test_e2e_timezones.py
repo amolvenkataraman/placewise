@@ -41,5 +41,22 @@ def test_zone_on_each_side_of_a_line(geo, name, point, zone):
     assert r.sources["tz"].startswith("world/timezones:")
 
 
-def test_open_ocean_has_no_zone(geo):
-    assert geo.lookup(0.0, -140.0).tz is None
+@pytest.mark.parametrize(
+    ("point", "zone"),
+    [
+        ((0.0, -140.0), "Etc/GMT+9"),  # mid-Pacific, south of Hawaii's longitude band: UTC-9
+        ((10.0, -150.0), "Etc/GMT+10"),
+        ((50.0, -30.0), "Etc/GMT+2"),  # mid-Atlantic
+        ((-40.0, 80.0), "Etc/GMT-5"),  # southern Indian Ocean: UTC+5
+        ((0.0, 0.0), "Etc/GMT"),  # Gulf of Guinea, beyond every territorial sea
+    ],
+)
+def test_open_ocean_has_the_nautical_zone(geo, point, zone):
+    r = geo.lookup(*point)
+    assert r.country is None
+    assert r.tz == zone and r.sources["tz"] == "nautical:longitude"
+
+
+def test_territorial_sea_keeps_the_land_zone(geo):
+    r = geo.lookup(21.20, -157.80)  # 8 km off Oahu's south shore, within 12 nmi
+    assert r.tz == "Pacific/Honolulu" and r.sources["tz"].startswith("world/timezones:")

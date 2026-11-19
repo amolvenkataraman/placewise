@@ -62,7 +62,8 @@ def test_offshore_within_territorial_waters_keeps_the_country(geo):
 
 def test_far_offshore_has_no_country_but_names_the_nearest(geo):
     r = geo.lookup(1.4, -139.5)  # 44 km north of Alphaland, 67 km south of Gammaland
-    assert r.country is None and r.admin1 is None and r.city is None and r.tz is None
+    assert r.country is None and r.admin1 is None and r.city is None
+    assert r.tz == "Etc/GMT+9" and r.sources["tz"] == const.TZ_NAUTICAL  # 139.5 W: UTC-9 at sea
     assert r.water.relation == Relation.OFFSHORE
     assert r.water.place.id == "iso:XA"
     assert r.water.distance_km == pytest.approx(44.5, abs=0.1)
