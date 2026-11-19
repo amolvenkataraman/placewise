@@ -41,8 +41,8 @@ placewise is the third option: the answer a person would give, computed on your 
 > universities, stadiums), park outlines in 35 European countries, postcodes in 116 more countries,
 > town outlines worldwide, precise US/Canada/India borders and islands (a point in Niagara Falls, NY
 > is never Canada; Treasure Island is land, not "On San Francisco Bay"), and a readable result card
-> (`print(result)`, `placewise lookup 43.65 -79.38`). The first lookup takes well under a second;
-> search answers in about 2 ms.
+> (`print(result)`, `placewise lookup 43.65 -79.38`). Speed and accuracy figures are in
+> [By the numbers](#by-the-numbers).
 >
 > **Doesn't work yet:** India state/district/city outlines (India uses PIN-code areas for now),
 > UK parks (the European data has had no UK since 2021), full detail for countries beyond the US,
@@ -53,6 +53,53 @@ placewise is the third option: the answer a person would give, computed on your 
 > add country packs with `placewise data install usa can ind`, or turn on auto mode
 > (`placewise data mode auto`) to fetch them when a lookup first needs them (see [Data](#data);
 > `placewise data status` shows them all).
+
+## By the numbers
+
+Measured with [`benchmarks/bench.py`](https://github.com/amolvenkataraman/placewise/blob/master/benchmarks/bench.py) on a 2019 laptop (Intel i7-9750H, one
+thread, Python 3.14), placewise 0.1.0a2, data 2026.11.1. Run it on your own packs to compare.
+
+**Speed**
+
+| | World pack only | All 14 packs |
+|---|---|---|
+| First lookup in a fresh process | 0.25 s | 6.1 s (0.7 s with world + usa + can + ind) |
+| One lookup after that (median / p95) | 2.7 / 3.6 ms | 12 / 20 ms |
+| Batch, `lookup_many`, points near cities | 11,700 points/s | 1,400 points/s; 11,900 with `near=False` |
+| Batch, points anywhere on the globe | 15,400 points/s | 4,100 points/s; 15,300 with `near=False` |
+| Search, `find` (median / p95, 364 queries) | | 3.4 / 19 ms |
+| Type-ahead, `suggest` (median / p95) | | 9.8 / 37 ms |
+| Peak memory | 370 MB | 2.0 GB at first lookup; 6 GB during 100k-point batches |
+
+With every pack installed most of the time goes to `near`: distances to the nearest park, lake,
+landmark and postcode outline. `near=False` skips it when only the containing places are needed.
+First lookups are slower with the parks and water packs because their distance indexes are built
+on first use (making that lazy by region is planned).
+
+**Accuracy** (`tests/e2e`, real packs, public places only)
+
+- Search: **99.7% top-1, 100% top-3** on 364 queries: cities, airports by code, parks, landmarks,
+  postcodes, typos, old names (Bangalore, Gurgaon), context (`"Paris", country="US"`). The one miss
+  is Manali (the Chennai suburb outranks the hill station).
+- Reverse lookup: 137 hand-checked points, plus 33 border and island points (Niagara Falls on both
+  sides, Detroit/Windsor, Point Roberts, Derby Line/Stanstead, Raxaul/Birgunj, Treasure Island,
+  Alcatraz, Mackinac): all correct.
+- India: state lines agree with an independent reference for 99.7% of points, districts 85%.
+- 4,496 unit tests and 833 end-to-end checks.
+
+**Data** (1.74 million features in 14 packs: 650 MB on disk, 228 MB to download; the base is
+49 MB on disk, 14 MB to download)
+
+| | | | |
+|---|---|---|---|
+| Cities (world) | 172,034 | Postcodes, 116 countries | 867,468 |
+| Notable places | 177,600 | US ZIP Code areas | 33,791 |
+| Park outlines (US, Canada, Europe) | 203,790 | India PIN-code areas / post offices | 19,628 / 100,138 |
+| US places / counties | 32,629 / 3,235 | Canadian municipalities / named places | 5,161 / 25,906 |
+| Town outlines (GHS-SMOD) | 39,220 | Lakes / named reservoirs | 4,659 / 1,222 |
+| Airports | 6,146 | Disputed areas (worldviews) | 99 |
+
+**Code**: about 35,000 lines of Python, NumPy the only runtime dependency, Python 3.10+.
 
 ## Coverage
 
@@ -107,6 +154,8 @@ with its state, for every area India claims; `"CN"` puts Taiwan, Hong Kong and M
 - World: municipal outlines where an openly licensed global source allows (geoBoundaries), a fame
   signal for towns so search ranks famous small places (Manali) over bigger namesakes, park outlines
   for the UK.
+- Speed: build the parks and water distance indexes lazily by region, so a full install's first
+  lookup and nearby search get closer to the core packs' speed.
 - A few more countries at full depth only where the government data is as good and stable as the US
   and Canada's (candidates: New Zealand, Australia, UK).
 
@@ -153,7 +202,7 @@ import placewise
 r = placewise.lookup(43.6426, -79.3871)       # downloads the world pack on first use
 r.label                                       # "Toronto, Ontario, Canada"
 r.admin1.codes, r.tz, r.airport               # ISO codes, "America/Toronto", Nearby(YTZ, 1.8 km)
-placewise.Geocoder().lookup_many(lats, lons)  # vectorised, tens of thousands of points/s
+placewise.Geocoder().lookup_many(lats, lons)  # vectorised: 1,400 to 15,000 points/s (By the numbers)
 
 r = placewise.lookup(36.1147, -115.1728)      # fetches the usa pack first (auto mode): the Las Vegas Strip
 r.locality.name, r.sublocality.name           # "Las Vegas", "Paradise" (the census place)
