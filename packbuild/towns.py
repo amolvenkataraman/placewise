@@ -22,7 +22,7 @@ from placewise.constants import lookup as lookup_const
 from placewise.constants import towns as const
 from placewise.packs import open_pack
 
-from .fetch import DEFAULT_CACHE, fetch
+from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads, fetch
 from .layer import LayerData, write_pack
 from .sources import url
 from .sources.ghsl.geotiff import GeoTiff
@@ -130,9 +130,11 @@ def main(argv=None):
     parser.add_argument("--world", type=Path, help="world pack directory (default: <out>/world-<version>)")
     parser.add_argument("--refresh", action="store_true", help="download the sources again")
     parser.add_argument("--tolerance-m", type=float, default=TOLERANCE_M, help="outline simplification")
+    add_keep_downloads(parser)
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     print(build(args.cache_dir, args.out, args.version, args.world, args.refresh, args.tolerance_m))
+    delete_downloads(args)  # the raw downloads, once the pack is written
 
 
 if __name__ == "__main__":

@@ -18,10 +18,12 @@ from e2e_kit import geocoder
 PACKS = (
     "world",
     "usa",
+    "usa-zip",
     "can",
     "ind",
     "world-water",
     "usa-parks",
+    "usa-parks-local",
     "can-parks",
     "world-parks",
     "world-notable",
