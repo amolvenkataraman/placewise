@@ -23,10 +23,10 @@ import numpy as np
 
 from placewise.geo import from_web_mercator, geohash_encode
 
-from .. import url
-from . import tiers
-from ._common import ParkRow, WebMercator, feature_area, feature_of
-from ._rest import fetch_query, read_pages, ungeneralised
+from ... import url
+from .. import tiers
+from .._common import ParkRow, WebMercator, feature_area, feature_of
+from .._rest import fetch_query, read_pages, ungeneralised
 
 SOURCE = "padus"
 FIELDS = "OBJECTID,Unit_Nm,Loc_Nm,Loc_Ds,Mang_Name,Mang_Type,Des_Tp,State_Nm,Source_PAID,Pub_Access,GIS_Acres"

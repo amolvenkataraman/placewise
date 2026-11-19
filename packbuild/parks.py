@@ -24,7 +24,8 @@ from pathlib import Path
 from . import names
 from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads
 from .layer import write_pack
-from .sources.parks import _common, cpcad, eea, nps, padus, usfs, wikidata
+from .sources.parks import _common, cpcad, eea, wikidata
+from .sources.parks.usa import nps, padus, usfs
 
 log = logging.getLogger(__name__)
 

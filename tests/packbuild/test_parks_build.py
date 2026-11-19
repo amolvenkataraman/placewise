@@ -7,7 +7,8 @@ import pytest
 from natda_kit import write_natda
 
 from packbuild import parks
-from packbuild.sources.parks import cpcad, eea, nps, padus, usfs, wikidata
+from packbuild.sources.parks import cpcad, eea, wikidata
+from packbuild.sources.parks.usa import nps, padus, usfs
 from placewise.engine._nearby.parks import Parks
 from placewise.packs import open_pack
 
