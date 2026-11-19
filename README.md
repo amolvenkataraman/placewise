@@ -276,8 +276,8 @@ placewise attribution                 # the installed packs' sources, licences a
 
 The default keeps the base lean: only the world pack until you install more. Auto mode with its
 default kinds fetches only country packs, and only for the countries you look up. Sizes for the
-2026.11 data on disk: `world` 50 MB, `usa` 71 MB, `can` 90 MB, `ind` 41 MB, `usa-parks` 64 MB,
-`can-parks` 33 MB, `world-water` 52 MB, `world-parks` 0.6 MB, `world-postal` 80 MB (postcode
+2026.11 data on disk: `world` 50 MB, `usa` 71 MB, `can` 90 MB, `ind` 70 MB, `usa-parks` 64 MB,
+`can-parks` 33 MB, `world-water` 52 MB, `world-parks` 0.6 MB, `world-postal` 59 MB (postcode
 points outside the US, Canada and India: `docs/postal.md`), and two packs that are optional even
 beside their own: `usa-zip` 53 MB (US ZIP Code areas: `postal`, and search by ZIP Code; without it
 US points have no postal code and everything else is the same) and `usa-parks-local` 43 MB (city

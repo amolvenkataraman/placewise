@@ -508,7 +508,7 @@ mode fetches it for those only. Lookup rules and the countries left out: `docs/p
   areas), SG, PT, AE (undocumented sources), HK, MO (placeholder codes), Northern Ireland's BT
   codes (LPS terms), CEDEX codes and impossible points; then exact repeats and placeholder
   points (a coordinate 3 or more codes share, where each has its own point too:
-  Paris's centre). 867,468 points remain, 507,930 codes in 116 countries; 80 MB installed (ids, unique per point, are about 30 MB of it with their index entries).
+  Paris's centre). 867,468 points remain, 507,930 codes in 116 countries; 59 MB installed; the ids (unique per point) are derived from country and code, not stored, which saves 25 MB (docs/pack-format.md, "Derived ids").
 - **Reach.** Per country, 2 x the 90th percentile of the distance from each distinct point to its
   nearest neighbour, within 2 .. 30 km (`constants.postal`).
 
@@ -612,7 +612,7 @@ in `docs/naming.md` ("Town and city outlines").
   Mollweide and unprojected.
 - **2026.11.1:** 1,102,488 settlement cells, 840,829 outside the three countries, 112,446
   clusters, 39,220 named (7,466 centres, 31,754 towns; 29,389 with a population). The build takes
-  about 22 s and 0.7 GB from the cached zip; the pack is 8.5 MB on disk. The zip is the only
+  about 22 s and 0.7 GB from the cached zip; the pack is 7.8 MB on disk (its ids derived, not stored). The zip is the only
   download; it can be deleted once the pack is built.
 - **Gaps.** The 2020 grid misses newer growth; GeoNames' place can be a suburb's where the town's
   own point lies outside the cluster; one urban centre can hold several cities (Tokyo, Kawasaki and
