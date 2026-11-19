@@ -20,7 +20,7 @@ should still read each licence for its own obligations.
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/pincodes, ind/regions |
 | [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/neighbourhoods, ind/pincodes, ind/post_offices, ind/regions |
 | [placewise curated datasets: names and airports (datasets/names, datasets/airports)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | ind/states, ind/districts, ind/cities, world/cities (alias columns), world/admin1 (alias columns), world/countries (alias columns), world/airports (served_city), package: constants/countries/city_aliases.py (generated) |
-| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, world/admin1 (alias columns), world/countries (alias columns), package: constants/countries/<country>/cities.py (generated), usa-zip/zcta |
+| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, world-towns/towns (names), world/admin1 (alias columns), world/countries (alias columns), package: constants/countries/<country>/cities.py (generated), usa-zip/zcta |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
 | [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-notable/notable, world-parks/park_points, world-water/lakes |
 | [QRank](https://qrank.toolforge.org) | CC0-1.0 | world-notable/notable |
@@ -28,6 +28,7 @@ should still read each licence for its own obligations.
 | [USDA Forest Service Administrative Forest Boundaries](https://data.fs.usda.gov/geodata/edw/datasets.php) | LicenseRef-public-domain | usa-parks/parks_state |
 | [Protected Areas Database of the United States (PAD-US) 4.1](https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e) | LicenseRef-public-domain | usa-parks/parks_state, usa-parks/parks_regional, usa-parks-local/parks_local |
 | [Canadian Protected and Conserved Areas Database (CPCAD), December 2025](https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c) | OGL-Canada-2.0 | can-parks/parks_national, can-parks/parks_state, can-parks/parks_regional, can-parks/parks_local |
+| [GHSL Settlement Model grid (GHS-SMOD R2023A), European Commission Joint Research Centre](https://human-settlement.emergency.copernicus.eu/ghs_smod2023.php) | CC-BY-4.0 | world-towns/towns |
 | [Statistics Canada, 2021 Census of Population, population and dwelling counts](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201) | LicenseRef-StatCan-Open-Licence | can/provinces, can/cd, can/csd, can/cma, can/fsa |
 | [Canadian Geographical Names Database (CGNDB), Natural Resources Canada](https://open.canada.ca/data/en/dataset/e27c6eba-3c5d-4051-9db2-082dc6411c2c) | OGL-Canada-2.0 | can/populated_places |
 | [Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic)](https://www150.statcan.gc.ca/n1/en/catalogue/92-179-X) | LicenseRef-StatCan-Open-Licence | can/fsa |
@@ -51,7 +52,7 @@ should still read each licence for its own obligations.
 | parks | can | Canadian Protected and Conserved Areas Database (CPCAD), December 2025 |
 | parks | ind | none: No openly licensed outlines: WII/ENVIS publishes lists marked All Rights Reserved, and Bhuvan, PARIVESH and NTCA maps are view-only; OpenStreetMap's outlines are ODbL (share-alike pack only, not built yet). India's national parks, tiger reserves and sanctuaries are Wikidata points in world-parks. |
 | parks | usa | National Park Service Administrative Boundaries of National Park System Units, USDA Forest Service Administrative Forest Boundaries, Protected Areas Database of the United States (PAD-US) 4.1 |
-| places | world | GeoNames, placewise curated datasets: names and airports (datasets/names, datasets/airports) |
+| places | world | GeoNames, GHSL Settlement Model grid (GHS-SMOD R2023A), European Commission Joint Research Centre, placewise curated datasets: names and airports (datasets/names, datasets/airports) |
 | places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts, Canadian Geographical Names Database (CGNDB), Natural Resources Canada |
 | places | ind | All India Pincode Directory (Department of Posts, Open Government Data Platform India), Local Government Directory (LGD), Ministry of Panchayati Raj |
 | places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
@@ -223,6 +224,14 @@ ScienceBase rights: 'Public Domain.' The credit is USGS's requested citation (no
 - Website: https://open.canada.ca/data/en/dataset/6c343726-1e92-451a-876a-76e17d398a1c
 
 The Open Government Portal record and the map service's copyright text give the Open Government Licence - Canada. The database is published as a File Geodatabase, so the build reads ECCC's map service of it in its native EPSG:3978 (NAD83 / Canada Atlas Lambert), generalised by the service to 10 m, and unprojects it (packbuild/projection.py; NAD83 used as WGS84). Only public protected areas are kept: private, NGO and habitat-only designations and OECMs are dropped (docs/parks.md). Ids are cpcad:<PARENT_ID>. CPCAD has no city parks apart from some municipal natural areas and British Columbia's municipal parks.
+
+## GHSL Settlement Model grid (GHS-SMOD R2023A), European Commission Joint Research Centre
+
+- Credit: © European Union, 1995-2026, GHSL (JRC), CC BY 4.0; Schiavina M., Melchiorri M., Pesaresi M. (2023): GHS-SMOD R2023A, doi:10.2905/A0DF7A6F-49DE-46EA-9BDE-563437A6E2BA
+- Licence: CC-BY-4.0
+- Website: https://human-settlement.emergency.copernicus.eu/ghs_smod2023.php
+
+The 2020 epoch of the Degree of Urbanisation grid (1 km, World Mollweide ESRI:54009), 36 MB zip. The folder's copyright.txt: '(c) European Union, 1995-2026 ... Any copyright and/or sui generis right on the dataset is licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) licence. Reuse is allowed provided appropriate credit is given and any changes are indicated.' Changes: urban centres (class 30) and dense and semi-dense urban clusters (23, 22) traced into outlines, cut at Natural Earth's borders, simplified, unprojected and named from GeoNames; populations from the zip's own urban centre and dense urban cluster extracts (packbuild.towns). The grid is read without GDAL (packbuild/sources/ghsl/geotiff.py: BigTIFF, LZW tiles). Releases are immutable, release-coded folders on the JRC FTP; new ones come every 2-3 years.
 
 ## Statistics Canada, 2021 Census of Population, population and dwelling counts
 
