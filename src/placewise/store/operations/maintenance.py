@@ -7,9 +7,9 @@ from pathlib import Path
 
 from placewise.constants import store as const
 
-from . import archive
-from .errors import PackNotInstalled, StoreError
-from .paths import check_name, check_version
+from .. import archive
+from ..errors import PackNotInstalled, StoreError
+from ..paths import check_name, check_version
 
 
 class MaintenanceMixin:

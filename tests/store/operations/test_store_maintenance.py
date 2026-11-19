@@ -1,4 +1,4 @@
-"""placewise.store.maintenance: verify, prune and remove.
+"""placewise.store.operations.maintenance: verify, prune and remove.
 No network: packs are served from file:// URLs."""
 
 import pytest

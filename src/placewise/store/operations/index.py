@@ -10,10 +10,10 @@ from dataclasses import dataclass, field
 from placewise.constants import store as const
 from placewise.model import PackInfo
 
-from . import net
-from .coverage import from_entry
-from .errors import DownloadError, OfflineError, StoreError
-from .paths import check_name, check_version
+from .. import net
+from ..coverage import from_entry
+from ..errors import DownloadError, OfflineError, StoreError
+from ..paths import check_name, check_version
 
 
 @dataclass(frozen=True)

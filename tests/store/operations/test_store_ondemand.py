@@ -1,4 +1,4 @@
-"""placewise.store.ondemand: which packs a batch of points or a search needs, and fetching them in
+"""placewise.store.operations.ondemand: which packs a batch of points or a search needs, and fetching them in
 auto mode (once, under a lock, with a log line); manual and locked never download. No network:
 releases are file:// directories, and the locked tests make any fetch fail loudly."""
 

@@ -7,7 +7,7 @@ import sys
 from placewise.constants import lookup as lookup_const
 from placewise.constants import store as store_const
 from placewise.store import StoreError
-from placewise.store.ondemand import human_size
+from placewise.store.operations.ondemand import human_size
 
 from ._common import one_line, open_store, subparser
 

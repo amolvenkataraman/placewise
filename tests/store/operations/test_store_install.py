@@ -1,4 +1,4 @@
-"""placewise.store.install: install, ensure and update, and the integrity checks an install runs.
+"""placewise.store.operations.install: install, ensure and update, and the integrity checks an install runs.
 No network: packs are served from file:// URLs."""
 
 import json

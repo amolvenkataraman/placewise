@@ -12,8 +12,8 @@ import time
 
 from placewise.constants import store as const
 
-from .coverage import Coverage
-from .errors import StoreError
+from ..coverage import Coverage
+from ..errors import StoreError
 from .index import parse_index
 
 log = logging.getLogger("placewise.store")

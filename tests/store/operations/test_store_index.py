@@ -1,4 +1,4 @@
-"""placewise.store.index: fetching, parsing, mirroring and caching the pack index, and offline use.
+"""placewise.store.operations.index: fetching, parsing, mirroring and caching the pack index, and offline use.
 No network: packs are served from file:// URLs."""
 
 import json

@@ -10,9 +10,9 @@ from pathlib import Path
 
 from placewise.constants import store as const
 
-from . import archive, net
-from .errors import IntegrityError, OfflineError, PackNotInstalled, StoreError, UnsupportedSchemaError
-from .paths import check_name, check_version, version_key
+from .. import archive, net
+from ..errors import IntegrityError, OfflineError, PackNotInstalled, StoreError, UnsupportedSchemaError
+from ..paths import check_name, check_version, version_key
 
 
 class InstallMixin:
