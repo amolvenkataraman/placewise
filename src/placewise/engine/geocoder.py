@@ -10,7 +10,8 @@ The rules, in the order they run (constants in placewise.constants.lookup):
    elsewhere, the town or city outline a point is in, when the world-towns pack is open
    (naming.towns);
    elsewhere the nearest postcode of the world-postal pack (_nearby.postal);
-5. airport, and the nearest country far offshore (_nearby.references);
+5. the airport the point is at or near, by size and service (_nearby.airports), and the nearest
+   country far offshore (_nearby.references);
 6. parks the point is within or near, from the park packs (_nearby.parks);
 7. the sea or lake a point is on, and the water beside it, when a water pack is open (_nearby.water);
 8. notable places near it, when the world-notable pack is open (_nearby.notable);
@@ -38,6 +39,7 @@ from ._admin import Admin
 from ._cities import Cities
 from ._layers import Layers
 from ._nearby import references
+from ._nearby.airports import Airports
 from ._nearby.notable import Notable
 from ._nearby.parks import Parks
 from ._nearby.postal import WorldPostal
@@ -103,6 +105,12 @@ class Geocoder:
         """The packs' time zones (placewise.engine._timezones), or None when no pack has any."""
         found = Timezones(self.layers, self.admin, self.naming)
         return found if found else None
+
+    @once
+    def airports(self):
+        """The airports layer's sizes and service (placewise.engine._nearby.airports), or None."""
+        layer = self.layers.layer(const.AIRPORTS)
+        return Airports(layer) if layer is not None else None
 
     @once
     def parks(self):
@@ -230,10 +238,12 @@ class Geocoder:
             if "postal" in named:
                 todo &= np.array([p is None for p in named["postal"].tolist()], dtype=bool)
             a["postal_row"], _ = self.postal.answer(lat, lon, self.admin.iso2_of_view(a), todo)
-        if everything and self.layers.has(const.AIRPORTS):
-            references.airports(
-                a, self.layers.layer(const.AIRPORTS), lat, lon, self._near_km(PlaceKind.AIRPORT)
-            )
+        if everything and self.airports is not None:
+            ns = self.settings.near
+            reach, large = self._near_km(PlaceKind.AIRPORT), ns.airport_large
+            if self._kind_tuning(PlaceKind.AIRPORT) is not None:  # a Tune rule: every airport's reach
+                large = reach
+            self.airports.answer(a, lat, lon, reach, large, ns.airport_scheduled)
         references.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
         if (everything or self._rules_read_parks) and self.parks is not None:
             a["parks"] = self.parks.answer(lat, lon, near)
@@ -264,15 +274,19 @@ class Geocoder:
         return norm(order), locked
 
     def _near_km(self, kind):
-        """How far `near` / `airport` search for a kind: the settings, unless an override Tune rule
-        for the whole kind sets near_km (per-place near_km can only narrow; the engine applies it)."""
+        """How far `near` / `airport` search for a kind: the settings (for airports, the medium and
+        small ones' reach), unless an override Tune rule for the whole kind sets near_km (then the
+        reach of every airport; per-place near_km can only narrow; the engine applies it)."""
         default = (
             self.settings.near.airport if kind == PlaceKind.AIRPORT else self.settings.near.notable_rural
         )
+        tuned = self._kind_tuning(kind)
+        return default if tuned is None else tuned
+
+    def _kind_tuning(self, kind):
+        """The near_km an override Tune rule sets for the whole kind, or None."""
         tuning = getattr(self.overrides, "tuning", None)
-        if tuning is None:
-            return default
-        return tuning(kind=kind).get("near_km", default)
+        return None if tuning is None else tuning(kind=kind).get("near_km")
 
     def _relabel(self, result):
         """The label recomposed from a Result's fields, for the override engine after a rename."""

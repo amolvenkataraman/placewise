@@ -185,6 +185,31 @@ back to the PIN areas alone.
 - Features flagged `india_view_only` (PIN areas and units on ground only India's view puts in
   India) answer only when the IN worldview decided the country (docs/worldviews.md).
 
+## Airports
+
+`Result.airport` is the airport the point is at or near, from OurAirports (large and medium
+airports, and small ones with scheduled service), with its distance and bearing. Without airport
+footprints, two rules stand in for "the airport here" (constants in `placewise.constants.lookup`):
+
+1. **At.** The point is `at` an airport within a radius that follows the airport's OurAirports
+   size: 2.5 km of a large airport's reference point, 1 km of a medium one's, 0.5 km of a small
+   one's. Any airport counts, with or without scheduled service (a point on Begumpet's apron is at
+   BPM). The 1 km keeps the downtown blocks beside a city airport out: Toronto's Harbourfront is
+   1.6 km from Billy Bishop (YTZ), near it, not at it.
+2. **Near.** Otherwise it is the airport you would fly from: among airports with scheduled service
+   (`near.airport_scheduled = true`) in reach (`near.airport_large`, 40 km, for large airports;
+   `near.airport`, 10 km, for the others), the smallest distance times a size weight (large 1,
+   medium 3, small 6). A large airport wins unless a smaller one is three times nearer: from
+   Hyderabad's centre HYD (22 km), not Begumpet (no scheduled service); from Hillsdale in San Mateo
+   SFO (11 km), not San Carlos (5 km); from the CN Tower Billy Bishop (1.8 km), not Pearson
+   (23 km). Belmont, 2.3 km from San Carlos, gets San Carlos.
+
+`near.airport_scheduled = false` lets any airport be near; `near.airport = 0` leaves only large
+airports. An override `tune` rule for the kind `airport` with `near_km` sets every airport's reach.
+Packs built without OurAirports' `type` read every airport as medium, without `scheduled` as
+served. Airport outlines (OSM aeroway areas, or boxes from runway ends) would replace the radius;
+they are a future data item.
+
 ## Labels
 
 `label.style = "locality"` (the default) gives "<locality>, <admin1>, <country>", falling back to

@@ -66,9 +66,21 @@ CITY_EXCLUDED_FEATURE_CODES = frozenset({"PPLX", "PPLH", "PPLQ", "PPLW", "PPLCH"
 NOTABLE_POPULATION = 50_000
 NOTABLE_CANDIDATES = 8  # per point; MAX_NEAR (5) plus the chosen city plus slack
 
-# an airport's point is near its centre and a big airport is a few km across: within this the
-# point is AT the airport, otherwise NEAR it (up to NearSettings.airport)
-AIRPORT_AT_KM = 2.0
+# Airports (placewise.engine._nearby.airports, docs/naming.md "Airports"), by OurAirports `type`.
+# An airport's point is near its centre: within AIRPORT_AT_KM of it the point is AT the airport.
+# Without airport footprints the radius follows the airport's size (a large airport is several km
+# across; a city airport like Billy Bishop is a few hundred metres, so 1 km keeps the downtown
+# blocks beside it out). A type missing from the tables reads as AIRPORT_DEFAULT_TYPE.
+LARGE_AIRPORT, MEDIUM_AIRPORT, SMALL_AIRPORT = "large_airport", "medium_airport", "small_airport"
+AIRPORT_DEFAULT_TYPE = MEDIUM_AIRPORT
+AIRPORT_AT_KM = {LARGE_AIRPORT: 2.5, MEDIUM_AIRPORT: 1.0, SMALL_AIRPORT: 0.5}
+# Where the point is AT no airport, the airport NEAR it is the one with the smallest distance times
+# this weight, among airports with scheduled service (NearSettings.airport_scheduled) within reach
+# (NearSettings.airport_large for large airports, NearSettings.airport for the others): a large
+# airport wins unless a medium one is three times nearer (Hyderabad's centre: HYD, not Begumpet;
+# the CN Tower: Billy Bishop at 1.8 km, not Pearson at 23 km)
+AIRPORT_WEIGHT = {LARGE_AIRPORT: 1.0, MEDIUM_AIRPORT: 3.0, SMALL_AIRPORT: 6.0}
+AIRPORT_CANDIDATES = 8  # nearest airports of every size weighed per point, beside the nearest large one
 
 # where no timezones polygon answers, the nearest city of the same country gives the time zone; and in
 # a split time-zone unit the nearest city inside it decides between its zones. Both search this

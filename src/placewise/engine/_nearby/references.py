@@ -1,6 +1,6 @@
-"""What is near a point: the airport, notable cities and, far offshore, the nearest country.
+"""What is near a point: notable cities and, far offshore, the nearest country (the airport is
+airports.py).
 
-- airport: the nearest within NearSettings.airport; AT within AIRPORT_AT_KM, else NEAR.
 - near: up to NearSettings.max_near notable cities (NOTABLE_POPULATION+) within
   NearSettings.notable_rural, nearest first, across borders, without the chosen city.
 - water: beyond TERRITORIAL_KM of every country, the country whose boundary is nearest (OFFSHORE)
@@ -11,12 +11,6 @@ import numpy as np
 
 from placewise.constants import lookup as const
 from placewise.geo import compass, initial_bearing
-
-
-def airports(a, layer, lat, lon, max_km):
-    """Fill a["airport", "airport_km"]: the nearest airport within max_km, or -1."""
-    idx, dist = layer.nearest(lat, lon, k=1, max_km=max_km)
-    a["airport"], a["airport_km"] = np.atleast_1d(idx), np.atleast_1d(dist)
 
 
 def water(a, countries, lat, lon):

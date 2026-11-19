@@ -62,6 +62,7 @@ def build(geo, lat, lon, a, named, order, locked):
     city_km = a.get("city_km", np.full(n, np.inf)).tolist()
     tz_zone, tz_source = (a[k].tolist() if k in a else [None] * n for k in ("tz_zone", "tz_source"))
     airport, airport_km = airport.tolist(), a.get("airport_km", np.full(n, np.inf)).tolist()
+    airport_at = a.get("airport_at", np.zeros(n, dtype=bool)).tolist()
     air_deg, air_word = air_deg.tolist(), air_word.tolist()
     water, water_km = a["water"].tolist(), a["water_km"].tolist()
     water_deg, water_word, back_word = water_deg.tolist(), water_word.tolist(), back_word.tolist()
@@ -130,7 +131,7 @@ def build(geo, lat, lon, a, named, order, locked):
             sources["postal"] = src_postal
         if airport[i] >= 0:
             km = airport_km[i]
-            rel = Relation.AT if km <= const.AIRPORT_AT_KM else Relation.NEAR
+            rel = Relation.AT if airport_at[i] else Relation.NEAR
             air = Nearby(place(const.AIRPORTS, airport[i]), rel, km, air_deg[i], air_word[i])
             sources["airport"] = src[const.AIRPORTS, const.NEAREST]
         near = ()

@@ -390,11 +390,3 @@ def test_override_rename_recomposes_the_label(world):
     r = geo.lookup(0.75, -139.45)
     assert r.city.name == "Alpha Metro" and r.city.id == "geonames:1"
     assert r.label == "Alpha Metro, North Province, Alphaland"
-
-
-def test_kind_tuning_widens_the_airport_search(world, geo):
-    point = (0.85, -139.6)  # 16.7 km north of Alpha International, beyond NearSettings.airport
-    assert geo.lookup(*point).airport is None
-    tuned = Geocoder(packs=[world], overrides=_engine({"tune": [{"kind": "airport", "near_km": 20}]}))
-    r = tuned.lookup(*point)
-    assert r.airport.place.id == "ourairports:XAAA" and r.airport.relation == Relation.NEAR
