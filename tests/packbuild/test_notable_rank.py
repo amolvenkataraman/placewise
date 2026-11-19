@@ -72,6 +72,26 @@ def test_aliases_are_cleaned_capped_and_short_forms_first():
     assert len(aliases.clean("A", [f"Alias {i}" for i in range(20)])) == aliases.MAX_ALIASES
 
 
+def test_spelling_variants_of_the_name_come_last():
+    # Wikidata's aliases of Harmandir Sahib (QLever lists them alphabetically): the name people
+    # use in English, Golden Temple, stays; spellings a typo-tolerant search finds anyway go last
+    found = aliases.clean(
+        "Harmandir Sahib",
+        ["Darbar Sahib", "Darbār Sahib", "Golden Temple", "Harimandar", "Harimandir", "Harmandar",
+         "Harmandar Sahib", "Harmandir", "Sri Harmandir Sahib", "Sri Harmandir Sahib Amritsar",
+         "The Golden Temple", "The Golden Temple Amritsar"],
+    )  # fmt: skip
+    assert found == ["Darbar Sahib", "Harmandir", "Sri Harmandir Sahib", "Sri Harmandir Sahib Amritsar",
+                     "Golden Temple", "The Golden Temple Amritsar"]  # fmt: skip
+    # with room to spare, the variants are kept, after the rest
+    assert aliases.clean("Harmandir Sahib", ["Harmandar", "Golden Temple"]) == ["Golden Temple", "Harmandar"]
+    assert aliases.variant("Harmandir Sahib", "Harmandar Sahib")
+    assert aliases.variant("Harmandir Sahib", "Harimandir")
+    assert not aliases.variant("Harmandir Sahib", "Harmandir")  # a part of the name, spelled so
+    assert not aliases.variant("Harmandir Sahib", "Darbar Sahib")
+    assert not aliases.variant("Taj Mahal", "Taj")
+
+
 def test_stations_get_a_short_name():
     assert aliases.clean("Mumbai Central railway station", [], kind="station") == ["Mumbai Central station"]
     assert aliases.clean("Union Station", ["Toronto Union Station"], kind="station") == [
