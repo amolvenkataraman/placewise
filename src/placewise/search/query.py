@@ -16,6 +16,9 @@ _COORDINATE_CHARS = re.compile(r"[\d\s.,;:/°º′″'\"+\-−NSEWnsew]+")
 _DIGIT_RUNS = re.compile(r"\d+")
 _QID = re.compile(r"[Qq]\d+")
 _ID = re.compile(r"[A-Za-z][\w.\-]*:\S+")
+# a postcode written in two parts ("SW1A 1AA", "100 00", "AZ 0100"): matched as one code without
+# the space; its first part, when it has a digit, is the UK outward code or Canadian FSA
+_SPACED_CODE = re.compile(r"([A-Za-z0-9]{1,5}) ([A-Za-z0-9]{1,4})")
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,7 +30,8 @@ class Query:
     regions the name means (GTA -> region:gta); `fallback_keys` the name without generic words
     ("Peel Region" -> peel); `water_keys` the name without a water word, looked up among waters
     ("Mississippi River" -> mississippi); `trailing` the query read with its last word as context
-    ("Paris TX")."""
+    ("Paris TX"). A postcode with a space ("SW1A 1AA") has `code` without it and `code_head`, its
+    first part, to try when the whole code matches nothing (the district SW1A)."""
 
     raw: str
     name: str
@@ -43,6 +47,7 @@ class Query:
     water_keys: tuple[str, ...] = ()
     trailing: "Query | None" = None
     code: str | None = None  # the text matched against codes ("YYZ" in "YYZ airport")
+    code_head: str | None = None  # a spaced postcode's first part ("SW1A" in "SW1A 1AA")
     airport: bool = False  # the text says "airport": an airport code means the airport
 
     @property
@@ -66,6 +71,9 @@ def parse_query(text):
         name, context, place = raw, (), None
     key = city_key(name)
     code, airport = _code(raw)
+    head = None
+    if code is None:
+        code, head = _spaced_code(raw)
     return Query(
         raw=raw,
         name=name,
@@ -80,6 +88,7 @@ def parse_query(text):
         water_keys=_water_keys(key),
         trailing=_trailing(raw, name, context, place),
         code=code,
+        code_head=head,
         airport=airport,
     )
 
@@ -111,6 +120,20 @@ def _code(raw):
     airport = len(rest) < len(words)
     text = " ".join(rest)
     return (text if text and _code_like(text) else None), airport
+
+
+def _spaced_code(raw):
+    """(code, head) for a postcode written in two parts, else (None, None): the parts must hold a
+    digit, and the first part a digit too or at most SPACED_CODE_LETTERS letters ("AZ 0100", not
+    "Route 66")."""
+    match = _SPACED_CODE.fullmatch(raw)
+    if match is None or not any(c.isdigit() for c in raw):
+        return None, None
+    head, tail = match.groups()
+    head_digit = any(c.isdigit() for c in head)
+    if not head_digit and len(head) > const.SPACED_CODE_LETTERS:
+        return None, None
+    return head + tail, (head if head_digit else None)
 
 
 def _code_like(raw):

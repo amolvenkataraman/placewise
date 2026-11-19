@@ -10,7 +10,8 @@ One "city" field can't serve both "where in town" and "where in the world", so a
 | `city` | what you'd tell someone far away | Toronto for Pickering, San Francisco for SFO |
 
 Beside them: `admin2` (county, census division), `borough` (New York City), `postal` (ZIP Code
-area, from the optional `usa-zip` pack; forward sortation area, PIN code area) and `regions`
+area, from the optional `usa-zip` pack; forward sortation area, PIN code area; elsewhere the
+nearest postcode point of the optional `world-postal` pack, always `near`: `docs/postal.md`) and `regions`
 (smallest first). `Result.sources` names
 the layer and rule behind every field (`"usa/places:metro"`, `"can/csd:nearest"`).
 

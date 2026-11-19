@@ -5,6 +5,8 @@ import zipfile
 from pathlib import Path
 
 import pytest
+from gdw_kit import RESERVOIRS
+from gdw_kit import write_archive as write_gdw
 from hydrolakes_kit import opener_for, write_archive
 from ne_water_kit import LAKE_FIELDS, MARINE_FIELDS, RIVER_FIELDS, box, write_lines, write_polygons
 
@@ -52,6 +54,16 @@ def offline(tmp_path, monkeypatch):
     ]}}))  # fmt: skip
     for q in water.WIKIDATA_QUERIES:
         files[url("wikidata", q)] = sparql
+    covered = (
+        5,
+        "Ontario Pool",
+        "Moses-Saunders",
+        "",
+        "",
+        500.0,
+        (43.4, -79.5, 44.0, -76.5),
+    )  # in Lake Ontario
+    files[url("gdw", "reservoirs")] = write_gdw(src, [*RESERVOIRS, covered])
     requested = []
 
     def fake_fetch(link, cache_dir, refresh=False, timeout=60):
@@ -64,12 +76,13 @@ def offline(tmp_path, monkeypatch):
     return requested, opener_for(archive, url=url("hydrolakes", "polygons"))
 
 
-def test_build_writes_the_three_layers(tmp_path, offline):
+def test_build_writes_the_four_layers(tmp_path, offline):
     requested, opener = offline
     path = water.build_water(tmp_path / "cache", tmp_path / "out", "2026.11", opener=opener)
     assert path == tmp_path / "out" / "world-water-2026.11"
     pack = open_pack(path)
-    assert [layer.name for layer in pack] == ["marine", "lakes", "rivers"] and pack.name == const.PACK
+    assert [layer.name for layer in pack] == ["marine", "lakes", "reservoirs", "rivers"]
+    assert pack.name == const.PACK
     lakes = pack["lakes"]
     names = lakes.column("name").tolist()
     # HydroLAKES outlines named by Natural Earth (Ontario) and Wikidata (Dal Lake); Tahoe by its own
@@ -80,8 +93,30 @@ def test_build_writes_the_three_layers(tmp_path, offline):
     tahoe = pack.names.exact("Lake Tahoe")
     assert [pack.names.layers[x] for x in tahoe.layer] == ["lakes"]
     assert pack["rivers"].column("id").tolist() == ["wikidata:Q5089"]
-    assert set(pack.sources) == {"naturalearth-physical", "hydrolakes", "wikidata"}
+    assert set(pack.sources) == {"naturalearth-physical", "hydrolakes", "wikidata", "gdw"}
     assert all(link.startswith("https://") for link in requested)
+
+
+def test_reservoirs_no_named_lake_covers_join_as_their_own_layer(tmp_path, offline):
+    _, opener = offline
+    pack = open_pack(water.build_water(tmp_path / "cache", tmp_path / "out", "2026.11", opener=opener))
+    reservoirs = pack["reservoirs"]
+    # the pool inside Lake Ontario is left out (the lake answers there); Lake Tahoe is a lake (a
+    # control dam); Hirakud's HydroLAKES outline is unnamed here, so the reservoir stays
+    assert reservoirs.column("name").tolist() == [
+        "Big Meadows Reservoir", "Tehri Reservoir", "Nagarjuna Sagar", "Hirakud Reservoir",
+    ]  # fmt: skip
+    assert set(reservoirs.column("type").tolist()) == {"reservoir"} and reservoirs.sources == ("gdw",)
+    tehri = pack.names.exact("Tehri Reservoir")
+    assert [pack.names.layers[x] for x in tehri.layer] == ["reservoirs"]
+    assert (tmp_path / "cache" / "gdw" / "GDW_reservoirs_v1_0.shp").exists()
+
+
+def test_reservoirs_can_be_left_out(tmp_path, offline):
+    requested, opener = offline
+    layers = water.build_layers(tmp_path / "cache", with_reservoirs=False, opener=opener)
+    assert [layer.name for layer in layers] == ["marine", "lakes", "rivers"]
+    assert url("gdw", "reservoirs") not in requested
 
 
 def test_without_hydrolakes_the_lakes_are_natural_earths(tmp_path, offline):
@@ -89,4 +124,5 @@ def test_without_hydrolakes_the_lakes_are_natural_earths(tmp_path, offline):
     layers = water.build_layers(tmp_path / "cache", with_hydrolakes=False, opener=opener)
     lakes = layers[1]
     assert lakes.columns["name"] == ["Lake Small", "Lake Ontario"]
+    assert "Hirakud Reservoir" in layers[2].columns["name"]  # no lake covers it now
     assert not any("wikidata" in link for link in requested)

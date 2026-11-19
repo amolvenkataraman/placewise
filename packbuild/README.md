@@ -455,11 +455,13 @@ uv run python -m packbuild.water --version 2026.11 --no-hydrolakes  # Natural Ea
 |---|---|---|---|
 | `marine` | polygon | Natural Earth 1:10m `geography_marine_polys`: 294 named seas, gulfs, bays, straits, ocean halves | public domain |
 | `lakes` | polygon | HydroLAKES v1.0 lakes of 10 km² or more (`--min-lake-km2`), simplified to 30 m (`--tolerance-m`), named from Natural Earth, then Wikidata (CC0), then HydroLAKES; plus Natural Earth's lakes (and NA/Europe supplements) HydroLAKES doesn't cover | CC BY 4.0, public domain |
+| `reservoirs` | polygon | Global Dam Watch v1.0 reservoirs of 10 km² or more (`--min-reservoir-km2` defaults to the lakes' threshold) with a name, built as reservoirs (`LAKE_CTRL` empty), simplified like the lakes, that no named lake covers (`--no-reservoirs` leaves them out) | CC BY 4.0 |
 | `rivers` | polygon | Natural Earth 1:10m river centerlines + NA/Europe supplements, as zero-area polygons (each line out and back, so boundary distances measure the line) | public domain |
 
-Columns: `id` (`wikidata:Q...` where unique, else `ne:<ne_id>` / `hydrolakes:<Hylak_id>`), `name`,
-`type`, `wikidata`, `aliases` (pipe-separated), `area_km2` (polygons; rows smallest first),
-`source` (lakes: `hydrolakes` / `naturalearth`, which sets the shore margin), `scalerank` (rivers).
+Columns: `id` (`wikidata:Q...` where unique, else `ne:<ne_id>` / `hydrolakes:<Hylak_id>` /
+`gdw:<GDW_ID>`), `name`, `type`, `wikidata`, `aliases` (pipe-separated), `area_km2` (polygons;
+rows smallest first), `source` (lakes and reservoirs: `hydrolakes` / `naturalearth` / `gdw`, which
+sets the shore margin), `scalerank` (rivers).
 Sources live in `packbuild/sources/water/` (registry `sources/water.json`).
 
 - **Why a separate pack.** HydroLAKES makes it tens of MB, as big as the world pack (35 MB), and
@@ -474,8 +476,41 @@ Sources live in `packbuild/sources/water/` (registry `sources/water.json`).
   outline give it their name and Wikidata id (and are dropped); Wikidata lakes with an English
   Wikipedia article whose point falls inside name more (Dal Lake); unnamed outlines are dropped.
   HydroLAKES' `Country` (the outflow's) is never used.
+- **Reservoirs.** Global Dam Watch (70 MB archive from figshare, cached in `gdw/`; only the
+  reservoir .shp and .dbf are extracted) has 2,865 reservoirs of 10 km² or more;
+  2,300 have a name and are dam-made, and 1,222 of those are covered by no named
+  lake (half or more of a grid of sample points inside them falls in the lakes layer: Lake Mead and
+  Hirakud are named HydroLAKES outlines already, the Tehri reservoir is not). Names: `RES_NAME`
+  when it says it is water, else `DAM_NAME` less "Dam", "Reservoir" added where needed
+  (`sources/water/gdw.py`). Lake Tahoe and the other natural lakes behind lake-control dams stay lakes.
 - **Rejected:** Marine Regions IHO Sea Areas (CC BY-NC-SA 4.0) and HydroRIVERS (HydroSHEDS v1
   licence); both ids are in `constants.licences.DENIED_SOURCES`. See `docs/water.md`.
+
+## World postcodes pack (`world-postal`)
+
+```
+uv run python -m packbuild.postal --version 2026.11     # writes ~/.placewise/packbuild/out/world-postal-2026.11/
+```
+
+| Layer | Kind | Source | Licence |
+|---|---|---|---|
+| `postal` | point | GeoNames postal codes, `allCountries.zip` (registry `geonames`, download `postal_world`, cached in `geonames-postal/`) | CC BY 4.0 |
+
+Columns: `id` (`postal:<country>:<code without spaces or hyphens>`, then `:2`, `:3` ...
+for the code's other points), `name` (the code as written), `place`, `country` (alpha-2),
+`reach_km` (u1, whole km: the country's reach) and `secondary` (bool: every point of a code but
+its first, left out of the name index). The name index holds each code as written and without
+spaces or hyphens; that `codes` column is used at build time and not written.
+pack.json: `kind` postal, `covers` the alpha-2 codes of the countries it has points for, so auto
+mode fetches it for those only. Lookup rules and the countries left out: `docs/postal.md`.
+
+- **Rows.** 1,836,751 rows in 124 countries; left out: US, CA, IN (their packs carry postal
+  areas), SG, PT, AE (undocumented sources), HK, MO (placeholder codes), Northern Ireland's BT
+  codes (LPS terms), CEDEX codes and impossible points; then exact repeats and placeholder
+  points (a coordinate 3 or more codes share, where each has its own point too:
+  Paris's centre). 867,468 points remain, 507,930 codes in 116 countries; 80 MB installed (ids, unique per point, are about 30 MB of it with their index entries).
+- **Reach.** Per country, 2 x the 90th percentile of the distance from each distinct point to its
+  nearest neighbour, within 2 .. 30 km (`constants.postal`).
 
 ## Park packs (`usa-parks`, `usa-parks-local`, `can-parks`, `world-parks`)
 

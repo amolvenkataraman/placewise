@@ -50,6 +50,25 @@ def test_codes_and_ids():
     assert not parse_query("Paris, TX").is_id
 
 
+@pytest.mark.parametrize(
+    ("text", "code", "head"),
+    [
+        ("SW1A 1AA", "SW1A1AA", "SW1A"),  # a UK postcode: outward code first
+        ("sw1a 1aa", "sw1a1aa", "sw1a"),
+        ("M5V 3L9", "M5V3L9", "M5V"),
+        ("100 00", "10000", "100"),  # Czech and Swedish codes are written with a space
+        ("AZ 0100", "AZ0100", None),
+        ("SW1A", "SW1A", None),
+        ("Route 66", None, None),  # a name with a number is no code
+        ("Paris 7", None, None),
+        ("Lake Tahoe", None, None),
+    ],
+)
+def test_a_postcode_written_with_a_space_is_matched_as_a_code(text, code, head):
+    q = parse_query(text)
+    assert (q.code, q.code_head) == (code, head)
+
+
 def test_bare_wikidata_qid_is_also_read_as_its_id():
     assert parse_query("Q1049470").id == "wikidata:Q1049470"
     assert parse_query("q42").id == "wikidata:Q42"

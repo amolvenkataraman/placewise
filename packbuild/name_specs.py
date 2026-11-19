@@ -98,6 +98,12 @@ USA_ZIP = (
     ),
 )
 
+# GeoNames postcode points (packbuild.postal): each code once, on its first point; found by the
+# code as written and without spaces or hyphens ("100 00", "10000"); place names are not indexed
+WORLD_POSTAL = (
+    LayerNames("postal", "postal_code", names=(), codes=("codes",), skip="secondary", rank=_POSTAL),
+)
+
 CAN = (
     LayerNames(
         "provinces",
@@ -155,12 +161,15 @@ WATER = (
         codes=("wikidata",),
         rank=Rank(base=0.4, span=0.55, column="area_km2", lo=2, hi=8),
     ),
-    LayerNames(
-        "lakes",
-        "water",
-        aliases=_ALIASES,
-        codes=("wikidata",),
-        rank=Rank(base=0.25, span=0.55, column="area_km2", lo=0, hi=5),
+    *(
+        LayerNames(
+            layer,
+            "water",
+            aliases=_ALIASES,
+            codes=("wikidata",),
+            rank=Rank(base=0.25, span=0.55, column="area_km2", lo=0, hi=5),
+        )
+        for layer in ("lakes", "reservoirs")  # Global Dam Watch reservoirs rank like lakes
     ),
     LayerNames(
         "rivers",
@@ -208,6 +217,7 @@ SPECS = {
     "world": WORLD,
     "usa": USA,
     "usa-zip": USA_ZIP,
+    "world-postal": WORLD_POSTAL,
     "can": CAN,
     "ind": IND,
     "world-water": WATER,

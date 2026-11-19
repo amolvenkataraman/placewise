@@ -56,6 +56,7 @@ LAYER_KINDS = {
     "park_points": KIND_PARKS,
     "marine": KIND_WATER,
     "lakes": KIND_WATER,
+    "reservoirs": KIND_WATER,
     "rivers": KIND_WATER,
     "notable": KIND_NOTABLE,
     "zcta": KIND_POSTAL,

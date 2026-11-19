@@ -26,6 +26,7 @@ PACKS = {
     "world-water": {},
     "world-parks": {},
     "usa-zip": {"kind": "postal", "covers": ["US"], "requires": ["usa"]},
+    "world-postal": {"kind": "postal", "covers": ["DE", "FR", "GB"]},
 }
 
 
@@ -57,6 +58,14 @@ def test_opted_in_kinds_add_their_packs_requirements_first(data_dir, full_releas
     # usa-zip alone still brings the usa pack it needs
     store = _auto_store(data_dir, full_release, auto_packs=("postal",))
     assert store.plan(countries={"US"}) == ["usa", "usa-zip"]
+
+
+def test_world_postcodes_come_only_for_the_countries_they_cover(data_dir, full_release):
+    store = _auto_store(data_dir, full_release, auto_packs=("postal",))
+    assert store.plan(countries={"FR"}) == ["world-postal"]
+    assert store.plan(countries={"FR", "US"}) == ["usa", "usa-zip", "world-postal"]
+    assert store.plan(countries={"JP"}) == []
+    assert _auto_store(data_dir, full_release).plan(countries={"FR"}) == []  # postal not opted in
 
 
 def test_a_search_kind_is_an_opt_in_for_that_search(data_dir, full_release):
