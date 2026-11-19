@@ -2,6 +2,7 @@
 
 placewise lookup 43.6426 -79.3871
 placewise lookup 43.6426,-79.3871 --json --worldview IN
+placewise lookup 43.6 -77.9 --altitude 10000          # "Over Lake Ontario" (else "On ...")
 placewise lookup --csv points.csv --out named.csv --lat-column Latitude --lon-column Longitude
 """
 
@@ -24,6 +25,10 @@ def add_lookup(commands):
     sub.add_argument("--json", action="store_true", help="the Result as JSON")
     sub.add_argument("--worldview", help="worldview for points in disputed areas (e.g. IN)")
     sub.add_argument("--no-near", action="store_true", help="leave out the places near the point")
+    sub.add_argument(
+        "--altitude", type=float, metavar="METRES",
+        help="metres above sea level (every --csv row): 'Over' water from 100 m above it, else 'On'",
+    )  # fmt: skip
     batch = sub.add_argument_group("batch")
     batch.add_argument("--csv", metavar="FILE", help="look up every row of this CSV file instead")
     batch.add_argument("--out", metavar="FILE", help="with --csv: write here (default: standard output)")
@@ -42,7 +47,9 @@ def _cmd_lookup(args):
     if point is None:
         return _usage(args, "expected LAT LON (or LAT,LON) or --csv FILE")
     geocoder = _common.open_geocoder(args)
-    result = geocoder.lookup(*point, worldview=args.worldview, near=not args.no_near)
+    result = geocoder.lookup(
+        *point, worldview=args.worldview, near=not args.no_near, altitude_m=args.altitude
+    )
     if args.json:
         print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
     else:
@@ -70,6 +77,7 @@ def _batch(args):
                 [points[i][1] for i in chunk],
                 worldview=args.worldview,
                 near=False,
+                altitude_m=args.altitude,
             )
             answers.update(zip(chunk, results, strict=True))
     fields = header + [c for c in const.LOOKUP_CSV_COLUMNS if c not in header]

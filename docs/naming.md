@@ -181,7 +181,7 @@ Rules on top of that, in order:
    most significant one the point is in (`within[0]`). National forests and grasslands don't
    count: their administrative boundaries take in whole towns (South Lake Tahoe lies in the Lake
    Tahoe Basin Management Unit). Turn the rule off with `label.parks = false`; a template ignores it.
-2. **Water.** On a sea or lake the label names the water ("On Lake Tahoe", "Over Lake Ontario",
+2. **Water.** On a sea or lake the label names the water ("On Lake Tahoe"; "Over Lake Ontario" given an altitude,
    docs/water.md), park or not.
 3. **Offshore.** Far from land: "Offshore, 15 km S of Toronto". Country names are the ISO short names ("United States"); Natural
 Earth's longer form stays in `country.aliases`.

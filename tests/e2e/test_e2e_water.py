@@ -21,10 +21,10 @@ def _near_water(r):
     return {n.place.name: n for n in r.near if n.place.kind == PlaceKind.WATER}
 
 
-def test_over_lake_ontario(geo):
+def test_on_lake_ontario(geo):
     r = geo.lookup(43.6, -77.9)
-    assert r.label == "Over Lake Ontario"
-    assert r.water.place.name == "Lake Ontario" and r.water.relation == Relation.OVER
+    assert r.label == "On Lake Ontario"
+    assert r.water.place.name == "Lake Ontario" and r.water.relation == Relation.ON
     assert r.water.place.id == "wikidata:Q1062"
     assert 10 < r.water.distance_km < 40  # mid-lake, off the New York shore
     assert r.sources["water"] == "world-water/lakes:polygon"
@@ -39,17 +39,17 @@ def test_on_lake_tahoe(geo):
     assert r.sources["water"] == "world-water/lakes:polygon" and r.water.place.codes["type"] == "lake"
 
 
-def test_over_the_north_atlantic(geo):
+def test_on_the_north_atlantic(geo):
     r = geo.lookup(50.0, -30.0)
-    assert r.label == "Over the North Atlantic Ocean"
-    assert r.water.place.name == "North Atlantic Ocean" and r.water.relation == Relation.OVER
+    assert r.label == "On the North Atlantic Ocean"
+    assert r.water.place.name == "North Atlantic Ocean" and r.water.relation == Relation.ON
     assert r.country is None
     assert 900 < r.water.distance_km < 1500  # the nearest coast is the Azores (Flores)
 
 
 def test_arabian_sea_off_mumbai(full):
     r = full.lookup(18.90, 72.75)
-    assert r.label == "Over the Arabian Sea"
+    assert r.label == "On the Arabian Sea"
     assert r.water.place.name == "Arabian Sea"
     assert r.country.name == "India"  # within the territorial sea: the country stays
 
@@ -117,3 +117,37 @@ def test_tehri_comes_from_global_dam_watch_and_search_finds_it(geo):
     assert r.country.name == "India" and r.admin1.name == "Uttarakhand"
     found = geo.find("Tehri Reservoir")
     assert found and found[0].place.id == r.water.place.id and found[0].place.kind == PlaceKind.WATER
+
+
+# --- on or over, by altitude (placewise.engine._water.relation) -----------------------------------
+
+
+def test_a_plane_over_lake_ontario(geo):
+    r = geo.lookup(43.6, -77.9, altitude_m=10_000)
+    assert r.label == "Over Lake Ontario" and r.water.relation == Relation.OVER
+    assert 60 < geo.water.layer("lakes").row(_row(geo, "wikidata:Q1062"))["elevation_m"] < 90
+    base = geo.lookup(43.6, -77.9).to_dict()
+    high = r.to_dict()
+    for d in (base, high):
+        d.pop("label"), d["water"].pop("relation")
+    assert base == high  # nothing else changes
+
+
+def test_a_boat_on_lake_tahoe_and_a_plane_over_it(geo):
+    tahoe = (39.0968, -120.0324)
+    assert geo.lookup(*tahoe, altitude_m=1_897).label == "On Lake Tahoe"  # the lake is at ~1,897 m
+    assert geo.lookup(*tahoe, altitude_m=1_500).label == "On Lake Tahoe"
+    plane = geo.lookup(*tahoe, altitude_m=3_000)
+    assert plane.label == "Over Lake Tahoe" and plane.water.relation == Relation.OVER
+
+
+def test_on_or_over_the_ocean_by_sea_level(geo):
+    assert geo.lookup(50.0, -30.0, altitude_m=50).label == "On the North Atlantic Ocean"
+    assert geo.lookup(50.0, -30.0, altitude_m=200).label == "Over the North Atlantic Ocean"
+    labels = [r.label for r in geo.lookup_many([50.0, 50.0, 43.6], [-30.0, -30.0, -77.9],
+                                                 altitude_m=[11_000, float("nan"), 11_000])]  # fmt: skip
+    assert labels == ["Over the North Atlantic Ocean", "On the North Atlantic Ocean", "Over Lake Ontario"]
+
+
+def _row(geo, ident):
+    return geo.water.layer("lakes").column("id").tolist().index(ident)

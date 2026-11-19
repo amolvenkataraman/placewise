@@ -50,12 +50,6 @@ def test_on_a_lake_names_it_with_the_distance_to_shore(geo, land):
     assert (r.country.id, r.admin1.id, r.city.id) == (base.country.id, base.admin1.id, base.city.id)
 
 
-def test_a_big_lake_is_over_not_on(packs, monkeypatch):
-    monkeypatch.setattr(const, "OVER_LAKE_KM2", 100.0)
-    r = Geocoder(packs=list(packs)).lookup(0.35, -139.85)
-    assert r.label == "Over Lake Alpha" and r.water.relation == Relation.OVER
-
-
 def test_by_the_lake_shore_the_land_answer_stays_and_the_lake_is_near(geo, land):
     # 55 m inside the outline: within HydroLAKES' shore margin, so on the shore, not on the lake
     r = geo.lookup(0.3005, -139.85)
@@ -79,12 +73,12 @@ def test_natural_earth_lakes_need_a_wider_shore_margin(tmp_path):
 # --- on the sea --------------------------------------------------------------------------------
 
 
-def test_far_offshore_is_over_the_ocean_with_the_reference_kept(geo, land):
+def test_far_offshore_is_on_the_ocean_with_the_reference_kept(geo, land):
     base = land.lookup(1.4, -139.3)
     assert base.label == "Offshore, 76 km N of Alpha City"
     r = geo.lookup(1.4, -139.3)
-    assert r.label == "Over the Test Ocean, 76 km N of Alpha City"
-    assert r.water.place.name == "Test Ocean" and r.water.relation == Relation.OVER
+    assert r.label == "On the Test Ocean, 76 km N of Alpha City"
+    assert r.water.place.name == "Test Ocean" and r.water.relation == Relation.ON
     assert r.water.distance_km == pytest.approx(base.water.distance_km, rel=1e-9)  # shore = coast
     assert r.water.compass == "S"
     assert r.water.place.aliases == ("Testic Ocean",)
@@ -98,14 +92,14 @@ def test_far_offshore_is_over_the_ocean_with_the_reference_kept(geo, land):
 def test_a_bay_drawn_over_the_ocean_answers_first(geo):
     r = geo.lookup(1.7, -139.7)
     assert r.water.place.name == "Gamma Bay"
-    assert r.label.startswith("Over Gamma Bay")  # bays take no article
+    assert r.label.startswith("On Gamma Bay")  # bays take no article
 
 
 def test_within_territorial_waters_the_country_stays_and_the_label_names_the_sea(geo, land):
     base = land.lookup(1.1, -139.5)
     assert base.country.id == "iso:XA" and base.label != "Offshore"
     r = geo.lookup(1.1, -139.5)
-    assert r.label == "Over the Test Ocean"
+    assert r.label == "On the Test Ocean"
     assert r.country.id == "iso:XA" and r.admin1.id == base.admin1.id
     assert r.water.distance_km == pytest.approx(0.1 * KM_PER_DEG, rel=0.01)
 
@@ -121,7 +115,7 @@ def test_beside_the_coast_is_land_with_the_sea_near(geo, land):
 
 def test_far_from_every_country_the_shore_distance_is_still_measured(geo):
     r = geo.lookup(-10.0, -160.0)
-    assert r.label == "Over the Far Sea"  # no country or city within reach: no reference
+    assert r.label == "On the Far Sea"  # no country or city within reach: no reference
     assert r.water.distance_km > 2000
 
 
@@ -242,8 +236,9 @@ def test_the_default_geocoder_opens_an_installed_water_pack(packs):
 @pytest.mark.parametrize(
     ("relation", "name", "kind", "phrase"),
     [
+        (Relation.ON, "North Atlantic Ocean", "ocean", "On the North Atlantic Ocean"),
         (Relation.OVER, "North Atlantic Ocean", "ocean", "Over the North Atlantic Ocean"),
-        (Relation.OVER, "Arabian Sea", "sea", "Over the Arabian Sea"),
+        (Relation.ON, "Arabian Sea", "sea", "On the Arabian Sea"),
         (Relation.OVER, "Gulf of Mexico", "gulf", "Over the Gulf of Mexico"),
         (Relation.OVER, "Persian Gulf", "gulf", "Over the Persian Gulf"),
         (Relation.OVER, "Hudson Bay", "bay", "Over Hudson Bay"),

@@ -2,10 +2,11 @@
 world-water pack's `reservoirs` layer.
 
 The archive (70 MB from figshare) holds 41,145 barriers and 35,295 reservoir polygons with
-`RES_NAME`, `DAM_NAME`, `ALT_NAME`, `LAKE_CTRL` and `AREA_POLY` (km²); only the reservoir .shp and
-.dbf are extracted. Kept: reservoirs of at least `min_area_km2` (the lakes' threshold) with a name,
-built as reservoirs (`LAKE_CTRL` empty: a natural lake raised by a control dam, Lake Tahoe, stays a
-lake), simplified like the lakes.
+`RES_NAME`, `DAM_NAME`, `ALT_NAME`, `LAKE_CTRL`, `AREA_POLY` (km²) and `ELEV_MASL` (the reservoir
+surface in metres above sea level, -9999 where unknown: the `elevation_m` column); only the
+reservoir .shp and .dbf are extracted. Kept: reservoirs of at least `min_area_km2` (the lakes'
+threshold) with a name, built as reservoirs (`LAKE_CTRL` empty: a natural lake raised by a control
+dam, Lake Tahoe, stays a lake), simplified like the lakes.
 
 Names: the reservoir's own when it says it is water ("Lake Mead"); a bare one takes the dam's
 when that does ("Nagarjuna" -> "Nagarjuna Sagar"), else "Reservoir" ("Hirakud Reservoir"); with no
@@ -27,7 +28,7 @@ from .naturalearth import _title
 
 SOURCE = "gdw"
 STEM = "GDW_reservoirs_v1_0"
-_FIELDS = ("GDW_ID", "RES_NAME", "DAM_NAME", "ALT_NAME", "LAKE_CTRL", "AREA_POLY")
+_FIELDS = ("GDW_ID", "RES_NAME", "DAM_NAME", "ALT_NAME", "LAKE_CTRL", "AREA_POLY", "ELEV_MASL")
 # a dam's name less the structure: "Big Meadows - Main Dam", "Eugene J. Burrell Lock and Dam"
 _STRUCTURE = re.compile(
     r"(?:\s*-)?\s*\b(?:(?:main|lock\s+and|lock\s*&)\s+)?(?:dams?|barrage|dike|dyke|weir)$", re.IGNORECASE
@@ -55,6 +56,7 @@ def reservoirs(shp, min_area_km2, tolerance_m):
     shp = Path(shp)
     c = _shp.read_dbf(shp.with_suffix(".dbf"), fields=_FIELDS)
     area = _shp.numbers(c["AREA_POLY"])
+    surface = _shp.elevations(c.get("ELEV_MASL"), len(area))
     rows = []
     for i, parts in enumerate(_shp.read_shapes(shp)):
         if parts is None or not area[i] >= min_area_km2 or c["LAKE_CTRL"][i]:
@@ -64,16 +66,16 @@ def reservoirs(shp, min_area_km2, tolerance_m):
             continue
         fid = f"gdw:{c['GDW_ID'][i]}"
         alias = _title(c["ALT_NAME"][i])
-        rows.append((float(area[i]), fid, name, alias if alias != name else "", parts))
+        rows.append((float(area[i]), fid, name, alias if alias != name else "", parts, float(surface[i])))
     rows.sort(key=lambda r: r[0])
     n = len(rows)
     columns = {
         "id": [r[1] for r in rows], "name": [r[2] for r in rows], "type": [const.RESERVOIR] * n,
         "wikidata": [""] * n, "aliases": [r[3] for r in rows], "source": [SOURCE] * n,
-        "area_km2": [r[0] for r in rows],
+        "area_km2": [r[0] for r in rows], const.ELEVATION: [r[5] for r in rows],
     }  # fmt: skip
     features = [shapes.polygon_feature(r[4], tolerance_m, r[1]) for r in rows]
-    types = {k: "str" for k in columns} | {"area_km2": "f8"}
+    types = {k: "str" for k in columns} | {"area_km2": "f8", const.ELEVATION: "f8"}
     return LayerData(const.RESERVOIRS, "polygon", columns, (SOURCE,), features=features, types=types)
 
 

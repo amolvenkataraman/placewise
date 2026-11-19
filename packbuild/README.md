@@ -461,7 +461,10 @@ uv run python -m packbuild.water --version 2026.11 --no-hydrolakes  # Natural Ea
 Columns: `id` (`wikidata:Q...` where unique, else `ne:<ne_id>` / `hydrolakes:<Hylak_id>` /
 `gdw:<GDW_ID>`), `name`, `type`, `wikidata`, `aliases` (pipe-separated), `area_km2` (polygons;
 rows smallest first), `source` (lakes and reservoirs: `hydrolakes` / `naturalearth` / `gdw`, which
-sets the shore margin), `scalerank` (rivers).
+sets the shore margin), `elevation_m` (lakes and reservoirs: the surface in metres above sea level,
+HydroLAKES' `Elevation` / Global Dam Watch's `ELEV_MASL`, NaN for Natural Earth's lakes and the
+sources' -9999; it tells "On Lake Tahoe" from "Over Lake Tahoe" given an altitude, docs/water.md),
+`scalerank` (rivers).
 Sources live in `packbuild/sources/water/` (registry `sources/water.json`).
 
 - **Why a separate pack.** HydroLAKES makes it tens of MB, as big as the world pack (35 MB), and

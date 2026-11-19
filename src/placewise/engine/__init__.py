@@ -41,6 +41,6 @@ def default_geocoder():
     return _default
 
 
-def lookup(lat, lon, *, worldview=None, near=True):
+def lookup(lat, lon, *, worldview=None, near=True, altitude_m=None):
     """Geocoder.lookup on the default Geocoder (default_geocoder)."""
-    return default_geocoder().lookup(lat, lon, worldview=worldview, near=near)
+    return default_geocoder().lookup(lat, lon, worldview=worldview, near=near, altitude_m=altitude_m)

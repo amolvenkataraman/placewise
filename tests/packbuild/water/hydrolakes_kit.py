@@ -18,6 +18,8 @@ LAKES = [
     (6, "Small", 1, 3.0, (50.0, 10.0, 50.01, 10.01)),  # below the size kept
     (7, "", 1, 0.5, (51.0, 10.0, 51.005, 10.005)),
 ]
+# Elevation (m above sea level) by Hylak_id: the lake surface; 0 for the rest
+ELEVATIONS = {1: 75, 2: 187, 3: 1898, 4: 1583}
 
 
 def _ring(south, west, north, east):
@@ -32,9 +34,10 @@ def write_archive(folder):
         w.field("Country", "C", 35)
         w.field("Lake_type", "N", 4, 0)
         w.field("Lake_area", "N", 13, 2)
+        w.field("Elevation", "N", 10, 0)
         for hylak, name, kind, area, box in LAKES:
             w.poly([_ring(*box)])
-            w.record(hylak, name, "United States of America", kind, area)
+            w.record(hylak, name, "United States of America", kind, area, ELEVATIONS.get(hylak, 0))
     base.with_suffix(".prj").write_text('GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984"]]')
     archive = folder / "HydroLAKES_polys_v10_shp.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as z:

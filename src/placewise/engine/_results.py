@@ -5,7 +5,7 @@ where <name> is the locality (label.style "locality", the default) or the city (
 each falling back to the other; in a national or state park (_within.label_park) it is "<name>,
 <park>", or the park alone without one (label.parks, on by default); label.template formats any
 field instead. Far offshore, the label names a reference place: "Offshore, 15 km S of Toronto".
-On a sea or lake, the label names it ("Over Lake Ontario"; placewise.engine._water).
+On a sea or lake, the label names it ("On Lake Ontario"; placewise.engine._water).
 """
 
 import numpy as np

@@ -5,25 +5,29 @@ world-water pack; constants in placewise.constants.water, docs/water.md). Reserv
 Watch's, where no named lake covers them) are read exactly like lakes, after them.
 
 - On a lake: inside its outline and at least LAKE_SHORE_MARGIN_KM (per source) from its shore.
-  Result.water is the lake, ON (OVER for lakes of OVER_LAKE_KM2 or more), with the distance and
-  bearing to the nearest shore. Country, admin1 and city stay as on land.
+  Result.water is the lake, with the distance and bearing to the nearest shore. Country, admin1
+  and city stay as on land.
 - On the sea: in no country polygon, at least SEA_SHORE_MARGIN_KM from the nearest one, inside a
-  marine polygon (else the one whose edge is within MARINE_SNAP_KM). Result.water is the sea, OVER,
-  with the distance and bearing to the nearest coast (at any distance); the nearest country,
-  which `water` held before, moves to `near` (OFFSHORE).
+  marine polygon (else the one whose edge is within MARINE_SNAP_KM). Result.water is the sea, with
+  the distance and bearing to the nearest coast (at any distance); the nearest country, which
+  `water` held before, moves to `near` (OFFSHORE).
+- On or over (`relation`): ON, unless the lookup gave an altitude at least OVER_HEIGHT_M above the
+  water's surface (seas 0 m, lakes and reservoirs their `elevation_m` column), or, where the
+  surface isn't known, at least AIRBORNE_M: then OVER. Nothing else depends on the altitude.
 - Near, for points on neither: the nearest lake whose shore is within LAKE_NEAR_KM for its size,
   the nearest marine polygon within SEA_NEAR_KM and the nearest river within RIVER_NEAR_KM, each a
   NEAR entry in Result.near, with no bearing (the distance is to the feature's nearest edge).
-- Label, on water: "<Over|On> [the] <name>", then the far-offshore reference ("15 km S of
+- Label, on water: "<On|Over> [the] <name>", then the far-offshore reference ("15 km S of
   Toronto") when the point has no country; land labels are left alone.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
 from placewise.constants import lookup as lookup_const
 from placewise.constants import water as const
+from placewise.constants.overrides import SOURCE_PREFIX
 from placewise.geo import compass, initial_bearing
 from placewise.model import Nearby, Place, PlaceKind, Relation
 
@@ -56,8 +60,31 @@ class Answer:
         return label, tuple(sorted((*near, *extra), key=lambda x: x.distance_km))
 
 
+def relation(altitude_m, surface_m):
+    """ON or OVER for a point `altitude_m` above mean sea level (NaN: not given) on water whose
+    surface is `surface_m` above it (NaN: unknown)."""
+    if altitude_m != altitude_m:
+        return Relation.ON
+    if surface_m == surface_m:
+        return Relation.OVER if altitude_m - surface_m >= const.OVER_HEIGHT_M else Relation.ON
+    return Relation.OVER if altitude_m >= const.AIRBORNE_M else Relation.ON
+
+
+def in_flight(results, altitude):
+    """`results` with the water bodies the overrides added (whose surface isn't known) OVER where
+    the altitude is AIRBORNE_M or more; the labels don't name them, so they stay."""
+    out = list(results)
+    for i in np.flatnonzero(altitude >= const.AIRBORNE_M).tolist():
+        r = out[i]
+        w = r.water
+        added = r.sources.get("water", "").startswith(SOURCE_PREFIX)
+        if added and w is not None and w.relation == Relation.ON:
+            out[i] = replace(r, water=replace(w, relation=Relation.OVER))
+    return out
+
+
 def phrase(relation, name, kind):
-    """ "Over the North Atlantic Ocean", "Over Lake Ontario", "On Lake Tahoe"."""
+    """ "On Lake Tahoe", "On the North Atlantic Ocean", "Over Lake Ontario"."""
     word = const.OVER_WORD if relation == Relation.OVER else const.ON_WORD
     return f"{word} {article(name, kind)}{name}"
 
@@ -159,8 +186,10 @@ class Water:
         a["wet_layer"][pts], a["wet_row"][pts], a["wet_km"][pts], a["wet_at"][pts] = layer, row, km, at
 
     def _lake_array(self, what, name):
-        """Per row of lake layer `name`: its shore margin ("margin", by source), its area ("area")
-        or how close its shore must be to count as near, by its area ("near"); made once."""
+        """Per row of lake layer `name`: its shore margin ("margin", by source), its area ("area"),
+        its surface in metres above sea level ("elevation", NaN where unknown or in packs built
+        without the column) or how close its shore must be to count as near, by its area
+        ("near"); made once."""
         key = (what, name)
         if key not in self._per_lake:
             lakes = self.layer(name)
@@ -170,6 +199,11 @@ class Water:
                 out = np.array(
                     [margins.get(s, const.LAKE_SHORE_MARGIN_DEFAULT_KM) for s in sources], dtype=np.float64
                 )
+            elif what == "elevation":
+                out = np.full(lakes.count, np.nan)
+                if const.ELEVATION in lakes.fields:
+                    out[:] = np.asarray(lakes.column(const.ELEVATION), dtype=np.float64)
+                    out[out < const.ELEVATION_NULL_BELOW_M] = np.nan
             elif what == "area":
                 has = "area_km2" in lakes.fields
                 out = np.asarray(lakes.column("area_km2"), dtype=np.float64) if has else np.zeros(lakes.count)
@@ -188,6 +222,7 @@ class Water:
         n = len(lat)
         out = [None] * n
         wet, row, km = a["wet_layer"], a["wet_row"], a["wet_km"]
+        altitude = a.get("altitude")  # metres above sea level per point (NaN: not given), or None
         on_pts = np.flatnonzero(wet >= 0)
         deg, word = np.full(n, np.nan), np.full(n, "", dtype=object)
         aimed = on_pts[np.isfinite(a["wet_at"][on_pts, 0])]
@@ -205,11 +240,13 @@ class Water:
         for i in on_pts.tolist():
             name = _ON[wet[i]]
             key, r = self.keys[name], int(row[i])
-            relation = Relation.OVER
-            if name in const.LAKE_LAYERS and self._lake_array("area", name)[r] < const.OVER_LAKE_KM2:
-                relation = Relation.ON
+            how = Relation.ON
+            if altitude is not None:
+                sea = name == const.MARINE
+                surface = const.SEA_SURFACE_M if sea else self._lake_array("elevation", name)[r]
+                how = relation(float(altitude[i]), float(surface))
             bearing = None if np.isnan(deg[i]) else float(deg[i])
-            on = Nearby(self.layers.place(key, r), relation, float(km[i]), bearing, word[i] or None)
+            on = Nearby(self.layers.place(key, r), how, float(km[i]), bearing, word[i] or None)
             rule = const.NEAREST if a["wet_snapped"][i] else const.POLYGON
             out[i] = Answer(on, f"{key}:{rule}", tuple(near.pop(i, ())))
         for i, entries in near.items():

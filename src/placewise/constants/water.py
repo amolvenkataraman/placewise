@@ -38,9 +38,21 @@ RIVER_NEAR_KM = 2.0  # Natural Earth's river lines are ~1 km from the bank (Gang
 # landmarks from kilometres away, a pond only from its bank
 LAKE_NEAR_KM = ((10_000.0, 5.0), (100.0, 2.0), (10.0, 1.0), (0.0, 0.3))
 
-# Labels: "Over the North Atlantic Ocean", "Over Lake Ontario", "On Lake Tahoe"
+# Labels: "On Lake Tahoe", "On the North Atlantic Ocean"; "Over Lake Ontario" from a plane
 OVER_WORD, ON_WORD = "Over", "On"
-OVER_LAKE_KM2 = 10_000.0  # lakes this big are inland seas: "Over Lake Ontario", else "On ..."
+# On or over: every water body is ON unless the lookup gives an altitude (`altitude_m`, metres
+# above mean sea level; the WGS84 ellipsoid's difference of up to ~100 m is ignored) at least
+# OVER_HEIGHT_M above the water's surface: a boat, a ferry or a lakeside hotel's roof stays "On",
+# a plane is "Over". Surfaces: seas and oceans SEA_SURFACE_M; lakes HydroLAKES' `Elevation` and
+# reservoirs Global Dam Watch's `ELEV_MASL` (the `elevation_m` column, metres above sea level,
+# from a 90 m DEM); Natural Earth's lakes, rivers and packs built before the column: unknown.
+# Over water of unknown surface only from AIRBORNE_M up: higher than any water on Earth stands
+# (the highest lakes are at ~6,000 m) plus OVER_HEIGHT_M, so clearly in flight anywhere.
+OVER_HEIGHT_M = 100.0
+SEA_SURFACE_M = 0.0
+AIRBORNE_M = 9_000.0
+ELEVATION = "elevation_m"  # the lakes' and reservoirs' surface column (NaN where unknown)
+ELEVATION_NULL_BELOW_M = -1_000.0  # the sources' null (-9999); the Dead Sea is at -430 m
 # English names that take "the": by type (oceans, seas, straits, channels, fjords, reefs,
 # rivers: "the Kattegat", "the Ganges"), else by the name's form ("the Persian Gulf", "the Bay of
 # Bengal", "the Hirakud Reservoir"), but not lakes ("Lake Tahoe"), bays or sounds ("Hudson Bay")

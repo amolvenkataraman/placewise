@@ -98,3 +98,30 @@ def test_csv_batch_column_names_and_stdout(packs, tmp_path, capsys):
     assert rows[0]["Latitude"] == "0.75" and rows[0]["country"] == "Alphaland"
     code, _, err = run(capsys, "lookup", "--csv", str(src), "--packs", str(packs))
     assert code == 1 and "no column 'lat'" in err
+
+
+def test_altitude_reaches_the_lookup(packs, tmp_path, capsys, monkeypatch):
+    from placewise.cli import _common
+
+    seen, real = [], _common.open_geocoder
+
+    class Spy:
+        def __init__(self, geocoder):
+            self.geocoder = geocoder
+
+        def lookup(self, *args, **kwargs):
+            seen.append(kwargs["altitude_m"])
+            return self.geocoder.lookup(*args, **kwargs)
+
+        def lookup_many(self, *args, **kwargs):
+            seen.append(kwargs["altitude_m"])
+            return self.geocoder.lookup_many(*args, **kwargs)
+
+    monkeypatch.setattr(_common, "open_geocoder", lambda args: Spy(real(args)))
+    assert main(["lookup", "0.75", "-139.5", "--altitude", "10000", "--packs", str(packs)]) == 0
+    assert main(["lookup", "0.75", "-139.5", "--packs", str(packs)]) == 0
+    src = tmp_path / "in.csv"
+    write_csv(src, ["lat", "lon"], [["0.75", "-139.5"]])
+    assert main(["lookup", "--csv", str(src), "--altitude", "-20.5", "--packs", str(packs)]) == 0
+    assert seen == [10000.0, None, -20.5]
+    capsys.readouterr()

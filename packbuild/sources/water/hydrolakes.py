@@ -10,7 +10,9 @@ Names are sparse (1,837 of the 16,689 lakes of 10 km² or more) and bare ("Ontar
 `english_name` adds the generic ("Lake Ontario"); packbuild.sources.water.names joins better ones
 from Natural Earth and Wikidata. HydroLAKES' `Country` is the country of the lake's outflow, so
 Lake Ontario is "United States of America": it is never used (the country comes from the world
-pack's polygons, with the worldview applied).
+pack's polygons, with the worldview applied). `Elevation`, the lake surface in metres above sea
+level (from the EarthEnv-DEM90 terrain model), is the `elevation_m` column that tells "on" a lake
+from "over" it (placewise.engine._water.relation).
 """
 
 import datetime as dt
@@ -86,11 +88,13 @@ def _fetch(source, url, folder, min_area_km2, refresh):
 
 def lakes(shp, dbf, count, tolerance_m):
     """The first `count` lakes as a lakes-layer LayerData (unnamed ones have name "")."""
-    columns = _shp.read_dbf(dbf, limit=count, fields=("Hylak_id", "Lake_name", "Lake_type", "Lake_area"))
-    ids, names, types, areas, features = [], [], [], [], []
-    for parts, hylak, name, kind, area in zip(
+    fields = ("Hylak_id", "Lake_name", "Lake_type", "Lake_area", "Elevation")
+    columns = _shp.read_dbf(dbf, limit=count, fields=fields)
+    surface = _shp.elevations(columns.get("Elevation"), len(columns["Hylak_id"]))
+    ids, names, types, areas, elevations, features = [], [], [], [], [], []
+    for parts, hylak, name, kind, area, elevation in zip(
         _shp.read_shapes(shp, limit=count), columns["Hylak_id"], columns["Lake_name"],
-        _shp.numbers(columns["Lake_type"]), _shp.numbers(columns["Lake_area"]), strict=False,
+        _shp.numbers(columns["Lake_type"]), _shp.numbers(columns["Lake_area"]), surface, strict=False,
     ):  # fmt: skip
         if parts is None:
             continue
@@ -100,13 +104,14 @@ def lakes(shp, dbf, count, tolerance_m):
         names.append(english_name(name, kind))
         types.append(kind)
         areas.append(float(area))
+        elevations.append(float(elevation))
         features.append(shapes.polygon_feature(parts, tolerance_m, fid))
     n = len(ids)
     columns = {
         "id": ids, "name": names, "type": types, "wikidata": [""] * n, "aliases": [""] * n,
-        "source": [SOURCE] * n, "area_km2": areas,
+        "source": [SOURCE] * n, "area_km2": areas, const.ELEVATION: elevations,
     }  # fmt: skip
-    types_ = {k: "str" for k in columns} | {"area_km2": "f8"}
+    types_ = {k: "str" for k in columns} | {"area_km2": "f8", const.ELEVATION: "f8"}
     return LayerData(const.LAKES, "polygon", columns, (SOURCE,), features=features, types=types_)
 
 

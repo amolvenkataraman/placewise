@@ -85,6 +85,8 @@ def test_lakes_read_the_kept_records_with_ids_types_and_names(fetched):
     assert layer.columns["name"] == ["Lake Ontario", "", "Lake Tahoe", "", ""]
     assert layer.columns["type"] == ["lake", "reservoir", "lake", "lake", "lake"]
     assert layer.columns["area_km2"][0] == pytest.approx(19347.36)
+    assert layer.columns["elevation_m"] == [75.0, 187.0, 1898.0, 1583.0, 0.0]  # the lake's surface
+    assert layer.types["elevation_m"] == "f8"
     assert set(layer.columns["source"]) == {"hydrolakes"}
     assert layer.features[2].contains(39.0, -120.0)
     assert "country" not in layer.columns  # HydroLAKES' country is the outflow's: never used
