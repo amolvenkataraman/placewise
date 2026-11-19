@@ -33,7 +33,7 @@ placewise is the third option: the answer a person would give, computed on your 
 > airports, time zones by polygon), with full depth for the **US, Canada and India** (municipality,
 > county or district, metro area, ZIP / FSA / PIN code, neighbourhoods), first naming rules ("Las
 > Vegas" for the Strip, Mississauga for Pearson, Gurugram in Haryana), curated regions (GTA, GTHA,
-> Bay Area, Delhi NCR ...), water ("Over Lake Ontario"), US and Canadian parks ("within Yosemite
+> Bay Area, Delhi NCR ...), water ("On Lake Ontario"; "Over" given an altitude), US and Canadian parks ("within Yosemite
 > National Park"), worldviews (default de facto; `IN` answers India for every area India claims),
 > forward search (`placewise.find("Yosemite")`, codes, typos, context such as `country="USA"`;
 > `docs/search.md`), location-string parsing, the geo toolkit, track files, privacy tools, a local
@@ -79,7 +79,9 @@ with its state, for every area India claims; `"CN"` puts Taiwan, Hong Kong and M
 **Current limitations**
 
 - Outside the US, Canada and India the city is the nearest notable GeoNames place, not a municipal
-  boundary, and state lines are Natural Earth's 1:10m outlines (a few hundred metres off at borders).
+  boundary, and state lines are Natural Earth's 1:10m outlines (a few hundred metres off at borders;
+  where a US, Canadian or Indian pack's state or province holds the point, it decides the country:
+  Niagara Falls, New York; Treasure Island; Petrapole, `docs/naming.md`).
 - India's districts and cities are unions of PIN-code areas: state lines agree with an independent
   reference 99.7% of the time, districts 85%; large fringe PIN areas can fall outside a city, and
   satellite cities (Salt Lake → Bidhannagar) aren't rolled up yet. India has no open park outlines.
@@ -114,8 +116,8 @@ some population inside a radius. It's simple and it's wrong in ways people notic
 | Emeryville, California | Oakland | Emeryville | A small incorporated city next to a big one |
 | Toronto Pearson airport | Toronto | at YYZ, Mississauga | No airport awareness; the airport isn't in Toronto |
 | Gurugram, Haryana | Delhi, state Delhi | Gurugram, Haryana · Delhi NCR | The nearest place is across a state line |
-| A boat on Lake Ontario | Rochester, 50 km away | Over Lake Ontario | Water has no cities, so the radius reaches for one |
-| Mid-Atlantic, 50 N 30 W | a town 1,176 km away | Over the North Atlantic Ocean | Same, but worse |
+| A boat on Lake Ontario | Rochester, 50 km away | On Lake Ontario | Water has no cities, so the radius reaches for one |
+| Mid-Atlantic, 50 N 30 W | a town 1,176 km away | On the North Atlantic Ocean (Over, given a flight's altitude) | Same, but worse |
 | Yosemite Valley | Yosemite Valley | Yosemite Valley · Yosemite National Park | No park layer |
 
 And the alternatives:

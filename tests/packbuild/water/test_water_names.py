@@ -1,6 +1,7 @@
 """packbuild.sources.water.names: HydroLAKES outlines named from Natural Earth and Wikidata."""
 
 import json
+import math
 
 import pytest
 
@@ -13,13 +14,15 @@ def _box(south, west, north, east, fid):
     return Feature((Outline((((south, west), (south, east), (north, east), (north, west)),)),), id=fid)
 
 
-def _layer(rows, source):
-    """rows: (id, name, type, wikidata, area, box)"""
+def _layer(rows, source, elevations=None):
+    """rows: (id, name, type, wikidata, area, box); elevations: the elevation_m column, if any"""
     columns = {
         "id": [r[0] for r in rows], "name": [r[1] for r in rows], "type": [r[2] for r in rows],
         "wikidata": [r[3] for r in rows], "aliases": [""] * len(rows), "source": [source] * len(rows),
         "area_km2": [r[4] for r in rows],
     }  # fmt: skip
+    if elevations is not None:
+        columns["elevation_m"] = list(elevations)
     features = [_box(*r[5], r[0]) for r in rows]
     return LayerData("lakes", "polygon", columns, (source,), features=features)
 
@@ -60,7 +63,8 @@ def joined(tmp_path):
             ("Q424242", "Nowhere Lake", 0.0, 0.0),  # in no outline
         ])
     ])  # fmt: skip
-    return names.join(_layer(HL, "hydrolakes"), _layer(NE, "naturalearth"), points, tmp_path / "work")
+    hl = _layer(HL, "hydrolakes", elevations=[75.0, 187.0, 1583.0, 0.0, 10.0])
+    return names.join(hl, _layer(NE, "naturalearth"), points, tmp_path / "work")
 
 
 def _rows(layer):
@@ -72,6 +76,7 @@ def test_natural_earth_names_the_outline_it_covers(joined):
     ontario = rows["wikidata:Q1062"]  # the Wikidata id is the stable public id
     assert ontario["name"] == "Lake Ontario" and ontario["source"] == "hydrolakes"
     assert ontario["area_km2"] == 19347.0  # HydroLAKES' outline and area
+    assert ontario["elevation_m"] == 75.0  # and surface elevation
     hirakud = next(r for r in rows.values() if r["name"] == "Hirakud Reservoir")
     assert hirakud["source"] == "hydrolakes" and hirakud["type"] == "reservoir"
     assert hirakud["id"] == "hydrolakes:2"
@@ -81,6 +86,8 @@ def test_covered_natural_earth_lakes_go_and_the_rest_stay(joined):
     by_name = {r["name"]: r for r in _rows(joined).values()}
     assert "Whitefish Bay" not in by_name  # inside HydroLAKES' Lake Ontario, which keeps its name
     assert by_name["Lake Small"]["source"] == "naturalearth"
+    assert math.isnan(by_name["Lake Small"]["elevation_m"])  # Natural Earth gives none
+    assert by_name["Dal Lake"]["elevation_m"] == 1583.0
 
 
 def test_wikidata_names_unnamed_outlines(joined):

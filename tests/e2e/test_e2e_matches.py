@@ -32,9 +32,9 @@ def test_outback_point_names_the_nearest_town_with_its_distance():
     assert r.matches["admin1"].relation is Relation.WITHIN
 
 
-def test_over_lake_ontario_has_no_city_inside():
+def test_on_lake_ontario_has_no_city_inside():
     r = geocoder(*CA).lookup(43.6, -77.9)
-    assert r.label == "Over Lake Ontario"
+    assert r.label == "On Lake Ontario" and r.water.relation is Relation.ON
     m = r.matches.get("city")
     assert r.city is None or (m.relation is Relation.NEAR and m.distance_km > 1)
     assert not r.city_within

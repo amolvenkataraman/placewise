@@ -5,11 +5,12 @@ With the `world-water` pack installed, a lookup says what water a point is on, o
 ```python
 import placewise
 
-placewise.lookup(43.6, -77.9).label            # "Over Lake Ontario"
-placewise.lookup(39.0968, -120.0324).label     # "On Lake Tahoe"
-placewise.lookup(50.0, -30.0).label            # "Over the North Atlantic Ocean"
+placewise.lookup(43.6, -77.9).label                     # "On Lake Ontario"
+placewise.lookup(43.6, -77.9, altitude_m=10_000).label  # "Over Lake Ontario"
+placewise.lookup(39.0968, -120.0324).label              # "On Lake Tahoe"
+placewise.lookup(50.0, -30.0).label                     # "On the North Atlantic Ocean"
 r = placewise.lookup(50.0, -30.0)
-r.water                                        # Nearby(North Atlantic Ocean, over, 1,180 km to shore)
+r.water                                        # Nearby(North Atlantic Ocean, on, 1,180 km to shore)
 placewise.lookup(25.3069, 83.0107).near        # (..., Nearby(Ganges, near, 0.9 km), ...)
 ```
 
@@ -21,8 +22,27 @@ as before. Rules: `placewise.engine._water`; constants: `placewise.constants.wat
 
 | | When | `Result.water` | Label |
 |---|---|---|---|
-| a lake or reservoir | inside its outline, at least the shore margin from its shore (0.1 km for HydroLAKES and Global Dam Watch outlines, 0.5 km for Natural Earth's); a lake answers before a reservoir drawn over it | the lake, `on` (`over` for lakes of 10,000 km² or more), distance and bearing to the nearest shore | "On Lake Tahoe", "Over Lake Ontario" |
-| a sea or ocean | in no country polygon, at least 1 km from the nearest, inside a marine polygon (or within 25 km of one: the slivers Natural Earth's coarse coast leaves) | the sea, `over`, distance and bearing to the nearest coast | "Over the Arabian Sea"; far offshore with the old reference kept: "Over the Pacific Ocean, 15 km S of ..." |
+| a lake or reservoir | inside its outline, at least the shore margin from its shore (0.1 km for HydroLAKES and Global Dam Watch outlines, 0.5 km for Natural Earth's); a lake answers before a reservoir drawn over it | the lake, `on` (or `over`, below), distance and bearing to the nearest shore | "On Lake Tahoe", "On Lake Ontario" |
+| a sea or ocean | in no country polygon, at least 1 km from the nearest, inside a marine polygon (or within 25 km of one: the slivers Natural Earth's coarse coast leaves) | the sea, `on` (or `over`), distance and bearing to the nearest coast | "On the Arabian Sea"; far offshore with the old reference kept: "On the Pacific Ocean, 15 km S of ..." |
+
+**On or over.** Every water body is `on` ("On Lake Ontario", "On the North Atlantic Ocean")
+unless the lookup is given an altitude: `lookup(lat, lon, altitude_m=...)`, `lookup_many(...,
+altitude_m=...)` with one altitude or one per point (NaN: unknown), `placewise lookup ...
+--altitude 10000`, in metres above mean sea level (the WGS84 ellipsoid's difference, up to ~100 m,
+is ignored). It is `over` when the altitude is at least 100 m above the water's surface
+(`OVER_HEIGHT_M`): a ship's bridge or a boat on Lake Tahoe at 1,897 m stays "On", a plane at
+3,000 m over Tahoe or 10 km over Lake Ontario is "Over".
+
+| Water | Surface |
+|---|---|
+| seas, oceans, gulfs, bays | 0 m |
+| HydroLAKES lakes | `Elevation`, the lake surface from a 90 m terrain model (Lake Tahoe ~1,898 m, Lake Ontario ~75 m) |
+| Global Dam Watch reservoirs | `ELEV_MASL`, the reservoir surface (unknown where the source has -9999) |
+| Natural Earth lakes, override water, packs built before the `elevation_m` column | unknown |
+
+Where the surface is unknown, a point is `over` only from 9,000 m (`AIRBORNE_M`: above the
+highest water on Earth, ~6,000 m, by a wide margin), so a boat on a high lake is never "Over". The
+altitude changes nothing else in the Result.
 
 - On a lake, country, admin1, city and the other fields stay as on land: only the label and
   `water` change. Within 12 nmi of a coast the country stays too (as before); the label then names

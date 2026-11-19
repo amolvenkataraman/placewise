@@ -4,10 +4,15 @@ Test Ocean     lat -5 .. 5, lon -145 .. -135, with the land of Alphaland + Betal
                Gammaland as holes, as Natural Earth's marine polygons follow the coast
 Gamma Bay      lat 1.5 .. 2, lon -140 .. -139.5, drawn over the ocean (smaller: answers first)
 Far Sea        lat -12 .. -8, lon -162 .. -158, far from every country
-Lake Alpha     lat 0.3 .. 0.4, lon -139.9 .. -139.8, inside Alphaland (about 123 km²)
+Lake Alpha     lat 0.3 .. 0.4, lon -139.9 .. -139.8, inside Alphaland (about 123 km²), its
+               surface 1,897 m above sea level (as high as Lake Tahoe's)
 Alpha River    along lat 0.6 from lon -139.95 to -139.7
-Southam Reservoir  lat 0.1 .. 0.15, lon -139.7 .. -139.6 (Global Dam Watch, about 62 km²)
-Alpha Pool     lat 0.35 .. 0.45, lon -139.85 .. -139.75, a reservoir overlapping Lake Alpha
+Southam Reservoir  lat 0.1 .. 0.15, lon -139.7 .. -139.6 (Global Dam Watch, about 62 km²), its
+               surface elevation unknown (the source's -9999)
+Alpha Pool     lat 0.35 .. 0.45, lon -139.85 .. -139.75, a reservoir overlapping Lake Alpha, at 420 m
+
+`elevation=False` writes the lakes and reservoirs without their `elevation_m` column, as packs
+built before it have them.
 """
 
 from lookup_kit import CREATED, box_feature
@@ -42,7 +47,7 @@ def marine_layer():
     return LayerData("marine", "polygon", columns, ("synthetic",), features=[r[4] for r in rows])
 
 
-def lakes_layer(source="hydrolakes"):
+def lakes_layer(source="hydrolakes", elevation=True):
     columns = {
         "id": ["hydrolakes:1"],
         "name": ["Lake Alpha"],
@@ -51,12 +56,13 @@ def lakes_layer(source="hydrolakes"):
         "aliases": [""],
         "source": [source],
         "area_km2": [123.0],
+        **({"elevation_m": [1897.0]} if elevation else {}),
     }
     features = [box_feature(0.3, -139.9, 0.4, -139.8, fid="hydrolakes:1")]
     return LayerData("lakes", "polygon", columns, ("synthetic",), features=features)
 
 
-def reservoirs_layer():
+def reservoirs_layer(elevation=True):
     columns = {
         "id": ["gdw:2", "gdw:1"],
         "name": ["Southam Reservoir", "Alpha Pool"],
@@ -65,6 +71,7 @@ def reservoirs_layer():
         "aliases": ["", ""],
         "source": ["gdw", "gdw"],
         "area_km2": [62.0, 124.0],
+        **({"elevation_m": [-9999.0, 420.0]} if elevation else {}),
     }
     features = [
         box_feature(0.1, -139.7, 0.15, -139.6, fid="gdw:2"),
@@ -81,12 +88,12 @@ def rivers_layer():
     return LayerData("rivers", "polygon", columns, ("synthetic",), features=features)
 
 
-def write_water(out_dir, lake_source="hydrolakes", reservoirs=False):
+def write_water(out_dir, lake_source="hydrolakes", reservoirs=False, elevation=True):
     """The synthetic water pack, named like the real one: world-water-2026.11."""
     layers = [
         marine_layer(),
-        lakes_layer(lake_source),
-        *([reservoirs_layer()] if reservoirs else []),
+        lakes_layer(lake_source, elevation),
+        *([reservoirs_layer(elevation)] if reservoirs else []),
         rivers_layer(),
     ]
     return write_pack(out_dir, "world-water", "2026.11", layers, created=CREATED)

@@ -18,6 +18,8 @@ RESERVOIRS = [
     (900, "", "", "", "", 50.0, (5.0, 5.0, 5.1, 5.1)),  # no name at all
     (901, "Tiny Reservoir", "Tiny", "", "", 3.0, (6.0, 6.0, 6.01, 6.01)),  # below the size kept
 ]
+# ELEV_MASL (reservoir surface, m above sea level) by GDW_ID; the rest the source's null, -9999
+ELEVATIONS = {141: 1895, 336: 187, 1687: 830, 351: 179}
 
 
 def _ring(south, west, north, east):
@@ -32,9 +34,10 @@ def write_archive(folder, rows=RESERVOIRS):
         for name in ("RES_NAME", "DAM_NAME", "ALT_NAME", "LAKE_CTRL"):
             w.field(name, "C", 60)
         w.field("AREA_POLY", "N", 13, 3)
+        w.field("ELEV_MASL", "N", 10, 0)
         for gid, res, dam, alt, ctrl, area, box in rows:
             w.poly([_ring(*box)])
-            w.record(gid, res, dam, alt, ctrl, area)
+            w.record(gid, res, dam, alt, ctrl, area, ELEVATIONS.get(gid, -9999))
     archive = folder / "47913754"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as z:
         z.writestr("GDW_TechDoc_v1_0.pdf", b"%PDF-1.4")

@@ -1,6 +1,7 @@
 """packbuild.sources.water.gdw: Global Dam Watch reservoirs as the world-water pack's
 `reservoirs` layer, offline."""
 
+import numpy as np
 import pytest
 from gdw_kit import write_archive
 
@@ -34,6 +35,9 @@ def test_reservoirs_keep_named_big_dam_made_ones(shp):
     assert c["id"] == ["gdw:11543", "gdw:1687", "gdw:351", "gdw:336"]
     assert set(c["type"]) == {const.RESERVOIR} and set(c["source"]) == {"gdw"}
     assert c["area_km2"] == [12.0, 18.9, 195.2, 499.5]
+    # ELEV_MASL, the reservoir's surface; the source's -9999 is unknown
+    assert np.isnan(c["elevation_m"][0]) and c["elevation_m"][1:] == [830.0, 179.0, 187.0]
+    assert layer.types["elevation_m"] == "f8"
     assert len(layer.features) == 4 and layer.features[1].id == "gdw:1687"
 
 

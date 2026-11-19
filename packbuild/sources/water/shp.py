@@ -12,6 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
+from placewise.constants import water as const
+
 _LINE_TYPES = {3, 13, 23}  # PolyLine, PolyLineZ, PolyLineM (Z and M values are ignored)
 _POLYGON_TYPES = {5, 15, 25}
 _NULL_SHAPE = 0
@@ -83,4 +85,14 @@ def numbers(values):
             out[i] = float(v)
         except ValueError:
             continue
+    return out
+
+
+def elevations(values, n):
+    """Surface elevations (m above sea level) from a dBASE number column, NaN where blank, the
+    sources' null (-9999) or the column is missing (`values` None)."""
+    if values is None:
+        return np.full(n, np.nan)
+    out = numbers(values)
+    out[out < const.ELEVATION_NULL_BELOW_M] = np.nan
     return out

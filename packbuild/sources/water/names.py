@@ -20,6 +20,7 @@ first. Spatial tests run on temporary packs (placewise's own polygon queries).
 """
 
 import json
+import math
 import re
 import shutil
 import tempfile
@@ -78,8 +79,9 @@ def join(hydrolakes, natural_earth, points, workdir):
         k: [r[k] for r, _ in keep] for k in ("name", "type", "wikidata", "aliases", "source")
     }
     columns["area_km2"] = [r["area_km2"] for r, _ in keep]
+    columns[const.ELEVATION] = [r[const.ELEVATION] for r, _ in keep]
     features = [Feature(f.outlines, {}, i) for (_, f), i in zip(keep, ids, strict=True)]
-    types = {k: "str" for k in columns} | {"area_km2": "f8"}
+    types = {k: "str" for k in columns} | {"area_km2": "f8", const.ELEVATION: "f8"}
     sources = tuple(dict.fromkeys((*hydrolakes.sources, NE_SOURCE, WIKIDATA)))
     return LayerData(const.LAKES, "polygon", columns, sources, features=features, types=types)
 
@@ -179,10 +181,12 @@ def _polygons(work, name, features):
 
 
 def _rows(layer):
+    """The rows as dicts; the surface elevation NaN where the layer has none (Natural Earth)."""
     keys = ("id", "name", "type", "wikidata", "aliases", "source", "area_km2")
-    return [
-        dict(zip(keys, values, strict=True)) for values in zip(*(layer.columns[k] for k in keys), strict=True)
-    ]
+    n = len(layer.columns["id"])
+    surface = layer.columns.get(const.ELEVATION, [math.nan] * n)
+    columns = [*(layer.columns[k] for k in keys), surface]
+    return [dict(zip((*keys, const.ELEVATION), values, strict=True)) for values in zip(*columns, strict=True)]
 
 
 def _qnum(qid):

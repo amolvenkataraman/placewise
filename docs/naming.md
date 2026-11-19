@@ -36,6 +36,29 @@ Toronto, `within`, 0 km; on the Alberta prairie it is the nearest town, `near`, 
 A field an override rule filled with another place has no match; a renamed place keeps its own.
 The card (`print(r)`) adds "· 21 km away, not inside" to such lines.
 
+## Borders and islands
+
+The country comes from Natural Earth's 1:10m polygons, which are drawn to about a kilometre: its
+Canada takes in downtown Niagara Falls, New York, its Bangladesh the Petrapole checkpoint, and it
+has no Treasure Island in San Francisco Bay. Where a country pack is open, its first-level units
+decide instead (`placewise.engine._borders`):
+
+- a point inside a US state (Census cartographic boundary, 1:500k), a Canadian province (StatCan
+  cartographic boundary) or an Indian state (the India pack's) that belongs to another country than
+  Natural Earth's takes that country, with `sources["country"]` the unit layer's
+  (`"usa/states:polygon"`) and `matches["country"]` `within`; admin1 and the lower levels follow
+  from that country's pack as anywhere else;
+- the US and Canadian units are clipped to the shoreline, so a point inside one where Natural Earth
+  has no country (an island it leaves out) is on land: the country is the unit's, and the sea
+  around it is `near`, not "On San Francisco Bay". India's states, unions of PIN-code areas that
+  take in lagoons, only correct land borders;
+- where Natural Earth's own country's pack also holds the point (two packs' borders overlapping
+  by metres), or the point is less than 50 m inside the unit (within the unit's own
+  generalisation: the brink of the Horseshoe Falls), Natural Earth's answer stands; where two other
+  packs both hold it, the unit the point lies deeper inside wins;
+- disputed areas are left exactly as before (`docs/worldviews.md`): no correction inside a
+  worldviews area, and none from units only India's view gives India (`india_view_only`).
+
 ## Regions
 
 `regions` lists every region containing the point, smallest first by area: the pack's curated
@@ -181,7 +204,7 @@ Rules on top of that, in order:
    most significant one the point is in (`within[0]`). National forests and grasslands don't
    count: their administrative boundaries take in whole towns (South Lake Tahoe lies in the Lake
    Tahoe Basin Management Unit). Turn the rule off with `label.parks = false`; a template ignores it.
-2. **Water.** On a sea or lake the label names the water ("On Lake Tahoe", "Over Lake Ontario",
+2. **Water.** On a sea or lake the label names the water ("On Lake Tahoe"; "Over Lake Ontario" given an altitude,
    docs/water.md), park or not.
 3. **Offshore.** Far from land: "Offshore, 15 km S of Toronto". Country names are the ISO short names ("United States"); Natural
 Earth's longer form stays in `country.aliases`.

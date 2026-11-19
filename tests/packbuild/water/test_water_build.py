@@ -1,6 +1,7 @@
 """packbuild.water: the world-water pack from Natural Earth, HydroLAKES and Wikidata, offline."""
 
 import json
+import math
 import zipfile
 from pathlib import Path
 
@@ -88,6 +89,9 @@ def test_build_writes_the_four_layers(tmp_path, offline):
     # HydroLAKES outlines named by Natural Earth (Ontario) and Wikidata (Dal Lake); Tahoe by its own
     # name; Natural Earth's uncovered Lake Small kept; the unnamed outline left out
     assert sorted(names) == ["Dal Lake", "Lake Ontario", "Lake Small", "Lake Tahoe"]
+    surface = dict(zip(names, lakes.column("elevation_m").tolist(), strict=True))  # m above sea level
+    assert surface["Lake Tahoe"] == 1898.0 and surface["Lake Ontario"] == 75.0
+    assert math.isnan(surface["Lake Small"])  # a Natural Earth lake: unknown
     assert lakes.sources == ("hydrolakes", "naturalearth-physical", "wikidata")
     assert pack["marine"].column("name").tolist() == ["North Atlantic Ocean"]
     tahoe = pack.names.exact("Lake Tahoe")
@@ -107,6 +111,7 @@ def test_reservoirs_no_named_lake_covers_join_as_their_own_layer(tmp_path, offli
         "Big Meadows Reservoir", "Tehri Reservoir", "Nagarjuna Sagar", "Hirakud Reservoir",
     ]  # fmt: skip
     assert set(reservoirs.column("type").tolist()) == {"reservoir"} and reservoirs.sources == ("gdw",)
+    assert reservoirs.column("elevation_m").tolist()[1:] == [830.0, 179.0, 187.0]
     tehri = pack.names.exact("Tehri Reservoir")
     assert [pack.names.layers[x] for x in tehri.layer] == ["reservoirs"]
     assert (tmp_path / "cache" / "gdw" / "GDW_reservoirs_v1_0.shp").exists()

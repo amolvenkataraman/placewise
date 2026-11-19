@@ -18,7 +18,9 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 
 `lookup_many` runs every spatial query for all points at once and then builds the Results;
 `lookup` is `lookup_many` with one point, so the two always agree. A point given more than once
-in a batch is looked up once, and its Result (frozen) is shared by every position that has it.
+in a batch (at the same altitude, if any) is looked up once, and its Result (frozen) is shared by
+every position that has it. The optional altitude (metres above mean sea level) only decides
+whether a point on water is ON it or OVER it (placewise.engine._water.relation).
 """
 
 import inspect
@@ -38,7 +40,7 @@ from ._layers import Layers
 from ._notable import Notable
 from ._postal import WorldPostal
 from ._timezones import Timezones
-from ._water import Water
+from ._water import Water, in_flight
 from ._within import Parks
 from .naming import Naming
 from .naming.towns import Towns
@@ -147,15 +149,18 @@ class Geocoder:
         """The Entity with placewise id `ident` (placewise.search.get)."""
         return self.search.get(ident, **options)
 
-    def lookup(self, lat, lon, *, worldview=None, near=True):
-        """The Result for one point (WGS84 degrees)."""
-        return self.lookup_many([lat], [lon], worldview=worldview, near=near)[0]
+    def lookup(self, lat, lon, *, worldview=None, near=True, altitude_m=None):
+        """The Result for one point (WGS84 degrees). `altitude_m`, metres above mean sea level
+        (None: unknown), turns "On Lake Ontario" into "Over Lake Ontario" from 100 m above the
+        water (placewise.constants.water.OVER_HEIGHT_M); nothing else depends on it."""
+        return self.lookup_many([lat], [lon], worldview=worldview, near=near, altitude_m=altitude_m)[0]
 
-    def lookup_many(self, lats, lons, *, worldview=None, near=True):
+    def lookup_many(self, lats, lons, *, worldview=None, near=True, altitude_m=None):
         """Results for many points, one per point, in order. Vectorised: much faster per point.
-        Exactly repeated points are looked up once and share one Result."""
+        Exactly repeated points (at the same altitude) are looked up once and share one Result.
+        `altitude_m`: None, one altitude for every point, or one per point (NaN: unknown)."""
         _ondemand.before_lookup(self, lats, lons, worldview)
-        return self._lookup(lats, lons, worldview, near, everything=True)
+        return self._lookup(lats, lons, worldview, near, everything=True, altitude=altitude_m)
 
     def _lookup_places(self, lats, lons, *, worldview=None):
         """Results whose country, admin1 ... postal and regions are as lookup_many(near=False) has
@@ -164,11 +169,12 @@ class Geocoder:
         context: it skips the water step, whose shore index takes seconds to build on first use."""
         return self._lookup(lats, lons, worldview, False, everything=False)
 
-    def _lookup(self, lats, lons, worldview, near, everything):
+    def _lookup(self, lats, lons, worldview, near, everything, altitude=None):
         lat = np.asarray(lats, dtype=np.float64).ravel()
         lon = np.asarray(lons, dtype=np.float64).ravel()
         if lat.shape != lon.shape:
             raise ValueError(f"{len(lat)} latitudes but {len(lon)} longitudes")
+        alt = _altitudes(altitude, len(lat))
         bad = ~(np.isfinite(lat) & np.isfinite(lon) & (np.abs(lat) <= 90) & (np.abs(lon) <= 180))
         if bad.any():
             i = int(np.flatnonzero(bad)[0])
@@ -176,11 +182,15 @@ class Geocoder:
         order, locked = self._order(worldview)
         if not len(lat):
             return []
-        first, inverse = _repeats(lat, lon)
+        first, inverse = _repeats(lat, lon, alt)
         if first is not None:  # each distinct point once, in order of first appearance
-            unique = self._lookup(lat[first], lon[first], worldview, near, everything)
+            unique = self._lookup(
+                lat[first], lon[first], worldview, near, everything, None if alt is None else alt[first]
+            )
             return [unique[i] for i in inverse.tolist()]
         a, named = self._answer(lat, lon, order, near, everything)
+        if alt is not None:
+            a["altitude"] = alt
         results = _results.build(self, lat, lon, a, named, order, locked)
         if self.overrides is not None:
             apply = self.overrides.apply
@@ -188,6 +198,8 @@ class Geocoder:
             results = [
                 apply(r, x, y, **extra) for r, x, y in zip(results, lat.tolist(), lon.tolist(), strict=True)
             ]
+            if alt is not None:
+                results = in_flight(results, alt)
         return results
 
     # -- the steps ----------------------------------------------------------------------------------
@@ -262,13 +274,32 @@ class Geocoder:
         return _results.compose(self.settings.label, result)
 
 
-def _repeats(lat, lon):
-    """(first, inverse) when some points repeat exactly (bit for bit: -0.0 is not 0.0): the
-    position of each distinct point's first appearance, in order, and the distinct point of every
-    point; (None, None) when none repeats."""
+def _altitudes(altitude, n):
+    """The altitudes as n float64s (NaN: unknown), or None when none is given."""
+    if altitude is None:
+        return None
+    alt = np.asarray(altitude, dtype=np.float64)
+    if alt.ndim == 0:
+        alt = np.full(n, float(alt))
+    alt = alt.ravel()
+    if len(alt) != n:
+        raise ValueError(f"{n} points but {len(alt)} altitudes")
+    if np.isinf(alt).any():
+        i = int(np.flatnonzero(np.isinf(alt))[0])
+        raise ValueError(f"altitude {i} ({alt[i]}) is not a number of metres")
+    known = ~np.isnan(alt)
+    if not known.any():
+        return None
+    return np.where(known, alt, np.nan)  # one NaN, so repeated points with unknown altitude match
+
+
+def _repeats(lat, lon, alt=None):
+    """(first, inverse) when some points repeat exactly (bit for bit: -0.0 is not 0.0), at the
+    same altitude when altitudes are given: the position of each distinct point's first
+    appearance, in order, and the distinct point of every point; (None, None) when none repeats."""
     if len(lat) < 2:
         return None, None
-    bits = np.stack([lat, lon], axis=1).view(np.int64)
+    bits = np.stack([lat, lon] if alt is None else [lat, lon, alt], axis=1).view(np.int64)
     _, first, inverse = np.unique(bits, axis=0, return_index=True, return_inverse=True)
     if len(first) == len(lat):
         return None, None
