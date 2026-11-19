@@ -150,3 +150,18 @@ def test_fields_filled_from_outside_say_how_far():
     got = rows(str(off))
     assert got["country"][0] == "United States (US) · 4.0 km offshore"
     assert got["city"][0] == "Yosemite Valley · not inside"
+
+
+def test_entity_card_says_when_its_context_is_unsure():
+    from placewise.model import Match, Relation
+
+    e = paris_texas()
+    inside = {"country": Match(Relation.WITHIN, 0.0), "region": Match(Relation.WITHIN, 0.0)}
+    sure = dataclasses.replace(e, context_matches=inside)
+    assert str(sure).splitlines()[0] == "Paris  (Texas, US)"
+    border = dataclasses.replace(sure, context_certain=False)
+    assert str(border).splitlines()[0] == "Paris  (Texas, US · near a border)"
+    off = dataclasses.replace(border, context_matches={**inside, "country": Match(Relation.OFFSHORE, 4.0)})
+    assert str(off).splitlines()[0] == "Paris  (Texas, US · offshore)"
+    gap = dataclasses.replace(border, context_matches={**inside, "region": Match(Relation.NEAR, 0.2)})
+    assert str(gap).splitlines()[0] == "Paris  (Texas, US · outside its outline)"

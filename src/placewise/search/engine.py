@@ -381,7 +381,7 @@ class Search:
     def _point(self, point, worldview):
         lat, lon = point
         result = self.geocoder.lookup(lat, lon, worldview=worldview, near=False)
-        return entities.point_entity(result, lat, lon)
+        return entities.point_entity(result, lat, lon, self.contexts.of_result(result))
 
     def _override_ids(self, q, ctx):
         resolve = getattr(self.overrides, "resolve_name", None)

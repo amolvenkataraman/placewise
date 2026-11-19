@@ -181,7 +181,14 @@ class Entity(_Card, Model):
     """What `find` returns: a place with a point guaranteed inside it, its extent and its context.
     `city`, `region` (state, province) and `country` (ISO alpha-2) say where it is, for telling
     places of one name apart; `alternates` are the same place as found in other data (a city's
-    metro area of the same name, a park's point record)."""
+    metro area of the same name, a park's point record).
+
+    `context_matches` says, for each of city, region and country that is set, how it was found for
+    `point`, as Result.matches has it (`within`, `near` a fallback, `offshore`; distance_km).
+    `context_certain` is False when the country or region isn't guaranteed: taken from offshore or
+    as the nearest polygon rather than one holding the point, or the point is within
+    constants.search.CONTEXT_BORDER_KM of another country's or region's coarse outline
+    (docs/search.md, "How sure the context is"). True when there is no context to doubt."""
 
     place: Place
     point: Point
@@ -193,6 +200,8 @@ class Entity(_Card, Model):
     country: str | None = None
     score: float | None = None
     alternates: tuple[Place, ...] = ()
+    context_matches: dict[str, Match] = field(default_factory=dict)  # city/region/country -> Match
+    context_certain: bool = True
 
     def __post_init__(self):
         if self.radius_km < 0:
@@ -258,6 +267,13 @@ class Result(_Card, Model):
         """km from the point to the city: 0.0 inside it, None when unknown or no city."""
         m = self.matches.get("city")
         return m.distance_km if m is not None else None
+
+    @property
+    def certain(self):
+        """Whether the country and admin1 hold the point (not taken from offshore or as the nearest
+        polygon). Fields set by an override count as sure. Unlike Entity.context_certain it doesn't
+        measure the distance to a border."""
+        return all(_within(m) for f in ("country", "admin1") if (m := self.matches.get(f)) is not None)
 
     @property
     def cc(self):

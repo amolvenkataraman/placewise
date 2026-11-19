@@ -29,6 +29,9 @@ the layer and rule behind every field (`"usa/places:metro"`, `"can/csd:nearest"`
 `distance_km` is None where it can't be known (a box holding the point but not the outline).
 `r.city_within`, `r.locality_within` and `r.city_km` are shortcuts: at the CN Tower the city is
 Toronto, `within`, 0 km; on the Alberta prairie it is the nearest town, `near`, tens of km away.
+`r.certain` is True when the country and admin1 both hold the point (neither `offshore` nor a
+`near` fallback); forward search's `Entity.context_certain` also flags points near a coarse border
+(`docs/search.md`, "How sure the context is").
 A field an override rule filled with another place has no match; a renamed place keeps its own.
 The card (`print(r)`) adds "· 21 km away, not inside" to such lines.
 

@@ -3,7 +3,9 @@ within=, kinds=, combined with the context written in the text ("Paris, TX"). Ar
 the two disagree. Filters drop what fails them; with strict=False they only push it down.
 
 `Where` answers, for many points at once, the country (alpha-2) and admin1 code and name each is
-in, by reverse lookup's country and admin1 rules on the de facto view."""
+in, by reverse lookup's country and admin1 rules on the de facto view, and how each was found
+(Result.matches). `near_border` says which points are close enough to another country's or
+region's coarse outline that the answer may be wrong."""
 
 from dataclasses import dataclass
 
@@ -12,6 +14,7 @@ import numpy as np
 from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
 from placewise.constants.names import PLACE_KINDS
+from placewise.engine._matches import matches as field_matches
 from placewise.geo.distances import haversine
 from placewise.text.parse import readings
 
@@ -141,12 +144,13 @@ class Where:
 
     def __init__(self, admin, lat, lon):
         n = len(lat)
+        self.admin, self.lat, self.lon, self._a = admin, lat, lon, None
         self.country = np.full(n, None, dtype=object)
         self.admin1 = np.full(n, None, dtype=object)
         self.admin1_name = np.full(n, None, dtype=object)
         if not n or admin.countries is None:
             return
-        a = {}
+        a = self._a = {}
         admin.answer(a, np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64), _DE_FACTO)
         self.country[:] = admin.iso2_of_view(a)
         aidx = a["aidx"]
@@ -160,5 +164,37 @@ class Where:
     def pairs(self):
         return zip(self.country, self.admin1, strict=True)
 
+    def matches(self, i):
+        """{"country": Match, "region": Match} for point i, as Result.matches has its country and
+        admin1 (within the polygon, or offshore / nearest with the km to it); {} for no country."""
+        a = self._a
+        if a is None or self.country[i] is None:
+            return {}
+        layers, fields, sources = self.admin.layers, {}, {}
+        for field, role, row, mode in (
+            ("country", lookup_const.COUNTRIES, a["cidx"][i], a["cmode"][i]),
+            ("admin1", lookup_const.ADMIN1, a["aidx"][i], a["amode"][i]),
+        ):
+            if row >= 0 and (field == "country" or self.admin1[i] is not None):
+                fields[field], sources[field] = layers.place(role, int(row)), layers.source(role, mode)
+        found = field_matches(fields, sources, float(self.lat[i]), float(self.lon[i]))
+        return {_FIELD.get(f, f): m for f, m in found.items()}
+
+
+def near_border(admin, lat, lon, km=const.CONTEXT_BORDER_KM):
+    """(country, admin1) bool arrays: whether the outlines of two or more countries (admin1 units)
+    of the world pack come within km of each point, so a coarse border may put it on the wrong
+    side. A coast with nothing across it isn't a border: only one outline is near."""
+    lat, lon = np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64)
+    out = []
+    for layer in (admin.countries, admin.admin1):
+        if layer is None or not len(lat):
+            out.append(np.zeros(len(lat), dtype=bool))
+            continue
+        q, _, _ = layer.near_boundary(lat, lon, km)  # one row per (point, feature) pair
+        out.append(np.bincount(q, minlength=len(lat)) >= 2)
+    return out[0], out[1]
+
 
 _DE_FACTO = (lookup_const.DE_FACTO,)
+_FIELD = {"admin1": "region"}  # Result field -> Entity field
