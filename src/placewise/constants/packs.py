@@ -32,6 +32,9 @@ ARCHIVE_SUFFIX = ".tar.xz"
 # set for 4-byte values (lc=0, lp=2, pb=2), since packs are mostly int32 coordinate arrays: about
 # 2% smaller than plain preset 9 on the 2026.11 packs, and read by any xz decoder
 ARCHIVE_LZMA2 = {"preset": 9, "lc": 0, "lp": 2, "pb": 2}
+# packs (and source-registry regions) for a group of countries rather than one: "eur-parks". The
+# name says nothing about which countries: pack.json's `covers` lists them (docs/pack-format.md)
+MULTI_COUNTRY_REGIONS = {"eur": "Europe: EEA member and cooperating countries"}
 # share-alike data (constants.licences.SHARE_ALIKE) ships only in packs named <name>-sa
 SHARE_ALIKE_SUFFIX = "-sa"
 

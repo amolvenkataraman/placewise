@@ -9,6 +9,7 @@ import pytest
 
 from placewise import attribution
 from placewise.constants.countries.countries import BY_ALPHA3
+from placewise.constants.packs import MULTI_COUNTRY_REGIONS
 
 PACKBUILD = Path(__file__).resolve().parents[1] / "packbuild"
 ENTRY = {"id": "demo", "name": "Demo", "url": "https://example.org", "licence": "CC0-1.0", "credit": "Demo"}
@@ -25,7 +26,10 @@ def test_each_file_is_one_purpose_listing_sources_per_region():
     for path in attribution.SOURCES_DIR.glob("*.json"):
         doc = json.loads(path.read_text(encoding="utf-8"))
         assert doc["purpose"] == path.stem and doc["description"]
-        assert all(region == "world" or region.upper() in BY_ALPHA3 for region in doc["regions"])
+        assert all(
+            region == "world" or region in MULTI_COUNTRY_REGIONS or region.upper() in BY_ALPHA3
+            for region in doc["regions"]
+        )
     assert [s.id for s in registry["boundaries"]["world"]] == ["naturalearth"]
     assert [s.id for s in registry["airports"]["world"]] == ["ourairports"]
     # a source serves several purposes but only lists that purpose's downloads in each file
@@ -37,14 +41,15 @@ def test_each_file_is_one_purpose_listing_sources_per_region():
     }
 
 
-@pytest.mark.parametrize("region", ["us", "IND", "xyz", "world2"])
+@pytest.mark.parametrize("region", ["us", "IND", "xyz", "world2", "EUR", "europe"])
 def test_a_region_is_world_or_a_lower_case_iso_alpha3_code(tmp_path, region):
-    # pack names and region keys are lower-case ISO 3166-1 alpha-3 (docs/code-structure.md)
+    # pack names and region keys are lower-case ISO 3166-1 alpha-3 (docs/code-structure.md), or a
+    # named group of countries (constants.packs.MULTI_COUNTRY_REGIONS: "eur")
     _write(tmp_path, "places", {region: [ENTRY]})
     with pytest.raises(ValueError, match=f"region {region!r}"):
         attribution.load_registry(tmp_path)
-    _write(tmp_path, "places", {"world": [ENTRY], "can": [ENTRY]})
-    assert set(attribution.load_registry(tmp_path)["places"]) == {"world", "can"}
+    _write(tmp_path, "places", {"world": [ENTRY], "can": [ENTRY], "eur": [ENTRY]})
+    assert set(attribution.load_registry(tmp_path)["places"]) == {"world", "can", "eur"}
 
 
 def test_each_source_is_used_in_the_packs_of_the_regions_listing_it():

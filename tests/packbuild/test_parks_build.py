@@ -4,9 +4,10 @@ import json
 
 import parks_fixtures as fx
 import pytest
+from natda_kit import write_natda
 
 from packbuild import parks
-from packbuild.sources.parks import cpcad, nps, padus, usfs, wikidata
+from packbuild.sources.parks import cpcad, eea, nps, padus, usfs, wikidata
 from placewise.engine._within import Parks
 from placewise.packs import open_pack
 
@@ -20,6 +21,7 @@ def inputs(tmp_path, monkeypatch):
         lambda cache, refresh=False: (fx.padus_fee_pages(tmp_path / "fee"), fx.padus_refuge_pages(tmp_path / "nwr")),  # noqa: E501
     )  # fmt: skip
     monkeypatch.setattr(cpcad, "fetch", lambda cache, refresh=False: fx.cpcad_pages(tmp_path / "cpcad"))
+    monkeypatch.setattr(eea, "fetch", lambda cache, refresh=False: write_natda(tmp_path / "natda"))
     result = fx.wikidata_result(
         tmp_path / "np.json", [("Q10", "Gamma National Park", -139.6, 2.25, 78.54e6, "XC", 40)]
     )
@@ -64,6 +66,24 @@ def test_can_and_world_packs(inputs):
     world = open_pack(parks.build("world", inputs / "cache", inputs / "out", "2026.11"))
     assert list(world.layers) == ["park_points"] and world.sources == ("wikidata",)
     assert world["park_points"].value("radius_km", 0) == pytest.approx(5.0, rel=1e-3)
+
+
+def test_eur_parks_pack(inputs):
+    path = parks.build("eur", inputs / "cache", inputs / "out", "2026.11")
+    assert path.name == "eur-parks-2026.11"
+    pack = open_pack(path, verify=True)
+    assert list(pack.layers) == ["parks_national", "parks_state", "parks_regional"]
+    assert set(pack.sources) == {"eea-natda", "wikidata"}  # Wikidata: the English names
+    assert pack["parks_state"].sources == ("eea-natda",)  # no English name there
+    manifest = json.loads((path / "pack.json").read_text())
+    assert (manifest["kind"], manifest["covers"]) == ("parks", ["GR", "XX"])
+    assert "requires" not in manifest
+    national = pack["parks_national"]
+    hits = national.query_all(45.25, -9.9)  # in Alpha's core zone, a row of the Alpha park
+    assert [national.value("park", i) for i in hits] == ["eea:101"]
+    assert national.value("name", hits[0]) == "Alpha National Park"
+    assert pack.names.exact("Alpha").row.tolist()  # the short name, and the national ones, are aliases
+    assert pack.names.exact("Nationalpark Alpha Kernzone").row.tolist()
 
 
 def test_the_engine_reads_the_built_packs(inputs):

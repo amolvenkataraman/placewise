@@ -1,7 +1,8 @@
 """Parks and protected areas (placewise.engine._within, packbuild.parks, docs/parks.md)."""
 
 # the packs that carry parks; the default Geocoder opens them when they are installed
-PACKS = ("usa-parks", "usa-parks-local", "can-parks", "world-parks")  # usa-parks-local: city and county parks
+# usa-parks-local: city and county parks; eur-parks: outlines for Europe (EEA countries), optional
+PACKS = ("usa-parks", "usa-parks-local", "can-parks", "eur-parks", "world-parks")
 
 # polygon layers whose name starts with this are park outlines (parks_national, parks_state ...);
 # the point layer of parks known only by a point and an approximate radius
@@ -27,9 +28,14 @@ MAX_NEAR = 3  # parks listed in Result.near per point, after the notable cities
 # the label rule (docs/naming.md, LabelSettings.parks): a point in a park of tier LABEL_MAX_TIER or
 # more significant is labelled "<locality>, <park>" ("Lake Louise, Banff National Park"). Not for
 # national forests and grasslands: their administrative boundaries take in whole towns (South Lake
-# Tahoe lies in the Lake Tahoe Basin Management Unit), whose people name the town, not the forest
+# Tahoe lies in the Lake Tahoe Basin Management Unit), whose people name the town, not the forest.
+# Europe's nature parks, biosphere reserves and protected landscapes (eur-parks) are lived-in
+# landscapes the same way
 LABEL_MAX_TIER = STATE
-LABEL_SKIP_DESIGNATIONS = frozenset({"National Forest", "National Grassland"})
+LABEL_SKIP_DESIGNATIONS = frozenset({
+    "National Forest", "National Grassland",
+    "Nature Park", "Regional Park", "Landscape Park", "Biosphere Reserve", "Protected Landscape Area",
+})  # fmt: skip
 
 # names that say what kind of land a parcel is, not which place it is: never a park's name. PAD-US
 # fills its unit name with them ("Unknown Park" 1,869 parcels, "Open Space" 528); the build takes

@@ -318,21 +318,25 @@ class Search:
 
     def _inside_pairs(self, pool, items):
         """{(i, lat, lon)}: candidate i's outline holds that point of another candidate it could be
-        merged with; every such test of one layer in one vectorised call."""
+        merged with (for a park, the point is within DEDUPE_PARK_KM of the outline's box); every
+        such test of one layer in one vectorised call."""
         asks = {}  # (pack, layer) -> ([row], [lat], [lon], [i])
+        found = set()
         for i, (keys_i, kind_i, *_rest) in items.items():
             if not items[i][4]:
                 continue
             lyr = self._layer(pool, i)
             s, w, n, e = lyr.bboxes()[int(pool.row[i])].tolist()
+            park = dedupe.park_box(s, w, n, e) if kind_i == const.PARK_KIND else None
             for j, (keys_j, kind_j, lat, lon, *_more) in items.items():
                 if j == i or dedupe.family(kind_i) != dedupe.family(kind_j) or not (keys_i & keys_j):
                     continue
-                if s <= lat <= n and (w <= lon <= e if w <= e else (lon >= w or lon <= e)):
+                if park is not None and not items[j][4] and dedupe.in_box(park, lat, lon):
+                    found.add((i, lat, lon))
+                elif dedupe.in_box((s, w, n, e), lat, lon):
                     ask = asks.setdefault((int(pool.pack[i]), int(pool.layer[i])), ([], [], [], []))
                     for part, value in zip(ask, (int(pool.row[i]), lat, lon, i), strict=True):
                         part.append(value)
-        found = set()
         for (pack, layer), (rows, lats, lons, owners) in asks.items():
             lyr = self.packs[pack][self.packs[pack].names.layers[layer]]
             hit = np.atleast_1d(lyr.contains(np.array(lats), np.array(lons), np.array(rows)))

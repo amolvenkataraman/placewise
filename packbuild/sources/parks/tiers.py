@@ -138,6 +138,50 @@ NAME_TIERS = (
     (re.compile(r"\b(wildlife|bird) sanctuary\b", re.IGNORECASE), STATE),
 )
 
+# EEA Nationally designated areas: a designation type (DesignationType: category, English name,
+# IUCN category of the site) -> (tier, designation). 739 national types, so rules on the English
+# name rather than a table; EEA_CODES overrides a type the rules get wrong. Only category A
+# (nature and landscape protection) is kept, apart from national parks: B is sectoral (forests,
+# hunting, water), C private. Dropped: international designations reported again as national
+# (Natura 2000, Ramsar, Emerald), buffer, peripheral and development zones (whole towns),
+# landscape protection areas (a third of Germany), habitats, single objects and sites under
+# EEA_MIN_KM2 below tier 2.
+EEA_NATIONAL = re.compile(r"\bna[ct]ional park\b", re.IGNORECASE)
+EEA_NATIONAL_OUTSKIRTS = re.compile(r"buffer|peripheral|adhesion|development|established", re.IGNORECASE)
+EEA_NATIONAL_ZONE = re.compile(r"zone|reserve|integral", re.IGNORECASE)  # a zone inside a national park
+EEA_STATE = (  # tier 2, as one of a few designations (they take in towns: never a label)
+    (re.compile(r"biosphere (reserve|park)$", re.IGNORECASE), "Biosphere Reserve"),
+    (re.compile(r"protected landscape area", re.IGNORECASE), "Protected Landscape Area"),
+    (re.compile(r"landscape park", re.IGNORECASE), "Landscape Park"),
+    (re.compile(r"^(regional park|state park)", re.IGNORECASE), "Regional Park"),
+    (re.compile(r"natur(e|al)? ?park|naturpark|rural park|country park", re.IGNORECASE), "Nature Park"),
+)
+EEA_STATE_DESIGNATIONS = tuple(dict.fromkeys(d for _, d in EEA_STATE))
+EEA_DROP = re.compile(
+    r"natura ?2000|\bsci\b|\bspa\b|ramsar|emerald|community importance|areas? of conservation|"
+    r"special protection area|\bz(ps|sc|pic)\b|directive|no protection|unprotected|not protected|"
+    r"not (yet )?(assigned|reviewed)|^others?$|^other |buffer|peripheral|perimeter|adhesion|development|"
+    r"transition|established|landscape protection|landscape (section|component)|water|nitrate|"
+    r"shellfish|fish|spawning|hunting|\bgame\b|shooting|\btrees?\b|hedge|forest|woodland|private|"
+    r"contract|agreement|owned|acquired|oecm|temporary|habitat|biotop|geotop|inventory|management plan|"
+    r"set-aside|cave|corridor|border|construction|berthing|seed|garden|\bzoo|horticultur|silence|"
+    r"townscape|cultural|order|protection plan|sanitary|species|flora|plant|mire|fen|grassland|dune|"
+    r"beach|recuperational|amenity|significant landscape|resource|monument|feature|object|formation|"
+    r"refuge|hiking|recreation|micro-?reserve|strategy|rest area|polygon",
+    re.IGNORECASE,
+)
+EEA_CODES = {
+    "PL04": REGIONAL,  # Poland's and Latvia's light "protected landscape areas" over farmland and towns
+    "LV06": REGIONAL,
+    "DK01": REGIONAL,  # Denmark's conservation orders (fredninger): its protected areas, despite "order"
+}
+EEA_IUCN_STATE = "II"  # IUCN II (national park) sites this large are tier 2 whatever their type
+EEA_IUCN_STATE_KM2 = 100.0
+EEA_MIN_KM2 = 1.0  # tier 3 sites smaller than this aren't named from afar: left out
+_EEA_NOTE = re.compile(r"\s*(\([^)]*\)|;.*|\b[IV]+[ab]?(\.\d)?|\bcategory\b.*)$")
+_EEA_ID_PREFIX = re.compile(r"^\d+\s+")  # Sweden: "2001221 Sarek"
+_EEA_ZONE_SUFFIX = re.compile(r"\s+[A-Z]{1,4}\s+\d+$")  # Latvia: "Gaujas Nacionālais parks NZ 3822"
+
 _SUFFIX_OF_CANADA = re.compile(r"\s+of\s+canada$", re.IGNORECASE)
 _CLASS = re.compile(r"\s*\([^)]*\bclass\)$", re.IGNORECASE)
 _GENERATED = re.compile(r"(\d+|#\S*)$")  # PAD-US fills gaps with a manager name plus a number
@@ -189,3 +233,40 @@ def slug(text):
     """Lower-case ASCII words joined by "-": "Mount Rainier National Park" -> "mount-rainier-national-park"."""  # noqa: E501
     ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")
+
+
+def eea_tier(category, english, iucn, km2, code=""):
+    """(tier, designation) for a site of an EEA designation type, or None to leave it out."""
+    english = " ".join((english or "").split())
+    if EEA_NATIONAL.search(english):
+        if EEA_NATIONAL_OUTSKIRTS.search(english):
+            return None
+        if EEA_NATIONAL_ZONE.search(english) and "core area" not in english.lower():
+            return (REGIONAL, _eea_designation(english)) if km2 >= EEA_MIN_KM2 else None
+        return NATIONAL, "National Park"
+    if code not in EEA_CODES and (category != "A" or EEA_DROP.search(english)):
+        return None
+    state = next((d for pattern, d in EEA_STATE if pattern.search(english)), None)
+    tier = EEA_CODES.get(code, STATE if state else REGIONAL)
+    if tier == REGIONAL and iucn == EEA_IUCN_STATE and km2 >= EEA_IUCN_STATE_KM2:
+        tier = STATE
+    if tier == REGIONAL and km2 < EEA_MIN_KM2:
+        return None
+    return tier, (state if tier == STATE and state else _eea_designation(english))
+
+
+def _eea_designation(english):
+    """ "Nature park IIIb (FBiH law)" -> "Nature park", "biosphere reserve" -> "Biosphere Reserve"."""
+    text = english
+    while (shorter := _EEA_NOTE.sub("", text).strip()) != text and shorter:
+        text = shorter
+    return text.title() if text.islower() else text[:1].upper() + text[1:]
+
+
+def eea_name(site_name):
+    """A site's name without Sweden's id prefix or Latvia's zone code; ALL CAPS in title case."""
+    name = " ".join((site_name or "").split())
+    name = _EEA_ZONE_SUFFIX.sub("", _EEA_ID_PREFIX.sub("", name)).strip()
+    if name.isdigit():
+        return ""
+    return name.title() if name.isupper() and len(name) > 4 else name

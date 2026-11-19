@@ -65,6 +65,18 @@ def test_a_search_kind_is_an_opt_in_for_that_search(data_dir, full_release):
     assert store.plan(extra_kinds={"parks"}) == ["world-parks"]  # no country: world-wide packs only
 
 
+def test_a_pack_for_a_group_of_countries_serves_the_countries_it_covers(data_dir, release):
+    for name, meta in PACKS.items():
+        release.add(name, "2026.11", meta=meta)
+    release.add("eur-parks", "2026.11", meta={"kind": "parks", "covers": ["AT", "DE", "HR"]})
+    store = _auto_store(data_dir, release, auto_packs=("country", "parks"))
+    assert store.plan(countries={"AT"}) == ["eur-parks", "world-parks"]
+    assert store.plan(countries={"FR"}) == ["world-parks"]  # not a country it covers
+    from placewise.constants.lookup import OPTIONAL_PACKS
+
+    assert "eur-parks" in OPTIONAL_PACKS  # the Geocoder reads it, so auto mode may fetch it
+
+
 def test_installed_and_unusable_packs_are_not_planned(data_dir, full_release):
     store = _auto_store(data_dir, full_release)
     store.install("usa")

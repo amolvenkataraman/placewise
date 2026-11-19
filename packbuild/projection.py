@@ -1,13 +1,14 @@
-"""Lambert Conformal Conic (two standard parallels) on an ellipsoid, forward and inverse, with numpy.
+"""Map projections on an ellipsoid, forward and inverse, with numpy: the build unprojects
+publishers' files here, since placewise's runtime reads longitude/latitude only. Formulas: IOGP
+Guidance Note 7-2 ("Coordinate Conversions and Transformations including Formulas").
 
-Statistics Canada publishes its boundary files only in "Statistics Canada Lambert" (EPSG:3347,
-NAD83), and placewise's runtime reads longitude/latitude only, so the build unprojects them here.
-Formulas: IOGP Guidance Note 7-2 ("Coordinate Conversions and Transformations including Formulas"),
-section 3.2.1.1, Lambert Conic Conformal (2SP), EPSG method 9802.
-
-Datum: the output is NAD83 longitude/latitude. NAD83 (and its realisation NAD83(CSRS)) differs
-from WGS84 by about 1 to 2 m across Canada today, far below the generalisation of the boundaries,
-so no datum shift is applied and the result is used as WGS84.
+- Lambert Conformal Conic (2SP), EPSG method 9802 (GN 7-2 3.2.1.1): Statistics Canada publishes
+  its boundary files only in "Statistics Canada Lambert" (EPSG:3347, NAD83). NAD83 (and its
+  realisation NAD83(CSRS)) differs from WGS84 by about 1 to 2 m across Canada today, far below the
+  generalisation of the boundaries, so no datum shift is applied and the result is used as WGS84.
+- Lambert Azimuthal Equal Area, EPSG method 9820 (GN 7-2 3.3.2): the EEA publishes European data
+  in ETRS89-LAEA (EPSG:3035). ETRS89 moves with the Eurasian plate and is about 0.7 m from WGS84
+  (ITRF) today, again far below the generalisation, so it too is used as WGS84.
 """
 
 import math
@@ -121,4 +122,75 @@ STATCAN_LAMBERT = LambertConformalConic(
     lat_2=77.0,
     false_easting=6200000.0,
     false_northing=3000000.0,
+)
+
+
+@dataclass(frozen=True)
+class LambertAzimuthalEqualArea:
+    """EPSG method 9820 (oblique aspect). Angles in degrees, distances in the units of `a`; on a
+    sphere (inv_f = inf) the authalic latitude is the latitude itself."""
+
+    lat_origin: float  # latitude of natural origin
+    lon_origin: float  # longitude of natural origin
+    false_easting: float = 0.0
+    false_northing: float = 0.0
+    a: float = GRS80_A
+    inv_f: float = GRS80_INV_F
+
+    def __post_init__(self):
+        f = 0.0 if math.isinf(self.inv_f) else 1.0 / self.inv_f
+        e = math.sqrt(2 * f - f * f)
+        q_p = self._q(math.pi / 2, e)
+        p0 = math.radians(self.lat_origin)
+        beta0 = math.asin(self._q(p0, e) / q_p)
+        rq = self.a * math.sqrt(q_p / 2)
+        d = self.a * math.cos(p0) / math.sqrt(1 - (e * math.sin(p0)) ** 2) / (rq * math.cos(beta0))
+        e2 = e * e
+        series = (  # authalic latitude -> latitude (GN 7-2 3.3.2, inverse)
+            e2 / 3 + 31 * e2**2 / 180 + 517 * e2**3 / 5040,
+            23 * e2**2 / 360 + 251 * e2**3 / 3780,
+            761 * e2**3 / 45360,
+        )
+        constants = {"_e": e, "_qp": q_p, "_rq": rq, "_d": d, "_beta0": beta0, "_series": series}
+        for name, value in constants.items():
+            object.__setattr__(self, name, value)
+
+    @staticmethod
+    def _q(phi, e):
+        s = np.sin(phi)
+        if e == 0:
+            return 2 * s
+        return (1 - e * e) * (s / (1 - (e * s) ** 2) - np.log((1 - e * s) / (1 + e * s)) / (2 * e))
+
+    def forward(self, lon, lat):
+        """(easting, northing) for longitude/latitude in degrees (scalars or arrays)."""
+        phi = np.radians(np.asarray(lat, dtype=np.float64))
+        dlon = np.radians(np.asarray(lon, dtype=np.float64) - self.lon_origin)
+        beta = np.arcsin(np.clip(self._q(phi, self._e) / self._qp, -1.0, 1.0))
+        sb0, cb0 = math.sin(self._beta0), math.cos(self._beta0)
+        b = self._rq * np.sqrt(2 / (1 + sb0 * np.sin(beta) + cb0 * np.cos(beta) * np.cos(dlon)))
+        x = self.false_easting + b * self._d * np.cos(beta) * np.sin(dlon)
+        y = self.false_northing + (b / self._d) * (cb0 * np.sin(beta) - sb0 * np.cos(beta) * np.cos(dlon))
+        return x, y
+
+    def inverse(self, x, y):
+        """(longitude, latitude) in degrees for easting/northing (scalars or arrays)."""
+        dx = np.asarray(x, dtype=np.float64) - self.false_easting
+        dy = np.asarray(y, dtype=np.float64) - self.false_northing
+        d = self._d
+        rho = np.hypot(dx / d, d * dy)
+        c = 2 * np.arcsin(np.clip(rho / (2 * self._rq), -1.0, 1.0))
+        sb0, cb0 = math.sin(self._beta0), math.cos(self._beta0)
+        sc, cc = np.sin(c), np.cos(c)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            beta = np.arcsin(np.clip(cc * sb0 + np.where(rho > 0, d * dy * sc * cb0 / rho, 0.0), -1.0, 1.0))
+        s1, s2, s3 = self._series
+        phi = beta + s1 * np.sin(2 * beta) + s2 * np.sin(4 * beta) + s3 * np.sin(6 * beta)
+        lam = np.arctan2(dx * sc, d * rho * cb0 * cc - d * d * dy * sb0 * sc)
+        return np.degrees(lam) + self.lon_origin, np.degrees(phi)
+
+
+# EPSG:3035 "ETRS89-extended / LAEA Europe" (GN 7-2 3.3.2's example): the EEA's European datasets
+ETRS89_LAEA = LambertAzimuthalEqualArea(
+    lat_origin=52.0, lon_origin=10.0, false_easting=4321000.0, false_northing=3210000.0
 )

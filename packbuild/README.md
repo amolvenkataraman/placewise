@@ -465,16 +465,19 @@ Sources live in `packbuild/sources/water/` (registry `sources/water.json`).
 - **Rejected:** Marine Regions IHO Sea Areas (CC BY-NC-SA 4.0) and HydroRIVERS (HydroSHEDS v1
   licence); both ids are in `constants.licences.DENIED_SOURCES`. See `docs/water.md`.
 
-## Park packs (`usa-parks`, `usa-parks-local`, `can-parks`, `world-parks`)
+## Park packs (`usa-parks`, `usa-parks-local`, `can-parks`, `eur-parks`, `world-parks`)
 
 ```
-uv run python -m packbuild.parks usa usa-local can world --version 2026.11
+uv run python -m packbuild.parks usa usa-local can eur world --version 2026.11
 ```
 
-NPS, USFS and PAD-US 4.1 (US), CPCAD (Canada) as one polygon layer per tier, Wikidata points
-elsewhere; the US's local parks (`parks_local`, tier 4) are the optional `usa-parks-local` pack,
-whose pack.json says `kind` parks, `covers` US, `requires` usa-parks. Tiers, ids, sources and gaps
-in `docs/parks.md`.
+NPS, USFS and PAD-US 4.1 (US), CPCAD (Canada) and the EEA's Nationally designated areas (37
+European countries) as one polygon layer per tier, Wikidata points elsewhere; the US's local parks
+(`parks_local`, tier 4) are the optional `usa-parks-local` pack, whose pack.json says `kind` parks,
+`covers` US, `requires` usa-parks. `eur-parks` is optional too: `kind` parks, `covers` the
+countries with sites (its name names no country: `constants.packs.MULTI_COUNTRY_REGIONS`, which
+also lets the source registry list sources under `eur`). Tiers, ids, sources and gaps in
+`docs/parks.md`.
 
 ## Notable pack (`world-notable`)
 

@@ -39,6 +39,8 @@ class ParkRow:
     aliases: tuple[str, ...] = ()
     code: str = ""  # the publisher's own code: NPS unit code, USFS forest code
     area_km2: float = field(default=None)
+    country: str = ""  # ISO alpha-2, where a pack covering several countries needs it (not a column)
+    name_source: str = ""  # the source of the name, when another than the outline's (eur-parks: wikidata)
 
     def __post_init__(self):
         if self.area_km2 is None:
@@ -111,7 +113,7 @@ def layers(rows):
             "code": [r.code for r in tier_rows],
         }
         features = [Feature(r.feature.outlines, {}, i) for r, i in zip(tier_rows, ids, strict=True)]
-        sources = tuple(dict.fromkeys(r.source for r in tier_rows))
+        sources = tuple(dict.fromkeys(s for r in tier_rows for s in (r.source, r.name_source) if s))
         out.append(
             LayerData(
                 LAYER_NAMES[tier], "polygon", columns, sources, features=features, cell_deg=CELL_DEG[tier]

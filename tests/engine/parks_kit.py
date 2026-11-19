@@ -11,6 +11,8 @@ Alphaland (lat 0 - 1, lon -140 .. -139):
 
 Gammaland (lat 2 - 2.5, lon -140 .. -139.5): Gamma National Park, a point at (2.25, -139.6) with a
 5 km radius (world-parks/park_points), and Gamma Sanctuary, a point without an area (radius 0).
+Alpha National Park is a point too (5 km round its middle), as world-parks has Europe's parks that
+eur-parks draws.
 """
 
 import numpy as np
@@ -41,6 +43,8 @@ POINTS = [
     ("wikidata:Q1", "Gamma National Park", 1, "national park", 78.5, 5.0, 2.25, -139.6),
     ("wikidata:Q2", "Gamma Sanctuary", 2, "wildlife sanctuary", float("nan"), 0.0, 2.4, -139.9),
     ("wikidata:Q3", "Unknown Park", 2, "wildlife sanctuary", float("nan"), 0.0, 2.1, -139.9),
+    ("wikidata:Q4", "ALPHA National  Park", 1, "national park", 78.5, 5.0, 0.75, -139.75),
+    ("wikidata:Q5", "Alpha NP", 1, "national park", 10.0, 1.0, 0.65, -139.65),  # the park's alias
 ]
 
 
