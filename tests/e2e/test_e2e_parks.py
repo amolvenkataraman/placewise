@@ -31,7 +31,12 @@ def near_parks(packs, lat, lon):
             "can-parks",
             (43.82, -79.17),
             "Rouge National Urban Park",
-            marks=pytest.mark.xfail(reason="the 2026.11 build's Rouge outline misses points inside it: open"),
+            marks=pytest.mark.xfail(
+                reason="source data: CPCAD (Dec 2025) has Rouge as one 45.5 km² zone, the lands Parks "
+                "Canada holds so far, not the park's planned 79 km²; this point is outside it at full "
+                "resolution too (85 m to its nearest vertex), so no build setting can fix it",
+                strict=False,
+            ),
         ),  # Rouge Park, Toronto
     ],
 )
