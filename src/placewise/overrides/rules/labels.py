@@ -4,7 +4,7 @@ import dataclasses
 
 from placewise.model import Place, PlaceKind
 
-from .state import in_area, merge, synthetic_id
+from ..state import in_area, merge, synthetic_id
 
 # kind of the place a label rule creates when the answer has nothing in that field yet
 _FIELD_KIND = {

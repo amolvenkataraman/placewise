@@ -4,7 +4,7 @@ from placewise.geo.distances import haversine
 from placewise.model import Nearby, Place, PlaceKind
 from placewise.model.places import Relation
 
-from .state import LIST_FIELDS, NEARBY_FIELDS, in_area, synthetic_id
+from ..state import LIST_FIELDS, NEARBY_FIELDS, in_area, synthetic_id
 
 
 def hide(state, entry, lat, lon):

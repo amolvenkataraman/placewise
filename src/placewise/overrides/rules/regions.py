@@ -4,7 +4,7 @@ import dataclasses
 
 from placewise.model import AreaSelector, Place, PlaceKind
 
-from .state import PLACE_FIELDS, in_area, merge, synthetic_id
+from ..state import PLACE_FIELDS, in_area, merge, synthetic_id
 
 
 def city(state, entry, lat, lon):

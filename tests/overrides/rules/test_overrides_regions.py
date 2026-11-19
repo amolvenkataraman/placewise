@@ -1,4 +1,4 @@
-"""placewise.overrides.regions: city and region rules."""
+"""placewise.overrides.rules.regions: city and region rules."""
 
 import json
 

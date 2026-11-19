@@ -1,4 +1,4 @@
-"""placewise.overrides.labels: rename and label rules."""
+"""placewise.overrides.rules.labels: rename and label rules."""
 
 import dataclasses
 

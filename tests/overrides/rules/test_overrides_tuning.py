@@ -1,4 +1,4 @@
-"""placewise.overrides.tuning: tune rules and merged knobs."""
+"""placewise.overrides.rules.tuning: tune rules and merged knobs."""
 
 from overrides_kit import KARIYA_PARK, LAKE_ONTARIO, RATTRAY_MARSH, apply, engine, mississauga_result
 

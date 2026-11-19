@@ -1,4 +1,4 @@
-"""placewise.overrides.places: hide and add rules."""
+"""placewise.overrides.rules.places: hide and add rules."""
 
 import dataclasses
 

@@ -6,7 +6,7 @@ import dataclasses
 from placewise.model import PlaceKind, Tune
 from placewise.model.places import Relation
 
-from .state import NEARBY_FIELDS
+from ..state import NEARBY_FIELDS
 
 TUNE_KNOBS = ("tier", "near_km", "fame", "boost")
 

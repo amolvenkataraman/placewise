@@ -1,4 +1,4 @@
-"""placewise.overrides.names: forward search by override (resolve_name)."""
+"""placewise.overrides.rules.names: forward search by override (resolve_name)."""
 
 from overrides_kit import DATA_BAY_AREA, GTA_MEMBERS, MISSISSAUGA, engine
 
