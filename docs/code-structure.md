@@ -9,16 +9,17 @@ If a module doesn't fit any folder's purpose below, the map is wrong: change thi
 |---|---|---|
 | `geo/` | Pure maths on coordinates: distances, bearings, shapes, projections, encodings, sun | data files, I/O, packs |
 | `tracks/` | The `Track` model and everything computed from tracks | file parsing (that's `io/`) |
-| `io/` | File formats in and out: `io/tracks/` (GPX, FIT, TCX ...), `io/polygons/` (GeoJSON, shapefile) | analysis |
+| `io/` | File formats in and out, one module per format: tracks (`gpx/`, `fit`, `tcx`, `kml`, `nmea`, `csv_tracks`, `geojson_tracks`), polygons (`geojson`, `shapefile`) | analysis |
 | `privacy/` | Location-privacy transforms and the privacy audit | file formats |
 | `model/` | Shared dataclasses: results, places, geometry, settings, rules; how results show to people (`model/display/`: the text card of `str(result)`, the notebook table) | behaviour beyond validation, dict round trips and display |
 | `constants/` | Fixed values: standards and physical constants, file-format codes, thresholds and defaults, and all country and region reference tables (`constants/countries/`) | functions with logic |
 | `world/` | Queries over countries, subdivisions and country groups: lookups by code or name, lists by group or continent, memberships over time, country profiles | the reference data itself (that's `constants/countries/` and `datasets/`) |
-| `packs/` | The pack file format: write and read | downloading |
-| `store/` | Downloading, verifying and installing packs | reading pack contents |
-| `geocode/` | Answering place questions from packs: `geocode/reverse/` (point to place), `geocode/text/` (parsing location strings); forward search joins later | file formats, HTTP |
+| `packs/` | The pack file format: write (`writer`) and read (`reader`, the layers), over private `_geometry/` (planar geometry, the grid index), `_distances/` (nearest points, boundary distances) and `_names/` (the name index) | downloading |
+| `store/` | Downloading, verifying and installing packs: `Store` and what it shares, its operations in `operations/` (index, install, maintenance, on demand) | reading pack contents |
+| `engine/` | Reverse geocoding, point to place: the `Geocoder` and its rules (`naming/` for the country packs, private `_timezones/`, `_nearby/` for what is near a point, `_results/`) | file formats, HTTP |
+| `text/` | Parsing location strings (`text/parse/`) and matching what they name | file formats, HTTP |
 | `search/` | Forward search, name to place: query reading, candidates from the packs' name indexes, ranking under the caller's context, merging one place found in several packs, Entities; the `Gazetteer` location search uses | file formats, HTTP, the reverse-lookup rules (it asks the Geocoder) |
-| `overrides/` | Repo, app and local override rules and their engine | settings loading |
+| `overrides/` | Repo, app and local override rules and their engine, one handler per kind of rule in `rules/` | settings loading |
 | `config/` | Loading settings: `placewise.toml`, environment, TOML/JSON parsing | override rules |
 | `attribution/` | The source registry (`attribution/sources/*.json`, one file per purpose listing sources per region) and attribution output | build code |
 | `service/` | Network access: `service/server/` (HTTP API), `service/local.py` (cached local service), `service/client.py` | lookup logic |
@@ -31,15 +32,18 @@ loaders, `packbuild/packs/` one builder per pack, release tooling); `tests/` mir
 ## Rules
 
 - **Size:** a module stays around 300 lines, 400 at most; split by responsibility, not arbitrarily.
-  A package holds about 8 modules; past that, group by subject into subpackages.
-  Generated data modules (headed "GENERATED ... do not edit") are exempt: their size is the data's.
+  A package holds at most 8 modules (`__init__.py` and `__main__.py` aside); past that, group by
+  subject into subpackages. Generated data modules (headed "GENERATED ... do not edit") are exempt:
+  their size is the data's. `tests/test_code_structure.py` checks both; the few packages it lets
+  run wider (`constants/`, `geo/`, `io/`, `model/`: their modules are public import paths; the
+  `packbuild` folder: one command per pack) are listed there with the reason.
 - **Public API:** users import from packages (`from placewise.io import read_gpx`,
   `placewise.geo.distance`), which re-export; modules starting with `_` are private and may move.
 - **Dependencies point one way:** `constants` and `model` import nothing above them; `geo` uses
-  only those; `geocode` may use `packs`, `store`, `config`, `overrides`; `search` may use those, `text` and
+  only those; `engine` may use `packs`, `store`, `config`, `overrides`; `search` may use those, `text` and
   the reverse-lookup engine (for each result's context); nothing imports `cli` or `service`.
-- **Tests mirror src:** `src/placewise/io/tracks/gpx/reader.py` is tested in
-  `tests/io/tracks/test_gpx_reader.py`. Test file names stay unique across the suite (pytest's
+- **Tests mirror src:** `src/placewise/store/operations/install.py` is tested in
+  `tests/store/operations/test_store_install.py`. Test file names stay unique across the suite (pytest's
   default import mode needs it); shared fixtures live in a `*_kit.py` beside the tests that use them.
 - **Country naming:** anything named after a country (folders, files, registry region keys, pack
   names) uses the lower-case ISO 3166-1 alpha-3 code: `constants/countries/usa/`,
