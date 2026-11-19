@@ -20,7 +20,7 @@ import numpy as np
 from placewise.constants.earth import MEAN_RADIUS_KM
 from placewise.geo import lines
 
-from ._lazy import Guarded
+from .._lazy import Guarded
 
 _RUN_EDGES = (8, 64)  # edges per run: a quarter of the square root of the feature's count, within these
 _GROUP_RUNS = 32

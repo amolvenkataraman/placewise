@@ -121,7 +121,7 @@ def test_fuzzy_finds_typos(pack):
 
 
 def test_the_fuzzy_postings_are_stored_packed_and_read_without_building(pack, monkeypatch):
-    from placewise.packs import _name_match
+    from placewise.packs._names import match as _name_match
 
     files = pack.manifest["files"]
     for name in nc.TRIGRAM_FILES:
@@ -137,7 +137,7 @@ def test_the_fuzzy_postings_are_stored_packed_and_read_without_building(pack, mo
 
 
 def test_a_pack_without_stored_postings_builds_them_with_the_same_answers(tmp_path):
-    from placewise.packs import _name_match
+    from placewise.packs._names import match as _name_match
 
     path = names_pack(tmp_path).path
     stored = open_pack(path).names

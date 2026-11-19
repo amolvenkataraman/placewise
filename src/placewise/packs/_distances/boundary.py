@@ -26,9 +26,10 @@ import numpy as np
 from placewise.constants.earth import MEAN_RADIUS_KM
 from placewise.geo import lines
 
-from . import _geometry as gm
-from ._lazy import once
-from ._points import PointIndex, _Grid
+from .._geometry import planar as gm
+from .._lazy import once
+from .disks import Grid
+from .points import PointIndex
 
 _CELL_DEG = 0.25  # the grid edges are binned on
 _SPACING_KM = _CELL_DEG * math.pi * MEAN_RADIUS_KM / 180 / 4  # arcs are sampled this often (~7 km)
@@ -105,7 +106,7 @@ class Boundary:
             items.append(long_runs[pair % m])
             self._long_reach = _SPACING_KM / 2
         cells = np.concatenate(cells)
-        self.grid = _Grid(_CELL_DEG, cells, np.concatenate(items))
+        self.grid = Grid(_CELL_DEG, cells, np.concatenate(items))
         self._cover = _coverage(cells // cols, cells % cols)
 
     def _covered(self, lat, lon, radius_km):

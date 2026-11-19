@@ -192,7 +192,8 @@ def test_inside_cells_never_change_an_answer(tmp_path, kind):
 @pytest.mark.parametrize("refine_after", [0, 10**9])
 def test_small_batches_and_both_containment_paths(tmp_path, monkeypatch, refine_after):
     from placewise.constants import packs as consts
-    from placewise.packs import _geometry, _refine
+    from placewise.packs._geometry import planar as _geometry
+    from placewise.packs._geometry import refine as _refine
 
     features = LAYERS["holes_and_islands"]
     layer = _open(tmp_path, features)
@@ -233,7 +234,7 @@ def test_nearest_edge_km(tmp_path):
 
 
 def test_even_odd_rows_matches_even_odd():
-    from placewise.packs import _geometry as gm
+    from placewise.packs._geometry import planar as gm
 
     rng = np.random.default_rng(8)
     ring = np.array(LAYERS["sparse"][0].outlines[0].rings[0])
@@ -264,7 +265,7 @@ def test_query_work_is_vectorised_across_features(tmp_path, monkeypatch, refine_
     """Each round of candidates is tested in a few array calls for all its features together, not
     in a Python loop per feature: the call count stays flat however many features are hit."""
     from placewise.constants import packs as consts
-    from placewise.packs import _geometry
+    from placewise.packs._geometry import planar as _geometry
 
     features = LAYERS["dense_overlapping"]
     layer = _open(tmp_path, features)

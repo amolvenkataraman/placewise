@@ -10,7 +10,7 @@ import numpy as np
 
 from placewise.geo import haversine
 
-from . import _geometry as gm
+from .._geometry import planar as gm
 
 # where the lines cross the largest polygon's latitude span, most central first
 _FRACTIONS = np.array([0.5, 0.37, 0.63, 0.23, 0.77, 0.1, 0.9])

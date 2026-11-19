@@ -26,8 +26,8 @@ import numpy as np
 
 from placewise.constants.packs import REFINE_CELL_DEG
 
-from . import _geometry as gm
-from ._lazy import Guarded
+from .._lazy import Guarded
+from . import planar as gm
 
 # degrees: crossings nearer than this to a path's corner or ends send the point to the full test;
 # far above float64 rounding at 180 degrees, far below the 1e-7 degree storage grid

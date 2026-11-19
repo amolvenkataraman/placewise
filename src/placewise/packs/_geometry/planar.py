@@ -13,7 +13,7 @@ import numpy as np
 from placewise.constants.packs import E7
 from placewise.geo import normalize_lon
 
-from ._lazy import Guarded
+from .._lazy import Guarded
 
 # pairs of (edge, point) examined at once by the even-odd test; bounds memory to ~0.5 GB worst case
 _PAIR_BUDGET = 4_000_000

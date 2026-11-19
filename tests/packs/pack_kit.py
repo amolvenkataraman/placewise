@@ -95,7 +95,7 @@ def world_grid(grid_dir):
     import json
     from pathlib import Path
 
-    from placewise.packs import _geometry as gm
+    from placewise.packs._geometry import planar as gm
 
     grid_dir = Path(grid_dir)
     meta = json.loads((grid_dir / "meta.json").read_text())

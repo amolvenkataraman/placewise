@@ -231,11 +231,11 @@ def test_remote_queries_stay_fast_and_small(ocean, where, k, max_km):
 def test_far_queries_small_batches_and_large_k(monkeypatch, budget):
     """Points in one corner of the world, queries everywhere (poles, antimeridian, antipodes):
     disks of every size on every grid level, read in batches of any size."""
-    from placewise.packs import _points
+    from placewise.packs._distances import disks
 
     if budget:
-        monkeypatch.setattr(_points, "_ROW_BUDGET", budget)
-        monkeypatch.setattr(_points, "_PAIR_BUDGET", budget)
+        monkeypatch.setattr(disks, "_ROW_BUDGET", budget)
+        monkeypatch.setattr(disks, "_PAIR_BUDGET", budget)
     rng = np.random.default_rng(31)
     lat = np.concatenate([rng.normal(48, 4, 400), rng.normal(-75, 3, 30), [89.99, -89.99]])
     lon = np.concatenate([rng.normal(15, 8, 400), rng.uniform(-180, 180, 30), [123.0, -45.0]])

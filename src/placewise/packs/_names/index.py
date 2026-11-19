@@ -20,9 +20,9 @@ from placewise.constants.earth import MEAN_RADIUS_KM
 from placewise.geo import normalize_lon
 from placewise.model import BBox, Outline
 
-from . import _geometry as gm
-from ._lazy import once
-from ._name_match import IdView, KeyTable, PackedTrigrams, Trigrams, ranges
+from .._geometry import planar as gm
+from .._lazy import once
+from .match import IdView, KeyTable, PackedTrigrams, Trigrams, ranges
 
 # prefix lookups over many entries rank only the best `limit` x this by rank
 _PREFIX_POOL = 8

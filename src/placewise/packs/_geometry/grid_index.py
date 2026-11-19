@@ -8,7 +8,7 @@ answer for every point in it.
 
 Everything is vectorised across features: the cells each edge touches, the cells each bbox
 touches, and one even-odd test of the free cells' centres against their own feature's edges. The
-arithmetic is that of `_geometry.edge_cell_pairs`, `bbox_cells` and `even_odd_rows`, element by
+arithmetic is that of `planar.edge_cell_pairs`, `bbox_cells` and `even_odd_rows`, element by
 element, so the index is the one a per-feature loop over those functions builds.
 
 `crop` keeps only the rectangle of cells that have candidates (rows `row0`.., columns `col0`..,
@@ -18,7 +18,7 @@ empty cells; a point outside it has no candidate, as in the world grid.
 
 import numpy as np
 
-from . import _geometry as gm
+from . import planar as gm
 
 # edges handed to edge_cell_pairs at once, and (edge, latitude) pairs crossed at once: bounds the
 # working memory to a few hundred MB whatever the layer's size

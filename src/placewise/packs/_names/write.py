@@ -12,8 +12,8 @@ import numpy as np
 from placewise.constants import names as nc
 from placewise.constants._keys import city_key, key
 
-from . import _inside
-from ._name_match import Trigrams, decode_keys
+from . import inside
+from .match import Trigrams, decode_keys
 
 
 @dataclass
@@ -139,7 +139,7 @@ def prepare(data, layers):
         per_layer[("ids", name)] = np.array(sorted(range(p.count), key=ids.__getitem__), dtype=np.int32)
         if p.kind == "polygon":
             hint = data.points.get(name)
-            point, radius = _inside.points(p.geom, hint)
+            point, radius = inside.points(p.geom, hint)
             per_layer[("inside", name)] = point
             per_layer[("radius", name)] = radius
     meta = {
