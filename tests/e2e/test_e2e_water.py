@@ -62,14 +62,13 @@ def test_dashashwamedh_ghat_is_beside_the_ganges(full):
     assert r.water is None
 
 
-@pytest.mark.xfail(
-    reason="the test point falls outside HydroLAKES' Dal Lake outline in the 2026.11 build", strict=False
-)
 def test_on_dal_lake(full):
     lakes = full.water.layer("lakes")
     if "hydrolakes" not in lakes.sources:
         pytest.skip("Dal Lake's outline comes from HydroLAKES (built without --no-hydrolakes)")
-    r = full.lookup(34.1167, 74.8667)
+    # the open water of the northern basin, east of Hazratbal (Wikipedia's 34°07'N 74°52'E, rounded
+    # to the minute, lies between the basins, 160 m off HydroLAKES' shore: not a point on the lake)
+    r = full.lookup(34.1300, 74.8540)
     assert r.water is not None and r.water.place.name == "Dal Lake"
     assert r.label == "On Dal Lake"
 

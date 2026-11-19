@@ -14,11 +14,13 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from placewise.constants import naming as naming_const
+from placewise.packs import IdTemplate
 
 from ..layer import LayerData
 from ..regions_layer import region_area_km2, union
 
 SUFFIX = naming_const.IND_VIEW_ONLY_SUFFIX
+PIN_ID_TEMPLATE = IdTemplate("pin:{pincode}")  # the india-view pieces keep their own ids
 # words LGD puts in ULB names that people leave out ("Srinagar Municipal Corporation" -> Srinagar)
 ULB_TYPE_WORDS = (
     "Municipal Corporation", "City Municipal Corporation", "City Corporation", "Municipal Council",
@@ -180,4 +182,6 @@ def pincodes_layer(pincodes, pieces, extra, sources):
         whole = split[p.pin] == 1 and not p.view_only
         features.append(pincodes.features[p.pin] if whole else union(ident, p.rings))
     types = dict(pincodes.types) | {k: "str" for k in extra} | {"india_view_only": "bool"}
-    return LayerData("pincodes", "polygon", data, sources, features=features, types=types)
+    return LayerData(
+        "pincodes", "polygon", data, sources, features=features, types=types, id_template=PIN_ID_TEMPLATE
+    )

@@ -20,7 +20,7 @@ import numpy as np
 
 from placewise.constants import lookup as lookup_const
 from placewise.constants import towns as const
-from placewise.packs import open_pack
+from placewise.packs import IdTemplate, open_pack
 
 from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads, fetch
 from .layer import LayerData, write_pack
@@ -33,6 +33,8 @@ log = logging.getLogger(__name__)
 
 SOURCE = "ghsl"
 ABOUT = {"kind": "towns", "covers": list(const.COVERS), "requires": [lookup_const.DEFAULT_PACK]}
+# the ids outlines() makes (ghs:<country>:<GeoNames number>), rebuilt by readers from the columns
+ID_TEMPLATE = IdTemplate("ghs:{country}:{geonames:tail}")
 TOLERANCE_M = 400.0  # outline simplification; the cells are 1 km
 CHUNK = 250_000  # cell centres given a country at once
 _EXTRACTS = (("_UC_", CENTRE), ("_DUC_", TOWN))  # vector extracts in the zip: their populations
@@ -108,7 +110,7 @@ def build_layer(archive, world, tolerance=TOLERANCE_M):
     columns["population"] = columns["population"].astype(np.int32)
     return LayerData(
         const.LAYER, "polygon", columns, (SOURCE, "geonames"), features=features, types=types,
-        nulls={"population": NO_POPULATION},
+        nulls={"population": NO_POPULATION}, id_template=ID_TEMPLATE,
     )  # fmt: skip
 
 

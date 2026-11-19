@@ -27,13 +27,15 @@ from pathlib import Path
 import numpy as np
 
 from placewise.constants import postal as const
-from placewise.packs import PointIndex
+from placewise.packs import IdTemplate, PointIndex
 
 from ..layer import LayerData
 
 SOURCE = "geonames"
 MEMBER = "allCountries.txt"
 _FIELDS = 11  # through the longitude
+# the ids postal_layer makes, as the pack rebuilds them (docs/pack-format.md, "Derived ids")
+ID_TEMPLATE = IdTemplate(f"{const.ID_PREFIX}:{{country}}:{{name:compact}}", repeat=":{n}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,7 +137,7 @@ def postal_layer(rows, reach):
     """The `postal` point layer: id (postal:<country>:<code>, then :2, :3 ... for the code's other
     points), name (the code as written), codes (it and its compact form, for the name index only),
     place, country (alpha-2), reach_km (whole km, rounded up) and secondary (true but on a code's first
-    point)."""
+    point). The pack derives the ids from country and name (ID_TEMPLATE) instead of storing them."""
     count, ids, codes, secondary = {}, [], [], []
     for r in rows:
         key = (r.country, r.code)
@@ -156,4 +158,6 @@ def postal_layer(rows, reach):
     types = {k: "str" for k in columns} | {"reach_km": "u1", "secondary": "bool"}
     lat = np.array([r.lat for r in rows], dtype=np.float64)
     lon = np.array([r.lon for r in rows], dtype=np.float64)
-    return LayerData(const.LAYER, "point", columns, (SOURCE,), lat=lat, lon=lon, types=types)
+    return LayerData(
+        const.LAYER, "point", columns, (SOURCE,), lat=lat, lon=lon, types=types, id_template=ID_TEMPLATE
+    )

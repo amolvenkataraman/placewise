@@ -12,6 +12,14 @@ FIELD_TYPES = ("str", "i1", "i2", "i4", "i8", "u1", "u2", "u4", "f4", "f8", "boo
 INT_TYPES = ("i1", "i2", "i4", "i8", "u1", "u2", "u4")
 REQUIRED_FIELDS = ("id", "name")
 
+# derived ids (docs/pack-format.md, "Derived ids"): a layer may build its ids from a template over
+# its other str fields; the rows the template doesn't fit keep theirs in these files of col/, and
+# a template fitting no more than half the rows isn't used (the column is stored as usual)
+ID_EXCEPTION_ROWS = "id.except_rows"  # file stems: col/id.except_rows.npy ...
+ID_EXCEPTION_IDS = "id.except_ids"
+ID_MAX_EXCEPTION_SHARE = 0.5
+ID_REPEAT_NUMBER = "{n}"  # in an id template's repeat text: the row's number among its equals
+
 # CalVer: YYYY.MM, plus .N (N >= 1) for re-releases in the same month
 VERSION_PATTERN = r"\d{4}\.(0[1-9]|1[0-2])(\.[1-9]\d*)?"
 # names become directory and file names, so they stay portable and can't climb out of the pack

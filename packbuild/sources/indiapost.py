@@ -32,7 +32,7 @@ import numpy as np
 
 from placewise.constants.packs import E7
 from placewise.model import Feature
-from placewise.packs import open_pack
+from placewise.packs import IdTemplate, open_pack
 
 from ..layer import LayerData, write_pack
 from ._india import ISO_NAMES, normalise_name, read_wgs84_geojson, text
@@ -52,6 +52,8 @@ OFFICE_BUFFER_KM = 2.0
 # many degrees (plus the buffer) of the area's bbox
 _BBOX_MARGIN_DEG = 0.5
 _KM_PER_DEG_LAT = 110.5  # the least km per degree of latitude (at the equator), so margins err wide
+# the ids post_offices makes, rebuilt by readers from the columns (docs/pack-format.md)
+OFFICE_ID_TEMPLATE = IdTemplate("indiapost:{pincode}:{name}", repeat="#{n}")
 PLACEMENTS = ("inside", "near", "elsewhere", "outside", "no_area")
 _OFFICE_RANK = {"HO": 0, "PO": 1, "SO": 1, "BO": 2}
 _DIRECTORY_FIELDS = {
@@ -187,7 +189,10 @@ def post_offices(directory_path):
     }
     types = {name: "str" for name in columns}
     types["delivery"] = "bool"
-    return LayerData("post_offices", "point", columns, (DIRECTORY_SOURCE,), lat=lat, lon=lon, types=types)
+    return LayerData(
+        "post_offices", "point", columns, (DIRECTORY_SOURCE,), lat=lat, lon=lon, types=types,
+        id_template=OFFICE_ID_TEMPLATE,
+    )  # fmt: skip
 
 
 def office_placement(offices, pincodes, buffer_km=OFFICE_BUFFER_KM):

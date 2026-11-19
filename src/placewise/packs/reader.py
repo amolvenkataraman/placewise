@@ -25,6 +25,7 @@ from . import _geometry as gm
 from . import _grid_index
 from ._boundary import Boundary
 from ._edges import EdgeCaps
+from ._ids import DerivedIds
 from ._lazy import once
 from ._names import NameIndex
 from ._points import PointIndex
@@ -132,7 +133,8 @@ class Pack:
 
 class Layer:
     """A layer's properties. Columns load lazily: numeric ones memory-mapped, string ones decoded
-    once and cached."""
+    once and cached. Ids a layer derives from a template (docs/pack-format.md, "Derived ids") read
+    exactly as stored ones."""
 
     def __init__(self, path, meta):
         self.path = Path(path)
@@ -145,6 +147,8 @@ class Layer:
         self.nulls = {f: spec["null"] for f, spec in meta["fields"].items() if "null" in spec}
         self._arrays = {}
         self._decoded = {}
+        id_spec = meta["fields"].get("id", {})
+        self._ids = DerivedIds(self, id_spec) if "template" in id_spec else None
 
     def __len__(self):
         return self.count
@@ -156,6 +160,11 @@ class Layer:
         """A field's values for every row: an ndarray for numeric fields (memory-mapped, read-only;
         nulls stay as stored: the sentinel, NaN), an object array of str for string fields."""
         kind = self._kind(field)
+        if self._derived(field):
+            if field not in self._decoded:
+                self._decoded[field] = np.array(self._ids.column(), dtype=object)
+                self._decoded[field].flags.writeable = False
+            return self._decoded[field]
         codes = self._array(f"{consts.COL_DIR}/{field}.npy")
         if kind != "str":
             return codes
@@ -173,6 +182,9 @@ class Layer:
         from the stored string ids, without sorting every row's string."""
         if self._kind(field) != "str":
             raise TypeError(f"field {field!r} of layer {self.name!r} is not a string field")
+        if self._derived(field):
+            values, inverse = np.unique(self.column(field), return_inverse=True)
+            return values, inverse.ravel()
         codes = np.asarray(self._array(f"{consts.COL_DIR}/{field}.npy"))
         unique, inverse = np.unique(codes, return_inverse=True)  # one id per distinct string
         strings = self._strings_of(unique)
@@ -184,6 +196,8 @@ class Layer:
     def value(self, field, i):
         """One value as a plain Python object; nulls (sentinel, NaN, empty string) become None."""
         kind = self._kind(field)
+        if self._derived(field):
+            return self._ids.value(self._row_index(i))
         raw = self._array(f"{consts.COL_DIR}/{field}.npy")[self._row_index(i)]
         if kind == "str":
             return self._string(int(raw)) if raw else None
@@ -202,6 +216,8 @@ class Layer:
     def find(self, field, value):
         """Rows (ascending int array) whose field equals value exactly: ids, codes and the like."""
         kind = self._kind(field)
+        if self._derived(field):
+            return np.flatnonzero(self.column(field) == value).astype(np.int64)
         codes = np.asarray(self._array(f"{consts.COL_DIR}/{field}.npy"))
         if kind == "str":
             value = self._string_ids.get(value)
@@ -214,6 +230,9 @@ class Layer:
             return self.fields[field]
         except KeyError:
             raise KeyError(f"layer {self.name!r} has no field {field!r}") from None
+
+    def _derived(self, field):
+        return field == "id" and self._ids is not None
 
     def _row_index(self, i):
         i = int(i)

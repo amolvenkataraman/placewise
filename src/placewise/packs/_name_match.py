@@ -75,13 +75,12 @@ class IdView:
 
     def __init__(self, layer, order):
         self.layer, self.order = layer, order
-        self.codes = layer._array("col/id.npy")
 
     def __len__(self):
         return len(self.order)
 
     def __getitem__(self, i):
-        return self.layer._string(int(self.codes[self.order[i]]))
+        return self.layer.value("id", int(self.order[i]))
 
 
 class Trigrams:

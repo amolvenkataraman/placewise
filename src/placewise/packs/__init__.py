@@ -3,9 +3,10 @@
 the name index (`NameIndex`) forward search reads; `NameData` is what write_pack builds it from.
 `once` is the thread-safe cached property the lazy indexes use (and the engine's, over them).
 
-The on-disk format is docs/pack-format.md (schema 1).
+The on-disk format is docs/pack-format.md (schema 2).
 """
 
+from ._ids import IdTemplate
 from ._lazy import once
 from ._names import Candidates, NameIndex, Resolved
 from ._names_write import NameData
@@ -15,6 +16,7 @@ from .writer import LayerData, archive, pack_info, write_index, write_pack
 
 __all__ = [
     "Candidates",
+    "IdTemplate",
     "Layer",
     "LayerData",
     "NameData",

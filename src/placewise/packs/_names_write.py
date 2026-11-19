@@ -135,7 +135,7 @@ def prepare(data, layers):
         by_kind = mine[np.lexsort((mine, entries["name_kind"][mine]))][::-1]
         best[entries["row"][by_kind]] = by_kind
         per_layer[("entry", name)] = best
-        ids = [p.table[c] for c in p.arrays["id"]]
+        ids = p.ids
         per_layer[("ids", name)] = np.array(sorted(range(p.count), key=ids.__getitem__), dtype=np.int32)
         if p.kind == "polygon":
             hint = data.points.get(name)

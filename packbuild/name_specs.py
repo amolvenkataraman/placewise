@@ -147,7 +147,7 @@ IND = (
         skip=_VIEW_ONLY,
         rank=Rank(base=0.45, span=0.4, column="area_km2", lo=0.5, hi=2.9),  # 3 -> 800 km2
     ),
-    LayerNames("neighbourhoods", "sublocality", rank=Rank(base=0.2)),
+    LayerNames("neighbourhoods", "sublocality", rank=Rank(base=0.35)),  # above a hamlet (~0.2)
     LayerNames("pincodes", "postal_code", names=(), codes=("pincode",), skip=_VIEW_ONLY, rank=_POSTAL),
     LayerNames("post_offices", "sublocality", strip_suffixes=_OFFICE_SUFFIXES, rank=Rank(base=0.12)),
     _REGIONS,

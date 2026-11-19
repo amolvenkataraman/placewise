@@ -15,11 +15,13 @@ import re
 import numpy as np
 
 from placewise.engine.naming.rules import fold, office_area_name
+from placewise.packs import IdTemplate
 
 from ..layer import LayerData
 from ..sources.indiapost import DIRECTORY_SOURCE
 
 LGD_SOURCE = "lgd-directory"  # the city each point belongs to
+ID_TEMPLATE = IdTemplate("indiapost:{pincode}:{office}")  # the office's own id
 _RANK = {"HO": 0, "PO": 1, "SO": 1, "BO": 2}
 
 
@@ -69,4 +71,6 @@ def neighbourhoods(offices, city_of_pin, city_names, exclude=()):
     lon = np.asarray(offices.lon, dtype=np.float64)[rows]
     types = {name: "str" for name in columns}
     sources = (DIRECTORY_SOURCE, LGD_SOURCE)
-    return LayerData("neighbourhoods", "point", columns, sources, lat=lat, lon=lon, types=types)
+    return LayerData(
+        "neighbourhoods", "point", columns, sources, lat=lat, lon=lon, types=types, id_template=ID_TEMPLATE
+    )
