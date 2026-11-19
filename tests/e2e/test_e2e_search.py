@@ -288,6 +288,27 @@ def test_coastal_places_pass_country_and_state_filters(geo):
     assert top(geo, "Kochi", worldview="IN").country == "IN"
 
 
+def test_context_far_from_any_border_is_certain(geo):
+    has(geo, "usa", "ind")
+    for text in ("Denver", "Nagpur"):
+        e = top(geo, text)
+        assert e.context_certain is True, (text, e.context_matches)
+        assert {e.context_matches[f].relation.value for f in ("country", "region")} == {"within"}
+
+
+def test_context_near_a_border_or_off_a_coast_says_it_is_unsure(geo):
+    has(geo, "usa")
+    # Point Roberts, Washington: a peninsula below British Columbia, nowhere 5 km from Canada
+    e = top(geo, "Point Roberts", country="US")
+    assert e.country == "US" and e.context_certain is False
+    # a coastal place's context agrees with lookup, and says how lookup found it
+    boston = top(geo, "Boston")
+    full = geo.lookup(boston.point.lat, boston.point.lon)
+    assert boston.context_matches["country"].relation == full.matches["country"].relation
+    if full.matches["country"].relation.value != "within":
+        assert boston.context_certain is False
+
+
 # -- notable places (once world-notable exists) -----------------------------------------------------
 
 

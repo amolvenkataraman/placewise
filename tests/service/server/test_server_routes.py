@@ -379,6 +379,14 @@ def test_post_find_takes_json(serve, fake):
     assert options["radius_km"] == 50 and options["bbox"] == (-34, 151, -33, 152)
 
 
+def test_find_says_how_sure_each_context_is(serve, fake):
+    opera = call(serve(), "GET", "/v1/find?q=opera").json["results"][0]
+    assert opera["context_certain"] is False
+    assert opera["context_matches"]["country"] == {"relation": "offshore", "distance_km": 0.2}
+    tower = call(serve(), "GET", "/v1/find?q=tower").json["results"][0]
+    assert tower["context_certain"] is True and tower["context_matches"]["city"]["relation"] == "near"
+
+
 @pytest.mark.parametrize(
     "path",
     [

@@ -4,7 +4,9 @@ Name in, place out, offline: `placewise.find("Yosemite")` returns ranked `Entity
 (`placewise.model.Entity`): the place (id, name, kind, codes, aliases, tier), a point guaranteed to
 be inside it, its bounding box, a radius (the farthest outline vertex from the point), its outline
 on request (`geometry=True`, with `.contains(lat, lon)`), where it is (`city`, `region`, `country`
-as ISO alpha-2), a score, and `alternates`: the same place as other packs hold it.
+as ISO alpha-2) and how sure that is (`context_matches`, `context_certain`; see
+[How sure the context is](#how-sure-the-context-is)), a score, and `alternates`: the same place as
+other packs hold it.
 Code: `placewise.search`; constants: `placewise.constants.search`; index: the packs' `names/`
 directory (`docs/pack-format.md`).
 
@@ -69,6 +71,40 @@ where they disagree (`find("Paris, TX", country="FR")` ignores TX).
 
 Country and state filters use the de facto boundaries of the world pack's countries and admin1
 layers at each place's point.
+
+## How sure the context is
+
+An Entity's `city`, `region` and `country` follow reverse lookup's rules at its point: the
+containing polygon, or, just off a coast, the nearest country and region within the territorial sea
+(12 nmi), as `lookup` has them; a place that needs a city (a neighbourhood, postal code, airport or
+landmark) or another worldview gets a full reverse lookup, where country packs correct the region
+(US counties' states, Indian states). The answer is the best placewise has, but not always right:
+Natural Earth's 1:10m outlines are generalised, so the Statue of Liberty, on an island off New
+Jersey's shore, falls in New Jersey's admin1 polygon. Each Entity says how sure it is:
+
+- `context_matches`: for each of `city`, `region` and `country` that is set, a `Match` as
+  `Result.matches` has it: `within` (the polygon holds the point), `offshore` (taken from the
+  territorial sea) or `near` (a fallback: the nearest region polygon in a sliver between the
+  layers, the nearest town for `city`), with `distance_km`.
+- `context_certain`: False when the country or region isn't guaranteed: either was found other than
+  `within`, or the point is within 5 km (`constants.search.CONTEXT_BORDER_KM`) of another country's
+  outline, or of another region's where the world pack's admin1 decided the region (a country
+  pack's region has fine borders of its own). A coast with nothing across it doesn't count. True
+  when there is no context (far at sea). The city doesn't enter it: towns are often nearest
+  fallbacks, and `context_matches["city"]` says so.
+
+Why 5 km, measured (2026.11 packs, random points in the US, Canada and India, the world pack's
+admin1 against the country packs' states and provinces): 69 of 34,883 US points, 58 of 30,299
+Canadian and 291 of 21,311 Indian points fall in the wrong 1:10m admin1 polygon. 5 km from another
+outline catches 99% of the US misses, 90% of the Canadian and 91% of the Indian ones (the median
+miss is 0.3, 0.8 and 1.1 km inside), while flagging 5%, 2% and 9% of all points; 10 km would catch
+100%, 98% and 94%, flagging more. 5 km is also the usual 0.5 mm drawing tolerance at
+the 1:10,000,000 scale the data is generalised for.
+
+The card shows why after the context: `Point Roberts  (Washington, US · near a border)`, or
+`· offshore`, or `· outside its outline`; JSON and `Client.find` carry both fields
+(`"context_certain": false`). `Result.certain` is the lookup's counterpart without the border
+distance: True when its country and admin1 hold the point.
 
 ## Ranking
 

@@ -4,19 +4,22 @@ results at once and cached.
 
 Context comes from reverse lookup's country and admin1 rules (`context.Where`) on the default
 worldview, and from the Geocoder's full reverse lookup when another worldview applies or a city
-is wanted (neighbourhoods, postal codes, airports, landmarks)."""
+is wanted (neighbourhoods, postal codes, airports, landmarks). Either way it carries how each part
+was found (Result.matches) and which of country and region are unsure: not inside the polygon, or
+near another one's coarse border (`context.near_border`)."""
 
 import threading
 from collections import OrderedDict
 
 import numpy as np
 
+from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
 from placewise.constants._keys import city_key as name_key
 from placewise.constants.names import PLACE_KINDS
-from placewise.model import BBox, Entity, Outline, Place, Point
+from placewise.model import BBox, Entity, Outline, Place, Point, Relation
 
-from .context import Where
+from .context import Where, near_border
 
 __all__ = ["Contexts", "entity", "level", "light_place", "name_key", "place", "point_entity"]
 
@@ -26,7 +29,9 @@ def level(kind):
 
 
 class Contexts:
-    """(city, region, country, admin1 code) for points, per worldview, with an LRU cache."""
+    """(city, region, country, admin1 code, matches, unsure) for points, per worldview, with an LRU
+    cache: `matches` {"city" | "region" | "country": Match}, `unsure` the frozenset of "country"
+    and "region" when not guaranteed."""
 
     def __init__(self, geocoder, size=const.REVERSE_CACHE_SIZE):
         self.geocoder = geocoder
@@ -64,24 +69,60 @@ class Contexts:
         lat, lon = np.asarray(lat, dtype=np.float64), np.asarray(lon, dtype=np.float64)
         out = [None] * len(lat)
         view = [o for o in order if o != "locked"]
+        admin = self.geocoder.admin
+        country_near, admin1_near = near_border(admin, lat, lon)
         full = [i for i, w in enumerate(want_city) if w or view != ["de_facto"]]
         if full:
             results = self.geocoder._lookup_places(lat[full], lon[full], worldview=view or None)
             for i, r in zip(full, results, strict=True):
-                city = r.city or r.locality
-                admin1 = r.admin1.codes.get("iso", "").partition("-")[2] if r.admin1 else None
-                out[i] = (
-                    city.name if city else None,
-                    r.admin1.name if r.admin1 else None,
-                    r.cc,
-                    admin1 or None,
-                )
+                out[i] = self.of_result(r, (country_near[i], admin1_near[i]))
         rest = [i for i, v in enumerate(out) if v is None]
         if rest:
-            where = Where(self.geocoder.admin, lat[rest], lon[rest])
+            where = Where(admin, lat[rest], lon[rest])
             for j, i in enumerate(rest):
-                out[i] = (None, where.admin1_name[j], where.country[j], where.admin1[j])
+                matches = where.matches(j)
+                near = (country_near[i], admin1_near[i])
+                out[i] = (None, where.admin1_name[j], where.country[j], where.admin1[j], matches,
+                          _unsure(matches, near, world_admin1=True))  # fmt: skip
         return out
+
+    def of_result(self, r, near=None):
+        """The context of a reverse lookup Result; `near` (country, admin1) near_border flags for its
+        point (None: measure them here)."""
+        if near is None:
+            flags = near_border(self.geocoder.admin, [r.lat], [r.lon])
+            near = (flags[0][0], flags[1][0])
+        city = r.city or r.locality
+        admin1 = r.admin1.codes.get("iso", "").partition("-")[2] if r.admin1 else None
+        found = {
+            "city": r.matches.get("city" if r.city else "locality") if city else None,
+            "region": r.matches.get("admin1") if r.admin1 else None,
+            "country": r.matches.get("country") if r.cc else None,
+        }
+        matches = {f: m for f, m in found.items() if m is not None}
+        # a country pack's admin1 (US counties' states, Indian states ...) has fine borders
+        world = self.geocoder.admin.layers.source(lookup_const.ADMIN1, "")
+        world_admin1 = r.sources.get("admin1", "").startswith(world)
+        return (
+            city.name if city else None,
+            r.admin1.name if r.admin1 else None,
+            r.cc,
+            admin1 or None,
+            matches,
+            _unsure(matches, near, world_admin1),
+        )
+
+
+def _unsure(matches, near, world_admin1):
+    """{"country", "region"} that aren't guaranteed: found other than inside the polygon, or near
+    another outline (`near`: the (country, admin1) near_border flags); admin1 border flags only
+    matter where the world pack's admin1 decided the region."""
+    out = set()
+    for field, close in (("country", near[0]), ("region", near[1] and world_admin1)):
+        m = matches.get(field)
+        if m is not None and (m.relation != Relation.WITHIN or close):
+            out.add(field)
+    return frozenset(out)
 
 
 def place(index, pack, layer, row, kind, context, renames, outlines=False):
@@ -125,12 +166,26 @@ def entity(built, resolved, context, score, alternates=(), geometry=False):
         bbox=resolved.bbox,
         radius_km=max(float(resolved.radius_km), 0.0),
         outline=outline,
-        city=context[0] if lvl >= const.CONTEXT_LEVEL_DEFAULT else None,
-        region=context[1] if lvl >= 2 else None,
-        country=context[2] if lvl >= 0 else None,
         score=round(float(score), 6),
         alternates=tuple(alternates),
+        **_shown(context, lvl),
     )
+
+
+def _shown(context, lvl):
+    """The Entity's city, region, country and context_matches / context_certain for the parts its
+    kind's level shows (a state carries its country, not a region of its own)."""
+    shown = {
+        "city": context[0] if lvl >= const.CONTEXT_LEVEL_DEFAULT else None,
+        "region": context[1] if lvl >= 2 else None,
+        "country": context[2] if lvl >= 0 else None,
+    }
+    matches, unsure = context[4], context[5]
+    return {
+        **shown,
+        "context_matches": {f: m for f, m in matches.items() if shown.get(f) is not None},
+        "context_certain": not any(shown.get(f) is not None for f in unsure),
+    }
 
 
 def light_place(index, pack, layer, row, kind, lat, lon):
@@ -145,9 +200,9 @@ def light_place(index, pack, layer, row, kind, lat, lon):
     )
 
 
-def point_entity(result, lat, lon):
-    """The Entity for coordinates typed as text: the point, named by its reverse lookup."""
-    city = result.city or result.locality
+def point_entity(result, lat, lon, context):
+    """The Entity for coordinates typed as text: the point, named by its reverse lookup; `context`
+    that Result's (Contexts.of_result)."""
     label = result.label or f"{lat:.6f}, {lon:.6f}"
     built = Place(
         id=f"{const.GEO_SCHEME}:{lat:.6f},{lon:.6f}",
@@ -161,10 +216,8 @@ def point_entity(result, lat, lon):
         point=built.point,
         bbox=BBox(lat, lon, lat, lon),
         radius_km=0.0,
-        city=city.name if city else None,
-        region=result.admin1.name if result.admin1 else None,
-        country=result.cc,
         score=1.0,
+        **_shown(context, const.CONTEXT_LEVEL_DEFAULT),
     )
 
 

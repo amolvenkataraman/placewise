@@ -198,3 +198,46 @@ def test_from_dict_resolves_each_class_schema_once(monkeypatch):
     for _ in range(50):
         assert Result.from_dict(doc).label == "Toronto"
     assert calls.count(Result) <= 1
+
+
+def test_entity_context_matches_and_certainty_round_trip():
+    from placewise.model import Match, Relation
+
+    e = Entity(
+        Place("wikidata:Q9202", "Statue of Liberty", PlaceKind.LANDMARK),
+        point=Point(40.6892, -74.0445),
+        bbox=BBox(40.6888, -74.0451, 40.6896, -74.0439),
+        radius_km=0.1,
+        region="New York",
+        country="US",
+        context_matches={"country": Match(Relation.OFFSHORE, 0.4), "region": Match(Relation.WITHIN, 0.0)},
+        context_certain=False,
+    )
+    data = e.to_dict()
+    assert data["context_matches"]["country"] == {"relation": "offshore", "distance_km": 0.4}
+    assert data["context_certain"] is False
+    assert Entity.from_dict(data) == e
+    # older payloads have neither: no matches, and nothing claimed to be unsure
+    old = {k: v for k, v in data.items() if not k.startswith("context_")}
+    assert Entity.from_dict(old).context_matches == {} and Entity.from_dict(old).context_certain is True
+
+
+def test_result_certain_reads_the_country_and_admin1_matches():
+    from placewise.model import Match, Relation
+
+    country = Place("iso:US", "United States", PlaceKind.COUNTRY, codes={"iso2": "US"})
+    state = Place("iso:US-NY", "New York", PlaceKind.ADMIN1)
+    inside, off = Match(Relation.WITHIN, 0.0), Match(Relation.OFFSHORE, 0.4)
+    r = Result(
+        40.6892, -74.0445, country=country, admin1=state, matches={"country": inside, "admin1": inside}
+    )
+    assert r.certain is True
+    assert dataclasses.replace(r, matches={"country": off, "admin1": inside}).certain is False
+    assert (
+        dataclasses.replace(r, matches={"country": inside, "admin1": Match(Relation.NEAR, 1.0)}).certain
+        is False
+    )
+    # a nearest city doesn't make the answer's country or state unsure; overrides have no match
+    city = {"country": inside, "admin1": inside, "city": Match(Relation.NEAR, 3.0)}
+    assert dataclasses.replace(r, matches=city).certain is True
+    assert dataclasses.replace(r, matches={}).certain is True

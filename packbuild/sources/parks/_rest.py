@@ -27,7 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ...fetch import USER_AGENT
+from ...fetch import USER_AGENT, track
 
 _RETRY_STATUS = {500, 502, 503, 504}
 log = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def fetch_query(
     cache_dir = Path(cache_dir)
     dest, meta_path = cache_dir / name, cache_dir / f"{name}.json"
     if dest.is_dir() and meta_path.exists() and not refresh:
-        return dest
+        return track(dest)
     ids = _ids(post, layer_url, where)
     params = {"outFields": fields, "returnGeometry": "true", "outSR": str(out_sr), "f": "json"}
     if offset:
@@ -92,7 +92,7 @@ def fetch_query(
         "retrieved": dt.datetime.now(dt.timezone.utc).date().isoformat(),
     }
     meta_path.write_text(json.dumps(meta, indent=2) + "\n")
-    return dest
+    return track(dest)
 
 
 def ungeneralised(folder):

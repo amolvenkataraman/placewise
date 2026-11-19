@@ -26,6 +26,8 @@ def result_rows(r):
 def entity_rows(e):
     place = e.place
     where = ", ".join(x for x in (e.city, e.region, e.country) if x)
+    if where and not e.context_certain:
+        where += const.SEPARATOR + _unsure(e.context_matches)
     title = (place.name, f"({where})" if where else "")
     kind = place.kind.value.replace("_", " ") + (f", tier {place.tier}" if place.tier else "")
     extent = f"{bbox_size(e.bbox)} box"
@@ -48,6 +50,13 @@ def entity_rows(e):
         "alternates": (alternates, None),
     }
     return title, [(f, *values[f]) for f in const.ENTITY_FIELDS if values[f][0]]
+
+
+def _unsure(matches):
+    """Why an Entity's country or region isn't certain: taken from offshore, the nearest polygon,
+    or (both inside) near a border."""
+    relations = {m.relation.value for f, m in matches.items() if f in const.UNSURE_FIELDS}
+    return next((const.UNSURE[r] for r in const.UNSURE if r in relations), const.UNSURE_BORDER)
 
 
 # -- values ---------------------------------------------------------------------------------------
