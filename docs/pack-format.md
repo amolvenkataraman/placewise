@@ -78,7 +78,7 @@ be opened with `numpy.load(path, mmap_mode="r")` and costs nothing until touched
 - `kind` is `point` or `polygon` (`line` arrives with the line engine in a later schema).
 - `count` is the number of features `n`. Every column has exactly `n` rows.
 - Every layer has `id` and `name` string fields. `id` is stable across releases
-  (`"geonames:6167865"`, `"wikidata:Q16"`, `"iso:CA"`).
+  (`"geonames:6167865"`, `"wikidata:Q16"`, `"iso:CA"`), stored or derived (below).
 - Field types: `str`, `i1 i2 i4 i8`, `u1 u2 u4`, `f4 f8`, `bool`. Integer fields may name a `null`
   sentinel; float nulls are NaN; a `str` null is the empty string.
 - `coords` is `e7` (int32 degrees × 10⁷, ~1 cm, as in Google location history exports) for every coordinate array,
@@ -92,6 +92,36 @@ be opened with `numpy.load(path, mmap_mode="r")` and costs nothing until touched
   `strings.idx.npy` (int64, length `m + 1`) holds byte offsets, so string `k` is
   `strings.bin[idx[k]:idx[k+1]]`. Index 0 is always the empty string. Strings are deduplicated, and one table
   serves every `str` column of the layer. Ids are never empty.
+
+### Derived ids
+
+A layer whose ids follow from its other string fields may leave the `id` column out: its
+`fields.id` then carries a **template** and readers build each id from the row. GeoNames
+postcodes are `postal:<country>:<code without spaces or hyphens>`, then `:2`, `:3` ... for the
+code's other points; stored, those strings were a third of the world-postal pack.
+
+```json
+"id": {"type": "str", "template": "postal:{country}:{name:compact}", "repeat": ":{n}", "exceptions": 0}
+```
+
+- `template`: literal text (no `{` or `}`) with placeholders `{field}` or `{field:transform}`,
+  each a `str` field of the same layer other than `id`, stored as usual. The placeholder is the
+  row's value of the field (`""` for null), transformed by `compact` (spaces and hyphens removed)
+  or `tail` (the text after the last `:`, all of it when there is none). A template may have no
+  placeholder at all (with `repeat`, that numbers the rows).
+- `repeat` (optional): appended to the n-th row, n ≥ 2, counting rows in order, whose placeholder
+  fields hold the same values (before transforms) as an earlier row's; `{n}`, which it holds
+  exactly once, is replaced by n in decimal. The first such row gets nothing.
+- `exceptions`: how many rows don't take the template's id. They are listed in
+  `col/id.except_rows.npy` (int32, ascending row numbers) with their ids in
+  `col/id.except_ids.npy` (int32, indexes into the string table, like a string column's); both
+  files are absent when it is 0. A row listed there has that id whatever the template gives.
+
+Readers answer every id question exactly as if the column were stored: the same strings, still
+unique and non-empty, and the name index's `ids/<layer>.npy` order is the same. Writers verify the
+template against the real ids, store the rows it misses as exceptions, and store the column as
+usual when it would miss more than half of them. Layers that store their ids have `fields.id` =
+`{"type": "str"}` and `col/id.npy`.
 
 ## Point layers
 
@@ -150,8 +180,8 @@ layer with no features has `rows` = `cols` = 0. Builders cut the grid to the nar
 rectangle (columns: leaving out the widest run of empty columns round the world); a world-wide
 layer keeps the whole world (`row0` = `col0` = 0).
 
-**Schema history.** Schema 2 (2026-11) introduced cut grids: `row0` / `col0` are required
-reading, so a schema-1 reader would misread a schema-2 pack and must refuse it (it does: it checks
+**Schema history.** Schema 2 (2026-11) introduced cut grids and derived ids (a layer may leave
+out `col/id.npy`): `row0` / `col0` are required reading, so a schema-1 reader would misread a schema-2 pack and must refuse it (it does: it checks
 `pack.json`'s `schema`). Schema-1 packs have no `row0` / `col0` and `rows` = R, `cols` = C; current
 readers accept schemas 1 and 2 and take `row0` = `col0` = 0 when the fields are absent, which is
 the same grid. Writers produce schema 2. The index layout (`index.json` `schema`) is unchanged at 1,

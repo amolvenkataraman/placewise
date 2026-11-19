@@ -91,6 +91,7 @@ def test_build_writes_the_pack(tmp_path, monkeypatch):
     assert about == ("world-towns", "towns", ["*"], ["world"])
     layer = open_pack(path)["towns"]
     assert layer.column("id").tolist() == ["ghs:XA:1", "ghs:XA:2"]
+    assert layer.meta["fields"]["id"]["exceptions"] == 0  # derived from country and geonames
     assert layer.column("class").tolist() == ["centre", "town"]
     assert layer.column("population").tolist() == [150_000, 7_000]
     geo = Geocoder(packs=[world, path])

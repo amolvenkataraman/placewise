@@ -171,6 +171,10 @@ def test_build_india_writes_a_pack_that_answers_the_spot_checks(tmp_path, offlin
     assert [regions.value("id", i) for i in regions.query_all(*INDIA_GATE)] == ["region:test-delhi"]
     assert regions.query_all(*MG_ROAD) == []
     assert regions.value("members", 0) == "pin:110001"
+    for name in ("pincodes", "post_offices", "neighbourhoods"):  # ids derived from the columns
+        assert "template" in pack[name].meta["fields"]["id"], name
+        assert not (pack[name].path / "col" / "id.npy").exists()
+    assert offices.value("id", i).startswith("indiapost:500002:Charminar")
 
 
 def test_region_districts_must_match_their_pin_areas(tmp_path, offline, monkeypatch):

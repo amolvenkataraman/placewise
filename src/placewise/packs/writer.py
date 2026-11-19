@@ -27,7 +27,7 @@ from placewise.constants import names as names_consts
 from placewise.constants import packs as consts
 from placewise.model import Feature, PackInfo
 
-from . import _arrays, _grid_index, _names_write
+from . import _arrays, _grid_index, _ids, _names_write
 from . import _geometry as gm
 
 
@@ -35,7 +35,9 @@ from . import _geometry as gm
 class LayerData:
     """One layer to write. Columns are lists (None for null) or numpy arrays, one row per feature;
     every layer needs "id" (unique, non-empty) and "name". Polygon features are in priority order:
-    when several contain a point, the earliest wins."""
+    when several contain a point, the earliest wins. `id_template` (an IdTemplate) lets the pack
+    leave the ids out where the template gives them from the other string columns (the writer
+    checks every row and stores the ones it doesn't fit; docs/pack-format.md, "Derived ids")."""
 
     name: str
     kind: str  # "point" | "polygon"
@@ -47,6 +49,7 @@ class LayerData:
     types: dict[str, str] = field(default_factory=dict)  # explicit field types; otherwise inferred
     nulls: dict[str, int] = field(default_factory=dict)  # integer null sentinels
     cell_deg: float = consts.DEFAULT_CELL_DEG  # grid cell for polygon layers
+    id_template: _ids.IdTemplate | None = None  # derive ids instead of storing them
 
 
 @dataclass
@@ -58,8 +61,9 @@ class _Prepared:
     count: int
     sources: tuple[str, ...]
     fields: dict  # name -> {"type": ..., "null": ...}
-    arrays: dict  # name -> ndarray (string fields as int32 codes into `table`)
+    arrays: dict  # file stem in col/ -> ndarray (string fields as int32 codes into `table`)
     table: list  # the string table, "" first
+    ids: list  # every row's id (the name index sorts them), stored or derived
     geom: dict  # file name -> ndarray
     cell_deg: float
 
@@ -224,7 +228,7 @@ def _prepare(layer):
         if f not in columns:
             raise ValueError(f"{where}: type or null given for missing column {f!r}")
 
-    fields, arrays, table = {}, {}, {"": 0}
+    converted = {}
     for f, values in columns.items():
         kind, array = _arrays.column(where, f, values, layer.types.get(f), layer.nulls.get(f))
         if f in consts.REQUIRED_FIELDS and kind != "str":
@@ -234,14 +238,30 @@ def _prepare(layer):
                 raise ValueError(f"{where}: every id must be a non-empty string")
             if dupes := sorted(s for s, k in Counter(array).items() if k > 1):
                 raise ValueError(f"{where}: ids must be unique; repeated: {', '.join(dupes[:5])}")
+        converted[f] = kind, array
+    ids = converted["id"][1]
+    derived = None
+    if layer.id_template is not None:
+        strings = {f: array for f, (kind, array) in converted.items() if kind == "str"}
+        derived = _ids.encode(where, layer.id_template, ids, strings)
+
+    fields, arrays, table = {}, {}, {"": 0}
+    for f, (kind, array) in converted.items():
         fields[f] = {"type": kind}
         if f in layer.nulls:
             fields[f]["null"] = int(layer.nulls[f])
+        stem = f
+        if f == "id" and derived is not None:  # only the exceptions' ids are stored
+            fields[f], rows = derived
+            if not len(rows):
+                continue
+            arrays[consts.ID_EXCEPTION_ROWS] = rows
+            stem, array = consts.ID_EXCEPTION_IDS, [array[r] for r in rows.tolist()]
         if kind == "str":
             for s in dict.fromkeys(array):  # new strings in order of first use, as setdefault would
                 table.setdefault(s, len(table))
-            array = np.fromiter(map(table.__getitem__, array), dtype=np.int32, count=count)
-        arrays[f] = array
+            array = np.fromiter(map(table.__getitem__, array), dtype=np.int32, count=len(array))
+        arrays[stem] = array
 
     if layer.kind == "point":
         geom = _arrays.point_geometry(where, layer, count)
@@ -257,6 +277,7 @@ def _prepare(layer):
         fields=fields,
         arrays=arrays,
         table=list(table),
+        ids=ids,
         geom=geom,
         cell_deg=float(layer.cell_deg),
     )

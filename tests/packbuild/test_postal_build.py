@@ -83,3 +83,16 @@ def test_the_name_index_finds_each_code_exactly(built, text, ident):
 def test_place_names_are_not_search_names(built):
     pack = open_pack(built[0])
     assert not len(pack.names.exact("Paris 07")) and not len(pack.names.exact("The Rocks"))
+
+
+def test_ids_are_derived_from_country_and_code_not_stored(built):
+    path = built[0]
+    spec = json.loads((path / const.LAYER / "layer.json").read_text())["fields"]["id"]
+    assert spec["exceptions"] == 0 and "template" in spec
+    assert not (path / const.LAYER / "col" / "id.npy").exists()
+    layer = open_pack(path)[const.LAYER]
+    assert layer.column("id").tolist() == [
+        "postal:FR:75007", "postal:DE:10117", "postal:CZ:10000", "postal:GB:SW1A", "postal:AU:2000",
+        "postal:AU:2000:2",
+    ]  # fmt: skip
+    assert open_pack(path).names.codes("postal:CZ:10000").row.tolist() == [2]  # found by its id
