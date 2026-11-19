@@ -1,4 +1,5 @@
-"""Lambert Conformal Conic (two standard parallels) on an ellipsoid, forward and inverse, with numpy.
+"""Map projections the build unprojects from, with numpy: Lambert Conformal Conic (two standard
+parallels) on an ellipsoid, and Mollweide on a sphere (the GHSL grids, below).
 
 Statistics Canada publishes its boundary files only in "Statistics Canada Lambert" (EPSG:3347,
 NAD83), and placewise's runtime reads longitude/latitude only, so the build unprojects them here.
@@ -122,3 +123,53 @@ STATCAN_LAMBERT = LambertConformalConic(
     false_easting=6200000.0,
     false_northing=3000000.0,
 )
+
+
+@dataclass(frozen=True)
+class Mollweide:
+    """Mollweide (equal-area pseudocylindrical) on a sphere of radius `radius`, forward and inverse.
+
+    Formulas: Snyder, "Map Projections: A Working Manual" (USGS PP 1395, 1987), pp. 249-252. The
+    forward needs the auxiliary angle theta of 2 theta + sin 2 theta = pi sin(lat), found by
+    Newton's method; the inverse is closed-form. Points outside the projection's ellipse come back
+    with a longitude beyond +-180 (clipped there) and latitude +-90 at most."""
+
+    radius: float = GRS80_A
+    lon_origin: float = 0.0
+    false_easting: float = 0.0
+    false_northing: float = 0.0
+
+    def forward(self, lon, lat, tol=1e-12, max_iter=50):
+        """(easting, northing) for longitude/latitude in degrees (scalars or arrays)."""
+        phi = np.radians(np.asarray(lat, dtype=np.float64))
+        lam = np.radians(np.asarray(lon, dtype=np.float64) - self.lon_origin)
+        target = np.pi * np.sin(phi)
+        t = np.array(phi, dtype=np.float64)  # 2 theta, iterated from 2 theta = phi
+        for _ in range(max_iter):
+            with np.errstate(divide="ignore", invalid="ignore"):
+                step = (t + np.sin(t) - target) / (1 + np.cos(t))
+            step = np.where(np.isfinite(step), step, 0.0)  # at the poles 1 + cos(t) is 0: done
+            t = t - step
+            if not np.size(step) or np.max(np.abs(step)) < tol:
+                break
+        theta = np.where(np.abs(phi) >= np.pi / 2, np.sign(phi) * np.pi / 2, t / 2)
+        x = 2 * np.sqrt(2) / np.pi * self.radius * lam * np.cos(theta)
+        y = np.sqrt(2) * self.radius * np.sin(theta)
+        return self.false_easting + x, self.false_northing + y
+
+    def inverse(self, x, y):
+        """(longitude, latitude) in degrees for easting/northing (scalars or arrays)."""
+        x = np.asarray(x, dtype=np.float64) - self.false_easting
+        y = np.asarray(y, dtype=np.float64) - self.false_northing
+        theta = np.arcsin(np.clip(y / (np.sqrt(2) * self.radius), -1.0, 1.0))
+        phi = np.arcsin(np.clip((2 * theta + np.sin(2 * theta)) / np.pi, -1.0, 1.0))
+        with np.errstate(divide="ignore", invalid="ignore"):
+            lam = np.pi * x / (2 * np.sqrt(2) * self.radius * np.cos(theta))
+        lam = np.where(np.isfinite(lam), lam, 0.0)
+        lon = np.clip(np.degrees(lam) + self.lon_origin, -180.0, 180.0)
+        return lon, np.degrees(phi)
+
+
+# ESRI:54009 "World_Mollweide": the GHSL grids' projection (GHS-SMOD, GHS-POP), applied by Esri and
+# GDAL to the sphere of WGS84's semi-major axis (6378137 m), central meridian 0, no false origin.
+WORLD_MOLLWEIDE = Mollweide()

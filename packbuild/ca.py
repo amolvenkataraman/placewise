@@ -19,7 +19,7 @@ import urllib.parse
 from pathlib import Path
 
 from . import arcgis, names, regions_layer, timezones
-from .fetch import DEFAULT_CACHE, fetch, unzip
+from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads, fetch, unzip
 from .layer import write_pack
 from .projection import STATCAN_LAMBERT
 from .sources import statcan, url
@@ -174,10 +174,12 @@ def main(argv=None):
         default=statcan.DEFAULT_TOLERANCE_M,
         help="simplification, metres (0: none)",
     )
+    add_keep_downloads(parser)
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     path = build_ca(args.cache_dir, args.out, args.version, args.refresh, args.via, args.tolerance_m)
     print(path)
+    delete_downloads(args)  # the raw downloads, once the pack is written
 
 
 if __name__ == "__main__":

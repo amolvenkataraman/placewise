@@ -262,7 +262,7 @@ placewise attribution                 # the installed packs' sources, licences a
   Canada `can`, and so on, once, before the batch runs, with a log line naming the pack and its
   size. Only the kinds in `data.auto_packs` are fetched, by default `country` packs, the ones that
   change the main answer (city, county, metro area, postal code). Add `parks`, `water`,
-  `notable` or `postal` to fetch those too (`PLACEWISE_DATA_AUTO_PACKS=country,parks`). A search
+  `notable`, `postal` or `towns` to fetch those too (`PLACEWISE_DATA_AUTO_PACKS=country,parks`). A search
   that asks for a kind (`find("Banff", kinds="park", country="CA")`) fetches that kind's packs for
   its country (`can-parks`) even when it isn't in `auto_packs`. Installed packs are used straight
   away; a lookup that needs nothing new doesn't download anything (auto mode plans from the cached
@@ -281,7 +281,9 @@ default kinds fetches only country packs, and only for the countries you look up
 points outside the US, Canada and India: `docs/postal.md`), and two packs that are optional even
 beside their own: `usa-zip` 53 MB (US ZIP Code areas: `postal`, and search by ZIP Code; without it
 US points have no postal code and everything else is the same) and `usa-parks-local` 43 MB (city
-and county parks); `placewise data status` shows the current ones.
+and county parks); and `world-towns` (town and city outlines outside the US, Canada and India, so
+a point in Paris' suburbs or a village near Florence is named from the outline it is in rather
+than the nearest town's point); `placewise data status` shows the current ones.
 
 Everything placewise downloads lives in `~/.placewise/` unless configured otherwise (`--data-dir`,
 `PLACEWISE_DATA_DIR` or `data.data_dir` in `placewise.toml`; `placewise data where` prints it).

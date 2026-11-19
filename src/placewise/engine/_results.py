@@ -38,15 +38,22 @@ def build(geo, lat, lon, a, named, order, locked):
     water_deg, water_word = nearby.water_bearings(a, lat, lon)
     far_city = np.where(land, -1, city)
     back_word = nearby.bearings(cities_layer, lat, lon, far_city, reverse=True)[1]
+    town = a.get("town")  # the world-towns outline of each point (placewise.engine.naming.towns)
     near_rows = nearby.near_rows(
-        cities_layer, a, lat, lon, city, geo.settings.near.max_near, geo._near_km(PlaceKind.LOCALITY)
-    )
+        cities_layer, a, lat, lon, city, geo.settings.near.max_near, geo._near_km(PlaceKind.LOCALITY),
+        also=a["town_city"] if town is not None else None,
+    )  # fmt: skip
     water_rows = geo.water.rows(a, lat, lon) if "wet_layer" in a else [None] * n
     # the Places of every point at once, each made once
     country_l = _places(layers, const.COUNTRIES, a["view"])
     admin1_l = _places(layers, const.ADMIN1, a["aidx"])
     city_l0 = _places(layers, const.CITIES, np.where(land, city, -1))
     tz_l = _tz(geo, a, land, minus)
+    if town is not None:
+        town_city_l = _places(layers, const.CITIES, a["town_city"])
+        town_loc_l = _places(layers, const.CITIES, a["town_locality"])
+        town_named = [(a[f] == a["town_place"]).tolist() for f in ("town_city", "town_locality")]
+        town, src_town = town.tolist(), geo.towns.source
 
     cidx = a["cidx"].tolist()
     cmode, amode = a["cmode"].tolist(), a["amode"].tolist()
@@ -95,6 +102,10 @@ def build(geo, lat, lon, a, named, order, locked):
             disputed = admin.disputed(a, i, locked)
             if city_place is not None:
                 sources["city"] = sources["locality"] = src_city
+            if town is not None and town[i] >= 0:  # inside a town or city outline
+                city_place, locality = town_city_l[i], town_loc_l[i]
+                sources["city"] = src_town if town_named[0][i] else src_city
+                sources["locality"] = src_town if town_named[1][i] else src_city
             if tz_zone[i] is not None:  # the timezones polygons (_timezones)
                 tz = tz_zone[i]
                 sources["tz"] = tz_source[i]

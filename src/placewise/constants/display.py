@@ -21,6 +21,11 @@ RESULT_FIELDS = (
 ENTITY_FIELDS = ("kind", "point", "extent", "id", "score", "codes", "aliases", "alternates")
 # Place.codes an Entity's card leaves out: the context line says them already
 ENTITY_HIDDEN_CODES = ("iso2", "admin1")
+# after an Entity's context when it isn't certain (Entity.context_certain), by how its country or
+# region was found (Entity.context_matches), in this order; both inside: near a border
+UNSURE = {"offshore": "offshore", "near": "outside its outline"}
+UNSURE_BORDER = "near a border"
+UNSURE_FIELDS = ("country", "region")
 
 # a Nearby at this distance or less with one of these relations reads "on Lake Tahoe", "at SFO"
 HERE_KM = 0.05

@@ -186,6 +186,14 @@ def test_find_and_get_round_trip(serve, fake):
         client.find("tower", limit=0)
 
 
+def test_find_keeps_how_sure_each_context_is(serve, fake):
+    from placewise.model import Relation
+
+    opera = Client(url(serve())).find("opera")[0]
+    assert opera == fake.find("opera")[0]
+    assert opera.context_certain is False and opera.context_matches["country"].relation is Relation.OFFSHORE
+
+
 def test_local_service_passes_search_through(serve, fake):
     from placewise.service import CachedGeocoder
 

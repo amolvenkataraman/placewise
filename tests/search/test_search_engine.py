@@ -3,11 +3,14 @@
 import pytest
 from search_kit import ALPHA_CITY_BOX, PARK_BOX, geocoder, write_packs
 
+from placewise.constants.search import CONTEXT_BORDER_KM as BORDER_KM
 from placewise.engine import Geocoder
-from placewise.model import Layer, PlaceKind
+from placewise.model import Entity, Layer, Match, PlaceKind, Relation
 from placewise.overrides import OverrideEngine
 from placewise.packs import NameData, open_pack, write_pack
 from tests.engine.postal_kit import postal_layer
+
+WITHIN = Match(Relation.WITHIN, 0.0)
 
 
 @pytest.fixture(scope="module")
@@ -233,6 +236,62 @@ def test_a_place_just_offshore_is_in_the_country_and_region_its_coast_is(geo):
     reef = geo.find("Farout Reef")[0]
     assert (reef.country, reef.region) == (None, None)
     assert geo.find("Farout Reef", admin1="XA-N") == []
+
+
+# -- how sure the context is ------------------------------------------------------------------------
+
+
+def test_context_inside_both_polygons_far_from_a_border_is_certain(geo):
+    top = geo.find("Alpha City")[0]
+    assert top.context_matches == {"country": WITHIN, "region": WITHIN}
+    assert top.context_certain is True
+
+
+def test_context_snapped_from_offshore_is_not_certain(geo):
+    port = geo.find("Seaview")[0]  # 5.6 km off the coast: country and region by the territorial sea
+    assert (port.country, port.region) == ("XA", "North Province")
+    assert set(port.context_matches) == {"country", "region"}
+    assert {m.relation for m in port.context_matches.values()} == {Relation.OFFSHORE}
+    assert all(m.distance_km is not None and m.distance_km > 0 for m in port.context_matches.values())
+    assert port.context_certain is False
+
+
+def test_context_near_a_border_is_not_certain(geo):
+    # Beta Town is 3.3 km from the Alphaland border: inside both polygons, but a coarse outline
+    # can put a place this close on the wrong side
+    town = geo.find("Beta Town")[0]
+    assert (town.country, town.region) == ("XB", "West Region")
+    assert town.context_matches == {"country": WITHIN, "region": WITHIN}
+    assert BORDER_KM > 3.4
+    assert town.context_certain is False
+
+
+def test_no_context_claims_nothing(geo):
+    reef = geo.find("Farout Reef")[0]
+    assert reef.country is None and reef.context_matches == {}
+    assert reef.context_certain is True
+
+
+def test_context_from_a_full_lookup_carries_the_city_match(geo):
+    airport = geo.find("XAI airport")[0]  # airports carry a city: their context is a full lookup
+    full = geo.lookup(airport.point.lat, airport.point.lon)
+    assert airport.context_matches["city"] == full.matches["city"]
+    assert airport.context_matches["country"] == full.matches["country"] == WITHIN
+    assert airport.context_matches["region"] == full.matches["admin1"] == WITHIN
+    assert airport.context_certain is True  # a nearest city doesn't make the country or region unsure
+
+
+def test_coordinates_typed_as_text_carry_how_sure_their_context_is(geo):
+    sure, unsure = geo.find("0.75, -139.5")[0], geo.find("0.25, -138.97")[0]
+    assert sure.context_certain is True and sure.context_matches["country"] == WITHIN
+    assert unsure.country == "XB" and unsure.context_certain is False
+
+
+def test_context_matches_survive_the_dict_round_trip(geo):
+    port = geo.find("Seaview")[0]
+    data = port.to_dict()
+    assert data["context_certain"] is False and data["context_matches"]["country"]["relation"] == "offshore"
+    assert Entity.from_dict(data) == port
 
 
 # a GB-style outward code and a code written with a space, as the world-postal pack indexes them

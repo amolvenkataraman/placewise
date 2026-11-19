@@ -29,7 +29,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from .fetch import USER_AGENT
+from .fetch import USER_AGENT, track
 
 BATCH_KM = 8_000  # ~4 s of server time at full resolution
 SOLO_KM = 10_000
@@ -60,7 +60,7 @@ def fetch_layer(
     dest = cache_dir / layer_name
     meta_path = cache_dir / f"{layer_name}.json"
     if dest.is_dir() and meta_path.exists() and not refresh:
-        return dest
+        return track(dest)
     info = _json(f"{service_url}?f=json")
     matches = [layer for layer in info.get("layers", []) if str(layer.get("name", "")).endswith(layer_name)]
     if len(matches) != 1:
@@ -121,7 +121,7 @@ def fetch_layer(
         "retrieved": dt.datetime.now(dt.timezone.utc).date().isoformat(),
     }
     meta_path.write_text(json.dumps(meta, indent=2) + "\n")
-    return dest
+    return track(dest)
 
 
 def plan(lengths, batch_km, solo_km, full_km, page_size):

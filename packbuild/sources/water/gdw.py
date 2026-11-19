@@ -19,6 +19,7 @@ from pathlib import Path
 
 from placewise.constants import water as const
 
+from ...fetch import track
 from ...layer import LayerData
 from . import shapes
 from . import shp as _shp
@@ -40,7 +41,7 @@ def extract(archive, folder):
     with zipfile.ZipFile(archive) as z:
         members = {Path(m).name: m for m in z.namelist()}
         for ext in (".shp", ".dbf"):
-            target = folder / f"{STEM}{ext}"
+            target = track(folder / f"{STEM}{ext}", sidecar=False)  # deleted with the downloads
             if not target.exists():
                 folder.mkdir(parents=True, exist_ok=True)
                 part = target.with_name(target.name + ".part")

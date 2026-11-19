@@ -31,12 +31,17 @@ KIND_PARKS = "parks"
 KIND_WATER = "water"
 KIND_NOTABLE = "notable"
 KIND_POSTAL = "postal"  # postal areas split out of a country pack (it requires that pack)
+KIND_TOWNS = "towns"  # town and city outlines where no country pack names places (world-towns)
 KIND_OTHER = "other"
-PACK_KINDS = (KIND_BASE, KIND_COUNTRY, KIND_PARKS, KIND_WATER, KIND_NOTABLE, KIND_POSTAL, KIND_OTHER)
-AUTO_KINDS = (KIND_COUNTRY, KIND_PARKS, KIND_WATER, KIND_NOTABLE, KIND_POSTAL)  # data.auto_packs choices
+PACK_KINDS = (
+    KIND_BASE, KIND_COUNTRY, KIND_PARKS, KIND_WATER, KIND_NOTABLE, KIND_POSTAL, KIND_TOWNS, KIND_OTHER,
+)  # fmt: skip
+# data.auto_packs choices
+AUTO_KINDS = (KIND_COUNTRY, KIND_PARKS, KIND_WATER, KIND_NOTABLE, KIND_POSTAL, KIND_TOWNS)
 COVERS_WORLD = "*"  # a pack's `covers` for world-wide data
 # A pack whose index entry and pack.json don't name its kind: the name after "<country>-" or
-# "world-" says it ("usa-parks", "usa-parks-local", "world-water", "usa-zip"), else its layers do.
+# "world-" says it ("usa-parks", "usa-parks-local", "world-water", "usa-zip", "world-towns"), else
+# its layers do.
 SUFFIX_KINDS = {
     "parks": KIND_PARKS,
     "water": KIND_WATER,
@@ -44,6 +49,7 @@ SUFFIX_KINDS = {
     "zip": KIND_POSTAL,
     "postal": KIND_POSTAL,
     "postcodes": KIND_POSTAL,
+    "towns": KIND_TOWNS,
 }
 LAYER_KINDS = {
     "parks": KIND_PARKS,  # a prefix: parks_national, parks_state ...
@@ -55,6 +61,7 @@ LAYER_KINDS = {
     "notable": KIND_NOTABLE,
     "zcta": KIND_POSTAL,
     "postal": KIND_POSTAL,
+    "towns": KIND_TOWNS,
 }
 # What a search's kinds= asks of the packs (PlaceKind value -> pack kind): a search for parks in
 # Canada fetches can-parks in auto mode even when parks aren't in data.auto_packs.

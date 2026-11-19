@@ -11,6 +11,7 @@
         "credit": "GeoNames (geonames.org), CC BY 4.0",
         "used_in": [
           "world/cities",
+          "world-towns/towns (names)",
           "world/admin1 (alias columns)",
           "world/countries (alias columns)",
           "package: constants/countries/<country>/cities.py (generated)"
@@ -22,6 +23,20 @@
           "alternate_names": "https://download.geonames.org/export/dump/alternateNamesV2.zip"
         },
         "notes": "Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists. alternateNamesV2 (all alternate names, streamed from the zip) gives the world pack's alias columns on cities, admin1 and countries: English names, abbreviations, IATA codes attached to cities and short names; historic names only where a curated dataset confirms them (packbuild.world_aliases)."
+      },
+      {
+        "id": "ghsl",
+        "name": "GHSL Settlement Model grid (GHS-SMOD R2023A), European Commission Joint Research Centre",
+        "url": "https://human-settlement.emergency.copernicus.eu/ghs_smod2023.php",
+        "licence": "CC-BY-4.0",
+        "credit": "© European Union, 1995-2026, GHSL (JRC), CC BY 4.0; Schiavina M., Melchiorri M., Pesaresi M. (2023): GHS-SMOD R2023A, doi:10.2905/A0DF7A6F-49DE-46EA-9BDE-563437A6E2BA",
+        "used_in": [
+          "world-towns/towns"
+        ],
+        "downloads": {
+          "smod": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_SMOD_GLOBE_R2023A/GHS_SMOD_E2020_GLOBE_R2023A_54009_1000/V2-0/GHS_SMOD_E2020_GLOBE_R2023A_54009_1000_V2_0.zip"
+        },
+        "notes": "The 2020 epoch of the Degree of Urbanisation grid (1 km, World Mollweide ESRI:54009), 36 MB zip. The folder's copyright.txt: '(c) European Union, 1995-2026 ... Any copyright and/or sui generis right on the dataset is licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) licence. Reuse is allowed provided appropriate credit is given and any changes are indicated.' Changes: urban centres (class 30) and dense and semi-dense urban clusters (23, 22) traced into outlines, cut at Natural Earth's borders, simplified, unprojected and named from GeoNames; populations from the zip's own urban centre and dense urban cluster extracts (packbuild.towns). The grid is read without GDAL (packbuild/sources/ghsl/geotiff.py: BigTIFF, LZW tiles). Releases are immutable, release-coded folders on the JRC FTP; new ones come every 2-3 years."
       },
       {
         "id": "placewise-names",

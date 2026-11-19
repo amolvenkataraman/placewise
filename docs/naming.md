@@ -30,6 +30,9 @@ the layer and rule behind every field (`"usa/places:metro"`, `"can/csd:nearest"`
 `distance_km` is None where it can't be known (a box holding the point but not the outline).
 `r.city_within`, `r.locality_within` and `r.city_km` are shortcuts: at the CN Tower the city is
 Toronto, `within`, 0 km; on the Alberta prairie it is the nearest town, `near`, tens of km away.
+`r.certain` is True when the country and admin1 both hold the point (neither `offshore` nor a
+`near` fallback); forward search's `Entity.context_certain` also flags points near a coarse border
+(`docs/search.md`, "How sure the context is").
 A field an override rule filled with another place has no match; a renamed place keeps its own.
 The card (`print(r)`) adds "· 21 km away, not inside" to such lines.
 
@@ -53,6 +56,22 @@ the worldview order, `docs/worldviews.md`) and its admin1 isn't coded for anothe
 country pack installed, the answer is the world one: `locality` and `city` are both the GeoNames
 city score (`placewise.engine._cities`), with no sublocality. So a US county that spills across
 the Niagara River never names a point on the Canadian side.
+
+**Town and city outlines** (the optional `world-towns` pack, `placewise.engine.naming.towns`).
+Outside the US, Canada and India (whose packs win, and which the pack leaves out), a point inside
+one of its GHS-SMOD outlines (an urban centre or a town, cut at the borders, named after the most
+populous GeoNames place inside: packbuild/README.md, "World-towns pack") in the outline's own
+country (as the worldview reports it) takes its names from it:
+
+- `locality`: the city score's place when that place is in the same outline (Puteaux, inside
+  Paris' outline), else the outline's place (a village whose own outline the score passed over
+  for the bigger town nearby);
+- `city`: the outline's place, unless the locality doesn't roll up into it (`rolls_up`, the
+  roll-up rule of the country packs: 100,000+ people, or not ten times smaller), so Yokohama
+  stays Yokohama inside the Tokyo-Yokohama outline.
+
+A field the outline names comes from `world-towns/towns:polygon` (`matches`: within); the others
+keep the score's. Outside the outlines, and without the pack, the answer is the city score's.
 
 Census and StatCan shapes are clipped to the shoreline. A point within `SHORE_KM` (1 km) of a
 shape but in none (a pier, Horseshoe Falls) takes the nearest one, with rule `nearest`.

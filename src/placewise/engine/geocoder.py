@@ -7,6 +7,8 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 3. time zones from the zones the packs give their admin units (_timezones); GeoNames cities: the provisional
    city score, the nearest-city time zone where no polygon answered, notable cities (_cities);
 4. country packs' names: sublocality, locality, city, borough, admin2, postal, regions (naming);
+   elsewhere, the town or city outline a point is in, when the world-towns pack is open
+   (naming.towns);
    elsewhere the nearest postcode of the world-postal pack (_postal);
 5. airport, and the nearest country far offshore (_nearby);
 6. parks the point is within or near, from the park packs (_within);
@@ -39,6 +41,7 @@ from ._timezones import Timezones
 from ._water import Water
 from ._within import Parks
 from .naming import Naming
+from .naming.towns import Towns
 
 
 class Geocoder:
@@ -122,6 +125,11 @@ class Geocoder:
         return Naming(self.packs, self.layers, self.admin, self.cities) if self.cities is not None else None
 
     @once
+    def towns(self):
+        """The world-towns outlines (placewise.engine.naming.towns), or None when no pack has them."""
+        return Towns(self.packs, self.layers, self.admin, self.cities) or None
+
+    @once
     def search(self):
         """Forward search over these packs (placewise.search.Search)."""
         from placewise.search import Search
@@ -196,6 +204,8 @@ class Geocoder:
         if self.cities is not None:
             k_notable = max(const.NOTABLE_CANDIDATES, self.settings.near.max_near + 1)
             self.cities.answer(a, lat, lon, near, self._near_km(PlaceKind.LOCALITY), k_notable)
+            if self.towns is not None:
+                self.towns.answer(a, lat, lon, work)
         if work:
             named = naming.names(a, lat, lon, work)
         if self.postal is not None:
@@ -269,8 +279,9 @@ def _repeats(lat, lon):
 
 
 def _installed_country_packs(store):
-    """The country packs, the world-postal and world-water packs, the park packs and the
-    world-notable pack installed in the store that it can open (stores without `installed()` have none)."""
+    """The country packs, the world-postal and world-water packs, the park packs, the world-notable
+    and world-towns packs installed in the store that it can open (stores without `installed()`
+    have none)."""
     installed = getattr(store, "installed", None)
     if installed is None:
         return []

@@ -20,6 +20,8 @@ import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..fetch import track
+
 SIGNATURE = b"7z\xbc\xaf\x27\x1c"
 _CHUNK = 1 << 20
 # property ids (7zFormat.txt)
@@ -86,7 +88,7 @@ def extract_newest(path, out_dir):
     out_dir = Path(out_dir)
     target = out_dir / Path(member.name).name
     if target.exists():
-        return target
+        return track(target, sidecar=False)
     out_dir.mkdir(parents=True, exist_ok=True)
     partial = target.with_name(target.name + ".part")
     try:
@@ -97,7 +99,7 @@ def extract_newest(path, out_dir):
     except BaseException:
         partial.unlink(missing_ok=True)
         raise
-    return target
+    return track(target, sidecar=False)
 
 
 def _day(name):

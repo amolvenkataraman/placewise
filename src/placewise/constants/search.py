@@ -87,6 +87,11 @@ CODE_COLUMNS = (
     "state_code",
 )
 REVERSE_CACHE_SIZE = 4096  # Entity contexts (city, region, country) kept per worldview
+# Entity.context_certain is False within this of another country's or region's outline: the
+# world pack's Natural Earth 1:10m borders: catches 90-99% of the points a 1:10m admin1 polygon
+# gets wrong in the US, Canada and India, flagging 2-9% of points (docs/search.md, "How sure the
+# context is")
+CONTEXT_BORDER_KM = 5.0
 
 # kinds= accepts these everyday words for PlaceKind values
 KIND_ALIASES = {

@@ -61,13 +61,16 @@ def water_bearings(a, lat, lon):
     return deg, words
 
 
-def near_rows(cities, a, lat, lon, city, max_near, near_km):
-    """Per point, [(city row, km, bearing, compass), ...] for `near`, nearest first."""
+def near_rows(cities, a, lat, lon, city, max_near, near_km, also=None):
+    """Per point, [(city row, km, bearing, compass), ...] for `near`, nearest first, leaving out
+    the point's `city` row (and its `also` row: the city a town outline names)."""
     n = len(lat)
     if "notable" not in a or not max_near:
         return [()] * n
     notable = a["notable"].copy()
     notable[(notable == city[:, None]) | (a["notable_km"] > near_km)] = -1
+    if also is not None:
+        notable[notable == also[:, None]] = -1
     # keep the first max_near valid columns of each row
     rank = np.cumsum(notable >= 0, axis=1)
     notable[rank > max_near] = -1

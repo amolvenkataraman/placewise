@@ -74,7 +74,19 @@ def _entity(name):
         id=f"test:{name}", name=m[2].split(",")[0], kind=PlaceKind.LANDMARK, point=Point(m[0], m[1])
     )
     box = BBox(m[0] - 0.001, m[1] - 0.001, m[0] + 0.001, m[1] + 0.001)
-    return Entity(place, point=place.point, bbox=box, radius_km=0.1, city=m[3], country=m[6], score=1.0)
+    # the Opera House stands on a point in the harbour: say its country came from offshore
+    country = Match(Relation.OFFSHORE, 0.2) if name == "opera_house" else Match(Relation.WITHIN, 0.0)
+    return Entity(
+        place,
+        point=place.point,
+        bbox=box,
+        radius_km=0.1,
+        city=m[3],
+        country=m[6],
+        score=1.0,
+        context_matches={"country": country, "city": Match(Relation.NEAR, 0.4)},
+        context_certain=name != "opera_house",
+    )
 
 
 class FakeSearch:

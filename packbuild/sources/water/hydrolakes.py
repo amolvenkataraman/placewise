@@ -21,6 +21,7 @@ from pathlib import Path
 
 from placewise.constants import water as const
 
+from ...fetch import track
 from ...layer import LayerData
 from . import shapes
 from . import shp as _shp
@@ -40,7 +41,7 @@ def fetch_largest(url, cache_dir, min_area_km2, refresh=False, opener=open_range
     each prefix with a .json sidecar (url, records, bytes, sha256, retrieval date). Read by range
     requests; a server ignoring them gets the whole archive downloaded there instead (`whole`),
     which is deleted as soon as the members are out."""
-    folder = Path(cache_dir) / FOLDER
+    folder = track(Path(cache_dir) / FOLDER, sidecar=False)  # the whole zip, if fetched, is in it
     folder.mkdir(parents=True, exist_ok=True)
     try:
         return _fetch(RemoteZip(url, opener=opener), url, folder, min_area_km2, refresh)
