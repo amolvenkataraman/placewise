@@ -1,7 +1,8 @@
 """Water: the sea or lake a point is on, and the sea, lake or river beside it.
 
-Reads the `marine`, `lakes` and `rivers` layers of the first pack that has each (the world-water
-pack; constants in placewise.constants.water, docs/water.md).
+Reads the `marine`, `lakes`, `reservoirs` and `rivers` layers of the first pack that has each (the
+world-water pack; constants in placewise.constants.water, docs/water.md). Reservoirs (Global Dam
+Watch's, where no named lake covers them) are read exactly like lakes, after them.
 
 - On a lake: inside its outline and at least LAKE_SHORE_MARGIN_KM (per source) from its shore.
   Result.water is the lake, ON (OVER for lakes of OVER_LAKE_KM2 or more), with the distance and
@@ -25,11 +26,10 @@ from placewise.constants import lookup as lookup_const
 from placewise.constants import water as const
 from placewise.geo import compass, initial_bearing
 from placewise.model import Nearby, Place, PlaceKind, Relation
-from placewise.packs import once
 
 from ._index import best_per_query
 
-_ON = (const.MARINE, const.LAKES)  # a["wet_layer"] indexes this
+_ON = (const.MARINE, *const.LAKE_LAYERS)  # a["wet_layer"] indexes this
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +79,7 @@ class Water:
             pack = next((p for p in packs if name in p), None)
             if pack is not None:
                 self.keys[name] = layers.add(pack, name, maker=_place)
+        self._per_lake = {}  # (what, layer name) -> per-row array (_lake_array)
 
     def __bool__(self):
         return bool(self.keys)
@@ -99,30 +100,33 @@ class Water:
         self._on_sea(a, lat, lon, countries)
         rest = np.flatnonzero(a["wet_layer"] < 0)
         a["wet_near"] = {}
-        for name, radius, limit in (
-            (const.LAKES, max(km for _, km in const.LAKE_NEAR_KM), self._lake_near_km),
-            (const.MARINE, const.SEA_NEAR_KM, None),
-            (const.RIVERS, const.RIVER_NEAR_KM, None),
-        ):
+        lake_km = max(km for _, km in const.LAKE_NEAR_KM)
+        searches = [(name, lake_km) for name in const.LAKE_LAYERS]
+        searches += [(const.MARINE, const.SEA_NEAR_KM), (const.RIVERS, const.RIVER_NEAR_KM)]
+        for name, radius in searches:
             layer = self.layer(name)
             if layer is not None and len(rest):
+                limit = self._lake_array("near", name) if name in const.LAKE_LAYERS else None
                 a["wet_near"][name] = _nearest_within(layer, lat, lon, rest, radius, limit)
 
     def _on_lakes(self, a, lat, lon):
-        lakes = self.layer(const.LAKES)
-        if lakes is None or not lakes.count:
-            return
-        row = np.atleast_1d(lakes.query(lat, lon)).astype(np.int64)
-        hit = np.flatnonzero(row >= 0)
-        if not len(hit):
-            return
-        f, km, at_lat, at_lon = (np.atleast_1d(x) for x in lakes.nearest_boundary(lat[hit], lon[hit]))
-        km, at = km.astype(np.float64), np.column_stack([at_lat, at_lon])
-        for j in np.flatnonzero(f != row[hit]):  # another lake's shore is nearer (a lake on an island)
-            km[j] = lakes.nearest_edge_km(lat[hit[j]], lon[hit[j]], row[hit[j]])
-            at[j] = np.nan
-        on = km >= self._lake_margin_km[row[hit]]
-        self._set(a, hit[on], _ON.index(const.LAKES), row[hit[on]], km[on], at[on])
+        """On a lake, then on a reservoir for the points on neither yet."""
+        for name in const.LAKE_LAYERS:
+            lakes = self.layer(name)
+            todo = np.flatnonzero(a["wet_layer"] < 0)
+            if lakes is None or not lakes.count or not len(todo):
+                continue
+            found = np.atleast_1d(lakes.query(lat[todo], lon[todo])).astype(np.int64)
+            hit, row = todo[found >= 0], found[found >= 0]
+            if not len(hit):
+                continue
+            f, km, at_lat, at_lon = (np.atleast_1d(x) for x in lakes.nearest_boundary(lat[hit], lon[hit]))
+            km, at = km.astype(np.float64), np.column_stack([at_lat, at_lon])
+            for j in np.flatnonzero(f != row):  # another lake's shore is nearer (a lake on an island)
+                km[j] = lakes.nearest_edge_km(lat[hit[j]], lon[hit[j]], row[j])
+                at[j] = np.nan
+            on = km >= self._lake_array("margin", name)[row]
+            self._set(a, hit[on], _ON.index(name), row[on], km[on], at[on])
 
     def _on_sea(self, a, lat, lon, countries):
         marine = self.layer(const.MARINE)
@@ -154,29 +158,28 @@ class Water:
     def _set(a, pts, layer, row, km, at):
         a["wet_layer"][pts], a["wet_row"][pts], a["wet_km"][pts], a["wet_at"][pts] = layer, row, km, at
 
-    @once
-    def _lake_margin_km(self):
-        lakes = self.layer(const.LAKES)
-        sources = lakes.column("source").tolist() if "source" in lakes.fields else [""] * lakes.count
-        margins = const.LAKE_SHORE_MARGIN_KM
-        return np.array(
-            [margins.get(s, const.LAKE_SHORE_MARGIN_DEFAULT_KM) for s in sources], dtype=np.float64
-        )
-
-    @once
-    def _lake_area_km2(self):
-        lakes = self.layer(const.LAKES)
-        if "area_km2" not in lakes.fields:
-            return np.zeros(lakes.count)
-        return np.asarray(lakes.column("area_km2"), dtype=np.float64)
-
-    @once
-    def _lake_near_km(self):
-        """How close each lake's shore must be to count as near, by its area."""
-        area, near = self._lake_area_km2, np.zeros(len(self._lake_area_km2))
-        for min_area, km in sorted(const.LAKE_NEAR_KM):
-            near[area >= min_area] = km
-        return near
+    def _lake_array(self, what, name):
+        """Per row of lake layer `name`: its shore margin ("margin", by source), its area ("area")
+        or how close its shore must be to count as near, by its area ("near"); made once."""
+        key = (what, name)
+        if key not in self._per_lake:
+            lakes = self.layer(name)
+            if what == "margin":
+                sources = lakes.column("source").tolist() if "source" in lakes.fields else [""] * lakes.count
+                margins = const.LAKE_SHORE_MARGIN_KM
+                out = np.array(
+                    [margins.get(s, const.LAKE_SHORE_MARGIN_DEFAULT_KM) for s in sources], dtype=np.float64
+                )
+            elif what == "area":
+                has = "area_km2" in lakes.fields
+                out = np.asarray(lakes.column("area_km2"), dtype=np.float64) if has else np.zeros(lakes.count)
+            else:
+                area = self._lake_array("area", name)
+                out = np.zeros(len(area))
+                for min_area, km in sorted(const.LAKE_NEAR_KM):
+                    out[area >= min_area] = km
+            self._per_lake[key] = out
+        return self._per_lake[key]
 
     # -- per point, for the Results -----------------------------------------------------------------
 
@@ -203,7 +206,7 @@ class Water:
             name = _ON[wet[i]]
             key, r = self.keys[name], int(row[i])
             relation = Relation.OVER
-            if name == const.LAKES and self._lake_area_km2[r] < const.OVER_LAKE_KM2:
+            if name in const.LAKE_LAYERS and self._lake_array("area", name)[r] < const.OVER_LAKE_KM2:
                 relation = Relation.ON
             bearing = None if np.isnan(deg[i]) else float(deg[i])
             on = Nearby(self.layers.place(key, r), relation, float(km[i]), bearing, word[i] or None)

@@ -151,6 +151,38 @@ def test_beside_a_river(geo):
 # --- consistency -------------------------------------------------------------------------------
 
 
+# --- reservoirs (Global Dam Watch), read like lakes ---------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def dams(tmp_path_factory):
+    root = tmp_path_factory.mktemp("water-reservoirs")
+    return Geocoder(packs=[write_world(root), write_water(root, reservoirs=True)])
+
+
+def test_on_a_reservoir_like_on_a_lake(dams):
+    r = dams.lookup(0.125, -139.65)
+    assert r.label == "On the Southam Reservoir"
+    assert r.water.relation == Relation.ON and r.water.place.id == "gdw:2"
+    assert r.water.place.codes["type"] == "reservoir"
+    assert r.water.distance_km == pytest.approx(0.025 * KM_PER_DEG, abs=0.05)
+    assert r.sources["water"] == "world-water/reservoirs:polygon"
+    assert r.country.name == "Alphaland"
+
+
+def test_near_a_reservoir_like_near_a_lake(dams):
+    r = dams.lookup(0.155, -139.65)  # 0.56 km north of its shore; lakes of 10 km²+ are near within 1 km
+    assert r.water is None
+    assert _near(r)["Southam Reservoir"].distance_km == pytest.approx(0.005 * KM_PER_DEG, abs=0.02)
+    assert "Southam Reservoir" not in _near(dams.lookup(0.17, -139.65))  # 2.2 km
+
+
+def test_a_lake_answers_before_a_reservoir_drawn_over_it(dams):
+    r = dams.lookup(0.37, -139.82)
+    assert r.water.place.name == "Lake Alpha" and r.sources["water"] == "world-water/lakes:polygon"
+    assert dams.lookup(0.43, -139.78).water.place.name == "Alpha Pool"  # outside the lake
+
+
 def test_lookup_many_equals_lookup(geo):
     lats = np.array([0.35, 0.3005, 0.29, 1.4, 1.7, 1.1, 1.005, -10.0, 5.1, -30.0, 0.61, 0.75])
     lons = np.array([-139.85, -139.85, -139.85, -139.3, -139.7, -139.5, -139.5, -160.0, -140.0,

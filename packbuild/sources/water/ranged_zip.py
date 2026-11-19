@@ -4,10 +4,16 @@ HydroLAKES ships as one 820 MB zip whose polygons are ordered largest first, so 
 pack keeps are a prefix of its .shp member. Reading the archive's central directory from its last
 64 KiB, then inflating just that prefix, downloads a fraction of the archive (packbuild.water).
 Only stored and deflated members, and archives without ZIP64 records, are read.
+
+A server that ignores the range request (HTTP 200: the CDN in front of HydroLAKES did, once)
+raises RangeIgnoredError; the caller then downloads the whole archive (`download`), reads the members
+it needs from it with LocalZip, which extracts like RemoteZip, and deletes it.
 """
 
+import shutil
 import struct
 import urllib.request
+import zipfile
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +22,10 @@ from ...fetch import USER_AGENT
 
 _TAIL = 65_536 + 22  # the end-of-central-directory record and the longest comment
 _CHUNK = 1 << 20
+
+
+class RangeIgnoredError(OSError):
+    """The server answered a range request with the whole file (HTTP 200)."""
 
 
 @dataclass(frozen=True)
@@ -34,7 +44,7 @@ def open_range(url, first, last=None, timeout=60):
     response = urllib.request.urlopen(request, timeout=timeout)
     if response.status != 206:
         response.close()
-        raise OSError(f"{url}: the server ignored the range request (HTTP {response.status})")
+        raise RangeIgnoredError(f"{url}: the server ignored the range request (HTTP {response.status})")
     total = int(response.headers["Content-Range"].rsplit("/", 1)[1])
 
     def chunks():
@@ -43,6 +53,58 @@ def open_range(url, first, last=None, timeout=60):
                 yield chunk
 
     return chunks(), total
+
+
+def open_whole(url, timeout=60):
+    """The chunks of the whole of url."""
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    response = urllib.request.urlopen(request, timeout=timeout)
+
+    def chunks():
+        with response:
+            while chunk := response.read(_CHUNK):
+                yield chunk
+
+    return chunks()
+
+
+def download(url, dest, whole=open_whole):
+    """Write the whole of url to dest (through a .part file); returns dest."""
+    dest = Path(dest)
+    partial = dest.with_name(dest.name + ".part")
+    try:
+        with partial.open("wb") as out:
+            for chunk in whole(url):
+                out.write(chunk)
+        partial.replace(dest)
+    finally:
+        partial.unlink(missing_ok=True)
+    return dest
+
+
+class LocalZip:
+    """RemoteZip's `extract` over a zip on disk."""
+
+    def __init__(self, path):
+        self.path = Path(path)
+
+    def extract(self, name, dest, limit=None):
+        """Write member `name` (its first `limit` bytes, if given) to dest; returns dest."""
+        dest = Path(dest)
+        partial = dest.with_name(dest.name + ".part")
+        try:
+            with zipfile.ZipFile(self.path) as z, z.open(name) as src, partial.open("wb") as out:
+                if limit is None:
+                    shutil.copyfileobj(src, out, _CHUNK)
+                else:
+                    left = limit
+                    while left > 0 and (chunk := src.read(min(_CHUNK, left))):
+                        out.write(chunk)
+                        left -= len(chunk)
+            partial.replace(dest)
+        finally:
+            partial.unlink(missing_ok=True)
+        return dest
 
 
 class RemoteZip:

@@ -1,7 +1,23 @@
 {
   "purpose": "postal",
-  "description": "Postal-code areas: ZIP Code Tabulation Areas, forward sortation areas, PIN codes.",
+  "description": "Postal codes: ZIP Code Tabulation Areas, forward sortation areas, PIN codes, and postcode points for the rest of the world.",
   "regions": {
+    "world": [
+      {
+        "id": "geonames",
+        "name": "GeoNames",
+        "url": "https://www.geonames.org",
+        "licence": "CC-BY-4.0",
+        "credit": "GeoNames (geonames.org), CC BY 4.0",
+        "used_in": [
+          "world-postal/postal"
+        ],
+        "downloads": {
+          "postal_world": "https://download.geonames.org/export/zip/allCountries.zip"
+        },
+        "notes": "GeoNames postal codes for about 120 countries (export/zip/allCountries.zip: one row per code and place, with admin names and a point), under CC BY 4.0 per its readme, rebuilt daily. The optional world-postal pack keeps them as points (they are not areas, so a lookup reports the nearest code within a per-country reach, never that a point is inside one), leaving out: the United States, Canada and India, whose country packs carry postal areas; Singapore, Portugal and the United Arab Emirates, whose files have no documented source (the UAE has no postcode system); Hong Kong and Macau, whose single codes are placeholders; Northern Ireland's codes (BT), which fall under Land and Property Services' terms (internal business use only), not the Royal Mail licence of the rest of the UK file (\"Contains Royal Mail data Royal Mail copyright and database right 2022\"); and business-mail CEDEX codes. Per the readme the file keeps only part of some countries' codes: the UK's outward codes (SW1A) and the Netherlands' four digits, the first part in Chile, Ireland and Malta, Chinese codes ending in 00, Argentina's first five characters and Brazil's major codes only. Points are mostly the place name's coordinates or the centre of the code's addresses (the accuracy column), so a code's point can sit a few km from parts of its area; Crown Dependency (GG, JE, IM) rows have no documented source either and are kept, flagged here."
+      }
+    ],
     "usa": [
       {
         "id": "uscensus",

@@ -100,3 +100,28 @@ def test_unnamed_outlines_are_left_out_and_rows_are_smallest_first(joined):
 def test_wikidata_points_parse_the_query_result(tmp_path):
     path = _wikidata(tmp_path, [("Q325391", "Dal Lake", 34.12, 74.87)])
     assert names.wikidata_points([path]) == [("Q325391", "Dal Lake", 34.12, 74.87)]
+
+
+def test_reservoirs_a_named_lake_covers_are_dropped(tmp_path):
+    lakes = _layer(
+        [
+            ("wikidata:Q1", "Hirakud Reservoir", "reservoir", "Q1", 500.0, (20.5, 83.5, 21.8, 84.0)),
+            ("wikidata:Q2", "Lake Edge", "lake", "Q2", 30.0, (30.0, 78.0, 30.1, 78.1)),
+        ],
+        "hydrolakes",
+    )
+    reservoirs = _layer(
+        [
+            ("gdw:1687", "Tehri Reservoir", "reservoir", "", 18.9, (30.35, 78.40, 30.45, 78.55)),  # no lake
+            ("gdw:2", "Edge Reservoir", "reservoir", "", 40.0, (30.05, 78.05, 30.2, 78.2)),  # a ninth in one
+            ("gdw:336", "Hirakud Reservoir", "reservoir", "", 499.5, (20.55, 83.55, 21.75, 83.95)),  # in it
+        ],
+        "gdw",
+    )
+    kept = names.drop_covered(reservoirs, lakes, tmp_path)
+    assert kept.columns["id"] == ["gdw:1687", "gdw:2"]
+    assert [f.id for f in kept.features] == ["gdw:1687", "gdw:2"]
+    assert kept.name == "lakes" and kept.columns["area_km2"] == [18.9, 40.0]
+    assert names.drop_covered(reservoirs, _layer([], "hydrolakes"), tmp_path).columns["id"] == [
+        "gdw:1687", "gdw:2", "gdw:336",
+    ]  # fmt: skip

@@ -20,7 +20,7 @@ should still read each licence for its own obligations.
 | [All India Pincode Boundary (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-boundary-geo-json) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/pincodes, ind/regions |
 | [All India Pincode Directory (Department of Posts, Open Government Data Platform India)](https://www.data.gov.in/catalog/all-india-pincode-directory) | LicenseRef-GODL-India | ind/states, ind/districts, ind/cities, ind/neighbourhoods, ind/pincodes, ind/post_offices, ind/regions |
 | [placewise curated datasets: names and airports (datasets/names, datasets/airports)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | ind/states, ind/districts, ind/cities, world/cities (alias columns), world/admin1 (alias columns), world/countries (alias columns), world/airports (served_city), package: constants/countries/city_aliases.py (generated) |
-| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, world/admin1 (alias columns), world/countries (alias columns), package: constants/countries/<country>/cities.py (generated), usa-zip/zcta |
+| [GeoNames](https://www.geonames.org) | CC-BY-4.0 | world/country_facts, world/cities, world/admin1 (alias columns), world/countries (alias columns), package: constants/countries/<country>/cities.py (generated), world-postal/postal, usa-zip/zcta |
 | [Unicode CLDR (Common Locale Data Repository), cldr-json 49.0.0](https://cldr.unicode.org) | Unicode-3.0 | world/country_facts, package: constants/countries/currency_codes.py (generated) |
 | [Wikidata](https://www.wikidata.org) | CC0-1.0 | world/country_facts, world-notable/notable, world-parks/park_points, world-water/lakes |
 | [QRank](https://qrank.toolforge.org) | CC0-1.0 | world-notable/notable |
@@ -35,6 +35,7 @@ should still read each licence for its own obligations.
 | [placewise curated datasets: time zones (datasets/timezones)](https://github.com/amolvenkataraman/placewise-data/tree/main/datasets) | CC-BY-4.0 | world/countries, world/admin1, world/timezones, usa/counties, usa/timezones, can/csd |
 | [Natural Earth 1:10m Physical Vectors](https://www.naturalearthdata.com) | LicenseRef-public-domain | world-water/marine, world-water/lakes, world-water/rivers |
 | [HydroLAKES v1.0](https://www.hydrosheds.org/products/hydrolakes) | CC-BY-4.0 | world-water/lakes |
+| [Global Dam Watch (GDW) database v1.0](https://www.globaldamwatch.org) | CC-BY-4.0 | world-water/reservoirs |
 
 ## Coverage
 
@@ -55,6 +56,7 @@ should still read each licence for its own obligations.
 | places | can | Statistics Canada, 2021 Census of Population, population and dwelling counts, Canadian Geographical Names Database (CGNDB), Natural Resources Canada |
 | places | ind | All India Pincode Directory (Department of Posts, Open Government Data Platform India), Local Government Directory (LGD), Ministry of Panchayati Raj |
 | places | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
+| postal | world | GeoNames |
 | postal | can | Statistics Canada, 2021 Census Forward Sortation Area Boundary File (cartographic), Statistics Canada, 2021 Census of Population, population and dwelling counts |
 | postal | ind | All India Pincode Boundary (Department of Posts, Open Government Data Platform India), All India Pincode Directory (Department of Posts, Open Government Data Platform India) |
 | postal | usa | US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations, GeoNames |
@@ -64,7 +66,7 @@ should still read each licence for its own obligations.
 | timezones | world | placewise curated datasets: time zones (datasets/timezones), Natural Earth 1:10m Cultural Vectors |
 | timezones | can | placewise curated datasets: time zones (datasets/timezones), Statistics Canada, 2021 Census Boundary Files (cartographic) |
 | timezones | usa | placewise curated datasets: time zones (datasets/timezones), US Census Bureau cartographic boundaries, gazetteer, population estimates and metro delineations |
-| water | world | Natural Earth 1:10m Physical Vectors, HydroLAKES v1.0, Wikidata |
+| water | world | Natural Earth 1:10m Physical Vectors, HydroLAKES v1.0, Global Dam Watch (GDW) database v1.0, Wikidata |
 
 ## OurAirports
 
@@ -159,6 +161,8 @@ Curated by the placewise project and licensed CC BY 4.0 (datasets/LICENSE.md in 
 The world pack's country_facts layer takes capital, area, population, top-level domain, calling code, postal code format, languages and neighbours from countryInfo.txt, each country's IANA time zones from timeZones.txt, and the capital's coordinates from cities1000 (the PPLC city). countryInfo gives no reference year for its population and area figures, so the layer carries none.
 
 Places with population 1000+. Each city carries an IANA time zone, used for time zones until a boundary pack exists. alternateNamesV2 (all alternate names, streamed from the zip) gives the world pack's alias columns on cities, admin1 and countries: English names, abbreviations, IATA codes attached to cities and short names; historic names only where a curated dataset confirms them (packbuild.world_aliases).
+
+GeoNames postal codes for about 120 countries (export/zip/allCountries.zip: one row per code and place, with admin names and a point), under CC BY 4.0 per its readme, rebuilt daily. The optional world-postal pack keeps them as points (they are not areas, so a lookup reports the nearest code within a per-country reach, never that a point is inside one), leaving out: the United States, Canada and India, whose country packs carry postal areas; Singapore, Portugal and the United Arab Emirates, whose files have no documented source (the UAE has no postcode system); Hong Kong and Macau, whose single codes are placeholders; Northern Ireland's codes (BT), which fall under Land and Property Services' terms (internal business use only), not the Royal Mail licence of the rest of the UK file ("Contains Royal Mail data Royal Mail copyright and database right 2022"); and business-mail CEDEX codes. Per the readme the file keeps only part of some countries' codes: the UK's outward codes (SW1A) and the Netherlands' four digits, the first part in Chile, Ireland and Malta, Chinese codes ending in 00, Argentina's first five characters and Brazil's major codes only. Points are mostly the place name's coordinates or the centre of the code's addresses (the accuracy column), so a code's point can sit a few km from parts of its area; Crown Dependency (GG, JE, IM) rows have no documented source either and are kept, flagged here.
 
 GeoNames postal codes for the United States (export/zip/US.zip: 41,490 ZIP Codes with the USPS default city name, state, county and a centroid), under CC BY 4.0 per its readme. The US pack takes a ZCTA's postal city from it only where ZIP Code Business Patterns has no row for the ZIP Code (about 2,700 of 33,791 ZCTAs, mostly rural residential ones); the readme does not name the upstream source of the US file.
 
@@ -279,3 +283,11 @@ Public domain (naturalearthdata.com/about/terms-of-use). Version 5.1 marine poly
 - Website: https://www.hydrosheds.org/products/hydrolakes
 
 CC BY 4.0 (HydroLAKES Technical Documentation v1.0, section 4.1), which also asks users "to refrain from redistributing the data in whole in its original format on other websites without the explicit written permission from the authors": the pack carries a filtered, simplified derivative in placewise's own format (lakes of 10 km² or more, about 1.2% of the 1.43 million lakes, outlines simplified to 30 m), not the original files. The build reads only the start of the 820 MB archive by HTTP range requests (its records run largest first), about 220 MB in all. Names are joined from Natural Earth and Wikidata (packbuild.sources.water.names); HydroLAKES' Country field is the country of the outflow (Lake Ontario: United States), so it is not used: a lake's country comes from the world pack's polygons and the worldview.
+
+## Global Dam Watch (GDW) database v1.0
+
+- Credit: This product incorporates data from the GDW database © Global Dam Watch (2024). Lehner, B., Beames, P., Mulligan, M., Zarfl, C., De Felice, L., van Soesbergen, A., Thieme, M., Garcia de Leaniz, C., Anand, M., Belletti, B., et al. (2024): The Global Dam Watch database of river barrier and reservoir information for large-scale applications. Scientific Data 11: 1069. Data at doi:10.6084/m9.figshare.25988293, CC BY 4.0
+- Licence: CC-BY-4.0
+- Website: https://www.globaldamwatch.org
+
+CC BY 4.0 (figshare record 10.6084/m9.figshare.25988293 and GDW Technical Documentation v1.0, section 4.1), which also asks users "to refrain from redistributing the data in whole in its original format on other websites without the explicit written permission from the authors": the pack carries a filtered, simplified derivative in placewise's own format, not the original files. Section 4.5 asks products using the data to show the copyright line that opens the credit. The download is the shapefile archive (GDW_v1_0_shp.zip, 70 MB: 41,145 barriers and 35,295 reservoir polygons); only the reservoir polygons are read. Kept: reservoirs of 10 km² or more (the lakes' threshold) with a name, built as reservoirs (natural lakes behind a lake-control dam, such as Lake Tahoe, stay lakes), outlines simplified to 30 m, and only those no named lake of the lakes layer already covers (Lake Mead, Hirakud and most large reservoirs are named HydroLAKES outlines; GDW adds the rest, such as the Tehri reservoir). Names are the reservoir's own (RES_NAME), else the dam's (DAM_NAME) less its 'Dam', with 'Reservoir' added where the name doesn't say it is water (Tehri -> Tehri Reservoir).

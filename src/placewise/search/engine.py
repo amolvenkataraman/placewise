@@ -138,7 +138,10 @@ class Search:
             contexts.append(ctx_mod.text_context((reading,), ctx.countries, ctx.admin1))
             g.each("exact", key, group=len(contexts) - 1, factor=const.CITY_ALIAS_FACTOR)
         if q.code:
+            before = len(g.parts)
             g.each("codes", q.code)
+            if q.code_head and len(g.parts) == before:  # "SW1A 1AA": the district SW1A
+                g.each("codes", q.code_head)
         if q.id:
             g.ids(q.id)
         for ident in q.region_ids:

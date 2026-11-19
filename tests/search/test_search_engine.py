@@ -1,10 +1,13 @@
 """Forward search on the synthetic world (search_kit): ranking, merging, context, codes, ids."""
 
 import pytest
-from search_kit import ALPHA_CITY_BOX, PARK_BOX, geocoder
+from search_kit import ALPHA_CITY_BOX, PARK_BOX, geocoder, write_packs
 
+from placewise.engine import Geocoder
 from placewise.model import Layer, PlaceKind
 from placewise.overrides import OverrideEngine
+from placewise.packs import NameData, open_pack, write_pack
+from tests.engine.postal_kit import postal_layer
 
 
 @pytest.fixture(scope="module")
@@ -230,3 +233,39 @@ def test_a_place_just_offshore_is_in_the_country_and_region_its_coast_is(geo):
     reef = geo.find("Farout Reef")[0]
     assert (reef.country, reef.region) == (None, None)
     assert geo.find("Farout Reef", admin1="XA-N") == []
+
+
+# a GB-style outward code and a code written with a space, as the world-postal pack indexes them
+_POSTCODES = [
+    ("postal:XA:AB1", "AB1", "Alpha City", "XA", 0.75, -139.5, 10.0, False),
+    ("postal:XB:10000", "100 00", "Beta Town", "XB", 0.25, -138.97, 10.0, False),
+]
+
+
+@pytest.fixture(scope="module")
+def postal_geo(tmp_path_factory):
+    root = tmp_path_factory.mktemp("search-postal")
+    rows = [("AB1", "postal", 0, "postal_code", 0.2, "code")]
+    rows += [(code, "postal", 1, "postal_code", 0.2, "code") for code in ("100 00", "10000")]
+    path = write_pack(
+        root, "world-postal", "2026.11", [postal_layer(_POSTCODES)], names=NameData.from_rows(rows)
+    )
+    return Geocoder(packs=[*write_packs(root), open_pack(path)])
+
+
+@pytest.mark.parametrize(
+    ("text", "ident"),
+    [
+        ("AB1", "postal:XA:AB1"),
+        ("AB1 2CD", "postal:XA:AB1"),  # a full UK postcode finds its outward code
+        ("100 00", "postal:XB:10000"),
+        ("10000", "postal:XB:10000"),
+    ],
+)
+def test_postcodes_with_and_without_their_space(postal_geo, text, ident):
+    found = postal_geo.find(text)
+    assert ids(found)[:1] == [ident] and found[0].place.kind is PlaceKind.POSTAL_CODE
+
+
+def test_a_postcodes_first_part_is_tried_only_when_the_whole_code_matches_nothing(postal_geo):
+    assert postal_geo.find("XY9 9ZZ") == []

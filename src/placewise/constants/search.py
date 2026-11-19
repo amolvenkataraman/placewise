@@ -8,6 +8,8 @@ GENERIC_SUFFIXES = ("regional municipality", "region", "municipality", "district
 GENERIC_PREFIXES = ("city of", "town of", "region of", "municipality of")
 # a query this short or shorter without a space may be a code (YYZ, M5V, CA-ON, 94105, Q1049470)
 CODE_MAX_CHARS = 16
+# a two-part postcode whose first part has no digit has at most this many letters ("AZ 0100")
+SPACED_CODE_LETTERS = 3
 # placewise ids look like "<scheme>:<value>" ("census:0646870", "iso:IN-KA", "wikidata:Q1049470")
 ID_SEPARATOR = ":"
 # the id scheme of an Entity built for coordinates typed as text (RFC 5870 geo URI)

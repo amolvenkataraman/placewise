@@ -16,6 +16,7 @@ pack's polygons, with the worldview applied).
 import datetime as dt
 import hashlib
 import json
+import logging
 from pathlib import Path
 
 from placewise.constants import water as const
@@ -23,7 +24,9 @@ from placewise.constants import water as const
 from ...layer import LayerData
 from . import shapes
 from . import shp as _shp
-from .ranged_zip import RemoteZip, open_range
+from .ranged_zip import LocalZip, RangeIgnoredError, RemoteZip, download, open_range, open_whole
+
+log = logging.getLogger(__name__)
 
 SOURCE = "hydrolakes"
 STEM = "HydroLAKES_polys_v10"
@@ -31,18 +34,31 @@ FOLDER = f"{STEM}_shp"
 _RESERVOIR = 2  # Lake_type: 1 lake, 2 reservoir, 3 lake regulated by a dam
 
 
-def fetch_largest(url, cache_dir, min_area_km2, refresh=False, opener=open_range):
+def fetch_largest(url, cache_dir, min_area_km2, refresh=False, opener=open_range, whole=open_whole):
     """(shp, dbf, count): a .shp holding the first `count` records, those of at least
     min_area_km2, and the archive's full .dbf; cached in <cache_dir>/HydroLAKES_polys_v10_shp/,
-    each prefix with a .json sidecar (url, records, bytes, sha256, retrieval date)."""
+    each prefix with a .json sidecar (url, records, bytes, sha256, retrieval date). Read by range
+    requests; a server ignoring them gets the whole archive downloaded there instead (`whole`),
+    which is deleted as soon as the members are out."""
     folder = Path(cache_dir) / FOLDER
     folder.mkdir(parents=True, exist_ok=True)
-    remote = RemoteZip(url, opener=opener)
+    try:
+        return _fetch(RemoteZip(url, opener=opener), url, folder, min_area_km2, refresh)
+    except RangeIgnoredError as e:
+        log.warning("%s; downloading the whole archive (about 820 MB), deleted once read", e)
+        archive = download(url, folder / f"{FOLDER}.zip", whole)
+        try:
+            return _fetch(LocalZip(archive), url, folder, min_area_km2, refresh)
+        finally:
+            archive.unlink(missing_ok=True)
+
+
+def _fetch(source, url, folder, min_area_km2, refresh):
     whole = {}
     for ext in (".dbf", ".shx", ".prj"):
         path = folder / f"{STEM}{ext}"
         if refresh or not path.exists():
-            remote.extract(f"{FOLDER}/{STEM}{ext}", path)
+            source.extract(f"{FOLDER}/{STEM}{ext}", path)
         whole[ext] = path
     areas = _shp.numbers(_shp.read_dbf(whole[".dbf"], fields=("Lake_area",))["Lake_area"])
     kept = (areas >= min_area_km2).nonzero()[0]
@@ -53,7 +69,7 @@ def fetch_largest(url, cache_dir, min_area_km2, refresh=False, opener=open_range
     sidecar = shp.with_name(shp.name + ".json")
     if refresh or not (shp.exists() and sidecar.exists()):
         stop = int(_shp.record_ends(whole[".shx"])[count - 1])
-        remote.extract(f"{FOLDER}/{STEM}.shp", shp, limit=stop)
+        source.extract(f"{FOLDER}/{STEM}.shp", shp, limit=stop)
         meta = {
             "url": url,
             "member": f"{FOLDER}/{STEM}.shp",

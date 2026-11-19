@@ -1,6 +1,6 @@
 """Point lookup (placewise.engine): how far, how big and how the answer is scored."""
 
-from . import notable, parks, water
+from . import notable, parks, postal, water
 from .distance import METRES_PER
 from .naming import COUNTRY_PACKS, NAME, STATE
 
@@ -20,7 +20,7 @@ TZ_SEPARATOR = "|"
 DEFAULT_PACK = "world"  # what Geocoder() opens through the store when no packs are given
 # the packs a store-backed Geocoder opens beside it when installed, in this order; auto mode fetches
 # only these (a pack this placewise doesn't read is never downloaded for it)
-OPTIONAL_PACKS = (*COUNTRY_PACKS, water.PACK, *parks.PACKS, notable.PACK)
+OPTIONAL_PACKS = (*COUNTRY_PACKS, postal.PACK, water.PACK, *parks.PACKS, notable.PACK)
 
 # rule names in Result.sources ("world/countries:offshore")
 POLYGON = "polygon"  # the point is inside the feature

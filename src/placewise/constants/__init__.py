@@ -30,6 +30,7 @@ __all__ = [
     "parks",
     "plus_codes",
     "polylines",
+    "postal",
     "privacy",
     "search",
     "server",

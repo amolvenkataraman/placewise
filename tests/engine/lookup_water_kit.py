@@ -6,6 +6,8 @@ Gamma Bay      lat 1.5 .. 2, lon -140 .. -139.5, drawn over the ocean (smaller: 
 Far Sea        lat -12 .. -8, lon -162 .. -158, far from every country
 Lake Alpha     lat 0.3 .. 0.4, lon -139.9 .. -139.8, inside Alphaland (about 123 km²)
 Alpha River    along lat 0.6 from lon -139.95 to -139.7
+Southam Reservoir  lat 0.1 .. 0.15, lon -139.7 .. -139.6 (Global Dam Watch, about 62 km²)
+Alpha Pool     lat 0.35 .. 0.45, lon -139.85 .. -139.75, a reservoir overlapping Lake Alpha
 """
 
 from lookup_kit import CREATED, box_feature
@@ -54,6 +56,23 @@ def lakes_layer(source="hydrolakes"):
     return LayerData("lakes", "polygon", columns, ("synthetic",), features=features)
 
 
+def reservoirs_layer():
+    columns = {
+        "id": ["gdw:2", "gdw:1"],
+        "name": ["Southam Reservoir", "Alpha Pool"],
+        "type": ["reservoir", "reservoir"],
+        "wikidata": ["", ""],
+        "aliases": ["", ""],
+        "source": ["gdw", "gdw"],
+        "area_km2": [62.0, 124.0],
+    }
+    features = [
+        box_feature(0.1, -139.7, 0.15, -139.6, fid="gdw:2"),
+        box_feature(0.35, -139.85, 0.45, -139.75, fid="gdw:1"),
+    ]
+    return LayerData("reservoirs", "polygon", columns, ("synthetic",), features=features)
+
+
 def rivers_layer():
     line = [(0.6, -139.95), (0.6, -139.85), (0.6, -139.7)]
     ring = tuple(line + line[-2:0:-1])
@@ -62,7 +81,12 @@ def rivers_layer():
     return LayerData("rivers", "polygon", columns, ("synthetic",), features=features)
 
 
-def write_water(out_dir, lake_source="hydrolakes"):
+def write_water(out_dir, lake_source="hydrolakes", reservoirs=False):
     """The synthetic water pack, named like the real one: world-water-2026.11."""
-    layers = [marine_layer(), lakes_layer(lake_source), rivers_layer()]
+    layers = [
+        marine_layer(),
+        lakes_layer(lake_source),
+        *([reservoirs_layer()] if reservoirs else []),
+        rivers_layer(),
+    ]
     return write_pack(out_dir, "world-water", "2026.11", layers, created=CREATED)

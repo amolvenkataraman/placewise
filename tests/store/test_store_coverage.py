@@ -19,6 +19,7 @@ from placewise.store.coverage import Coverage, derive, from_entry
         ("can-parks", "parks", ("CA",), ()),
         ("usa-zip", "postal", ("US",), ("usa",)),
         ("world-water", "water", ("*",), ()),
+        ("world-postal", "postal", ("*",), ()),  # pack.json lists the countries it covers
         ("world-parks", "parks", ("*",), ()),
         ("world-notable", "notable", ("*",), ()),
         ("world-notable-sa", "notable", ("*",), ()),
@@ -30,6 +31,8 @@ def test_derived_from_the_name(name, kind, covers, requires):
 
 def test_layers_name_the_kind_when_the_name_does_not():
     assert derive("mystery", {"layers": ["marine", "lakes"]}).kind == "water"
+    assert derive("mystery", {"layers": ["reservoirs"]}).kind == "water"
+    assert derive("mystery", {"layers": ["postal"]}).kind == "postal"
     assert derive("mystery", {"layers": ["parks_national"]}).kind == "parks"
     assert derive("mystery", {"layers": ["cities"]}).kind == "other"
     assert derive("mystery").covers == ()

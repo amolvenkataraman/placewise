@@ -7,6 +7,7 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 3. time zones from the zones the packs give their admin units (_timezones); GeoNames cities: the provisional
    city score, the nearest-city time zone where no polygon answered, notable cities (_cities);
 4. country packs' names: sublocality, locality, city, borough, admin2, postal, regions (naming);
+   elsewhere the nearest postcode of the world-postal pack (_postal);
 5. airport, and the nearest country far offshore (_nearby);
 6. parks the point is within or near, from the park packs (_within);
 7. the sea or lake a point is on, and the water beside it, when a water pack is open (_water);
@@ -33,6 +34,7 @@ from ._admin import Admin
 from ._cities import Cities
 from ._layers import Layers
 from ._notable import Notable
+from ._postal import WorldPostal
 from ._timezones import Timezones
 from ._water import Water
 from ._within import Parks
@@ -108,6 +110,11 @@ class Geocoder:
     def notable(self):
         """The world-notable pack's layer (placewise.engine._notable), or None when no pack has it."""
         return Notable(self.packs, self.layers) or None
+
+    @once
+    def postal(self):
+        """The world-postal pack's postcodes (placewise.engine._postal), or None when no pack has them."""
+        return WorldPostal(self.packs, self.layers) or None
 
     @once
     def naming(self):
@@ -191,6 +198,11 @@ class Geocoder:
             self.cities.answer(a, lat, lon, near, self._near_km(PlaceKind.LOCALITY), k_notable)
         if work:
             named = naming.names(a, lat, lon, work)
+        if self.postal is not None:
+            todo = self.admin.undisputed(a)
+            if "postal" in named:
+                todo &= np.array([p is None for p in named["postal"].tolist()], dtype=bool)
+            a["postal_row"], _ = self.postal.answer(lat, lon, self.admin.iso2_of_view(a), todo)
         if everything and self.layers.has(const.AIRPORTS):
             _nearby.airports(a, self.layers.layer(const.AIRPORTS), lat, lon, self._near_km(PlaceKind.AIRPORT))
         _nearby.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
@@ -257,8 +269,8 @@ def _repeats(lat, lon):
 
 
 def _installed_country_packs(store):
-    """The country packs, the world-water pack, the park packs and the world-notable pack installed
-    in the store that it can open (stores without `installed()` have none)."""
+    """The country packs, the world-postal and world-water packs, the park packs and the
+    world-notable pack installed in the store that it can open (stores without `installed()` have none)."""
     installed = getattr(store, "installed", None)
     if installed is None:
         return []

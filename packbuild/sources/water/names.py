@@ -84,6 +84,35 @@ def join(hydrolakes, natural_earth, points, workdir):
     return LayerData(const.LAKES, "polygon", columns, sources, features=features, types=types)
 
 
+def drop_covered(layer, lakes, workdir, share=const.RESERVOIR_COVERED):
+    """`layer` (the reservoirs) without the features `lakes` already covers: at least `share` of
+    the sample points inside a feature fall in some lake (the lake answers there already)."""
+    if not len(layer.features) or not len(lakes.features):
+        return layer
+    work = Path(tempfile.mkdtemp(prefix="reservoirs-", dir=_mkdir(workdir)))
+    try:
+        mine = _polygons(work, "own", layer.features)
+        theirs = _polygons(work, "lakes", lakes.features)
+        inside_lakes = {}
+        todo = np.arange(mine.count)
+        for side in _GRID:
+            if not len(todo):
+                break
+            row, lat, lon = _samples(mine, todo, side)
+            inside = mine.contains(lat, lon, row)
+            row, lat, lon = row[inside], lat[inside], lon[inside]
+            found = np.atleast_1d(theirs.query(lat, lon))
+            for i in np.unique(row).tolist():
+                inside_lakes[i] = float(np.mean(found[row == i] >= 0))
+            todo = np.setdiff1d(todo, row)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    keep = [i for i in range(len(layer.features)) if inside_lakes.get(i, 0.0) < share]
+    columns = {k: [v[i] for i in keep] for k, v in layer.columns.items()}
+    features = [layer.features[i] for i in keep]
+    return LayerData(layer.name, layer.kind, columns, layer.sources, features=features, types=layer.types)
+
+
 def _cover(ne, hl, hl_layer, ne_layer):
     """Indexes of the covered Natural Earth lakes; their names go to the outlines (in `hl`)."""
     rows = {}  # NE lake -> HydroLAKES row of each sample point inside it

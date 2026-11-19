@@ -35,6 +35,8 @@ def test_on_lake_tahoe(geo):
     assert r.label == "On Lake Tahoe"
     assert r.water.relation == Relation.ON and r.water.place.id == "wikidata:Q169962"
     assert r.country.name == "United States"  # the land answer around the lake stays
+    # Global Dam Watch lists Tahoe (behind a lake-control dam): it stays a lake
+    assert r.sources["water"] == "world-water/lakes:polygon" and r.water.place.codes["type"] == "lake"
 
 
 def test_over_the_north_atlantic(geo):
@@ -84,3 +86,35 @@ def test_land_answers_away_from_water_are_unchanged(full):
             b.country,
         )
         assert a.water is None
+
+
+# --- reservoirs: Global Dam Watch's where no named lake covers them, read like lakes -------------
+
+
+def _has_reservoirs(pack_geo):
+    if not any("reservoirs" in p for p in pack_geo.packs):
+        pytest.skip("world-water built before the reservoirs layer: rebuild it")
+
+
+@pytest.mark.parametrize(
+    ("place", "lat", "lon", "label"),
+    [
+        ("Lake Mead", 36.15, -114.40, "On Lake Mead"),
+        ("Tehri reservoir", 30.38, 78.48, "On the Tehri Reservoir"),
+        ("Hirakud reservoir", 21.60, 83.80, "On the Hirakud Reservoir"),
+    ],
+)
+def test_on_reservoirs(geo, place, lat, lon, label):
+    _has_reservoirs(geo)
+    r = geo.lookup(lat, lon)
+    assert r.label == label, place
+    assert r.water.relation == Relation.ON and r.water.place.codes["type"] == "reservoir"
+
+
+def test_tehri_comes_from_global_dam_watch_and_search_finds_it(geo):
+    _has_reservoirs(geo)
+    r = geo.lookup(30.38, 78.48)
+    assert r.sources["water"] == "world-water/reservoirs:polygon" and r.water.place.id.startswith("gdw:")
+    assert r.country.name == "India" and r.admin1.name == "Uttarakhand"
+    found = geo.find("Tehri Reservoir")
+    assert found and found[0].place.id == r.water.place.id and found[0].place.kind == PlaceKind.WATER

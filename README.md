@@ -64,10 +64,10 @@ world-wide datasets, so answers are sensible but coarser. ●●● official bou
 | City / locality | ●●● incorporated places + CDPs, ZIP postal city | ●●● municipalities + named places (CGNDB) | ●● city corporations / ULBs (from PIN areas) | ● nearest GeoNames city | ● | ● | ● |
 | Neighbourhood | ●● GeoNames sections | ●● CGNDB neighbourhoods | ●● post-office areas | ● GeoNames sections | ● | ● | ● |
 | Metro / region | ●●● metro areas (CBSA/CSA) + curated (Bay Area …) | ●●● CMAs + curated (GTA, GTHA …) | ●● curated (Delhi NCR, MMR, BMR) | — | — | — | — |
-| Postal code | ●●● ZIP areas (ZCTA), optional pack `usa-zip` | ●● FSA (first 3 characters) | ●●● PIN-code areas | — | — | — | — |
+| Postal code | ●●● ZIP areas (ZCTA), optional pack `usa-zip` | ●● FSA (first 3 characters) | ●●● PIN-code areas | ● nearest GeoNames postcode point, optional pack `world-postal` (UK: outward codes) | ● | ● | ● (few countries) |
 | Time zone | ●●● by county | ●●● by division | ●●● | ●● by admin1 | ●● | ●● | ●● |
 | Parks & protected areas | ●●● NPS, USFS, state (PAD-US); city and county parks: optional pack `usa-parks-local` | ●●● CPCAD (no city parks) | ● Wikidata points ("near" only) | ● Wikidata points | ● | ● | ● |
-| Lakes, rivers, seas | ●● Natural Earth + HydroLAKES ≥ 10 km² | ●● | ●● (many lakes unnamed) | ●● | ●● | ●● | ●● |
+| Lakes, rivers, seas | ●● Natural Earth + HydroLAKES + Global Dam Watch reservoirs ≥ 10 km² | ●● | ●● (many lakes unnamed) | ●● | ●● | ●● | ●● |
 | Airports | ●●● OurAirports + city served | ●●● | ●●● | ●●● | ●●● | ●●● | ●●● |
 | Notable places | ●●● ~38k (Wikidata) | ●● ~4k | ●● ~12k | ●●● | ●● | ●● | ● |
 | Search (name → place) | ●●● every layer above | ●●● | ●●● incl. old names (Bangalore, Gurgaon) | ●● cities, admin1, water, parks, landmarks | ●● | ●● | ●● |
@@ -277,7 +277,8 @@ placewise attribution                 # the installed packs' sources, licences a
 The default keeps the base lean: only the world pack until you install more. Auto mode with its
 default kinds fetches only country packs, and only for the countries you look up. Sizes for the
 2026.11 data on disk: `world` 50 MB, `usa` 71 MB, `can` 90 MB, `ind` 41 MB, `usa-parks` 64 MB,
-`can-parks` 33 MB, `world-water` 46 MB, `world-parks` 0.6 MB, and two packs that are optional even
+`can-parks` 33 MB, `world-water` 52 MB, `world-parks` 0.6 MB, `world-postal` 80 MB (postcode
+points outside the US, Canada and India: `docs/postal.md`), and two packs that are optional even
 beside their own: `usa-zip` 53 MB (US ZIP Code areas: `postal`, and search by ZIP Code; without it
 US points have no postal code and everything else is the same) and `usa-parks-local` 43 MB (city
 and county parks); `placewise data status` shows the current ones.

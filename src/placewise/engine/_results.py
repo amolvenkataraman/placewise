@@ -68,6 +68,10 @@ def build(geo, lat, lon, a, named, order, locked):
     named_lists = {k: v.tolist() for k, v in named.items()}
     empty = [None] * n
     sub_l, loc_l, city_l, bor_l, adm2_l, post_l = (named_lists.get(k, empty) for k in NAMED)
+    src_postal = None
+    if "postal_row" in a:  # world postcodes, where no country pack named a postal area
+        post_l = _world_postal(geo, a["postal_row"], post_l)
+        src_postal = geo.postal.source
     regions_l, sources_l = named_lists.get("regions", empty), named_lists.get("sources", empty)
     parks = a.get("parks")  # (within, near, sources) per point (placewise.engine._within)
     notable = a.get("notable_places")  # (near, layer key) per point (placewise.engine._notable)
@@ -110,6 +114,8 @@ def build(geo, lat, lon, a, named, order, locked):
             sources.pop("city", None)
             sources.pop("locality", None)
             sources.update(named_sources)
+        if src_postal is not None and post_l[i] is not None and "postal" not in sources:
+            sources["postal"] = src_postal
         if airport[i] >= 0:
             km = airport_km[i]
             rel = Relation.AT if km <= const.AIRPORT_AT_KM else Relation.NEAR
@@ -176,6 +182,12 @@ def _new_places(found, within, near):
     """The notable Nearbys not already named (a park the point is in, a city or park near it)."""
     named = {p.name for p in within} | {n.place.name for n in near}
     return tuple(n for n in found if n.place.name not in named)
+
+
+def _world_postal(geo, rows, named):
+    """The country packs' postal Places, with the world-postal pack's where they have none."""
+    found = _places(geo.layers, geo.postal.key, rows)
+    return [n if n is not None else w for n, w in zip(named, found, strict=True)]
 
 
 def _places(layers, key, rows):
