@@ -538,6 +538,48 @@ Registry `sources/notable.json` (`wikidata`, `qrank`).
   4,756 of 24,285 Wikidata items with an AISHE code have one); outlines (campuses, airports and
   stadiums are points); station complexes are merged only when their names match.
 
+## World-towns pack (`world-towns`, optional)
+
+```
+uv run python -m packbuild.towns --version 2026.11   # reads out/world-2026.11/, writes out/world-towns-2026.11/
+```
+
+One polygon layer, `towns`: the urban centres (class 30: 50,000+ people at 1,500/km²) and towns
+(dense and semi-dense urban clusters, classes 23 and 22: 5,000+ people) of the GHS-SMOD R2023A
+grid, epoch 2020 (JRC, CC BY 4.0; registry `sources/places.json`, `ghsl`), named from the world
+pack's GeoNames places. pack.json: `kind` towns, `covers` `*`, `requires` world. The lookup rule is
+in `docs/naming.md` ("Town and city outlines").
+
+| Column | |
+|---|---|
+| `id` | `ghs:<country>:<geonames id>`: stable while GeoNames keeps the place |
+| `name`, `geonames` | the naming place's name and its world `cities` id (`geonames:<n>`) |
+| `class` | `centre` or `town` |
+| `country` | the de facto country code the cluster was cut to (the world pack's `countries`) |
+| `population` | GHS-SMOD's 2020 population of the cluster when the outline is all of it, else null (-1) |
+
+- **No GDAL.** The 36 MB zip holds the 1 km Mollweide grid (ESRI:54009) as an 18 MB BigTIFF of
+  256 x 256 LZW tiles with horizontal differencing, read tile row by tile row with numpy and a
+  pure-Python LZW (`sources/ghsl/geotiff.py`, `lzw.py`; identical tiles are decoded once). Its
+  class counts match JRC's published histogram exactly. Only the 1.1M settlement cells are kept,
+  never the 650M-cell grid. The inverse Mollweide is `packbuild.projection.Mollweide`.
+- **Clusters** (`sources/ghsl/cells.py`, `towns.py`): each cell gets the country at its centre
+  (de facto, with the lookups' 12 nmi offshore reach); the US, Canada and India and cells out at
+  sea are dropped; 4-connected cells of one class and country form a cluster, so San Diego and
+  Tijuana, or Detroit and Windsor, are cut along the cells' edges. The name is the most populous
+  GeoNames place of the cluster's country (no sections, historic or abandoned places) in its cells,
+  else in a cell next to them; clusters without one (mostly small semi-dense ones) are dropped.
+- **Outlines** (`sources/ghsl/trace.py`): the cells' edges as rings (cells that touch only at a
+  corner stay apart), holes of up to 25 km² filled (parks, rivers), simplified to 400 m in
+  Mollweide and unprojected.
+- **2026.11.1:** 1,102,488 settlement cells, 840,829 outside the three countries, 112,446
+  clusters, 39,220 named (7,466 centres, 31,754 towns; 29,389 with a population). The build takes
+  about 22 s and 0.7 GB from the cached zip; the pack is 8.5 MB on disk. The zip is the only
+  download; it can be deleted once the pack is built.
+- **Gaps.** The 2020 grid misses newer growth; GeoNames' place can be a suburb's where the town's
+  own point lies outside the cluster; one urban centre can hold several cities (Tokyo, Kawasaki and
+  Yokohama), which the lookup's roll-up rule separates only for places of 100,000+ people.
+
 ## Pack sizes
 
 Installed size on disk (`du`, MB) of the 2026.11 packs built from the same sources before and after

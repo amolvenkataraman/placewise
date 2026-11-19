@@ -259,7 +259,8 @@ which tells the store which pack serves which point (auto mode, `placewise data 
 
 - `kind`: what the pack adds. `base` (the world pack), `country` (one country in depth:
   municipality, county, metro area, postal code), `parks`, `water`, `notable`, `postal` (postal
-  areas split out of a country pack), `other`.
+  areas split out of a country pack), `towns` (town and city outlines where no country pack names
+  places: `world-towns`), `other`.
 - `covers`: the ISO 3166-1 alpha-2 codes of the countries it has data for, sorted, or `["*"]` for
   world-wide data.
 - `requires`: packs that must be installed with it (`usa-zip` needs `usa`); installing a pack
@@ -273,9 +274,11 @@ reader of an older index or pack derives the same values. The name rules (`place
 `world` is `base` world-wide; a lower-case alpha-3 country code alone (`usa`, also the older
 alpha-2 names `us`, `ca`, `in`) is `country` for that country; `<country>-<suffix>` and
 `world-<suffix>` cover that country or the world with the suffix's kind (`parks`, `parks-local`:
-parks; `water`; `notable`; `zip`, `postal`, `postcodes`: postal, requiring the country pack); a
+parks; `water`; `notable`; `zip`, `postal`, `postcodes`: postal, requiring the country pack;
+`towns`); a
 trailing `-sa` (share-alike) is ignored; failing that, the layers decide (`parks_*` and
-`park_points`: parks; `marine`, `lakes`, `rivers`: water; `notable`; `zcta`, `postal`: postal), else
+`park_points`: parks; `marine`, `lakes`, `rivers`: water; `notable`; `zcta`, `postal`: postal;
+`towns`), else
 `other`. Readers ignore fields they don't know, so these additions keep index schema 1. The archive holds one
 top-level directory `<name>-<version>/` with only regular files and directories. The store downloads to a temporary file, checks the archive's
 SHA-256, unpacks to a temporary directory (refusing absolute paths, `..` and links), checks every
