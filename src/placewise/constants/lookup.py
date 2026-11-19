@@ -37,6 +37,13 @@ MATCH_WITHIN_RULES = frozenset({POLYGON, WORLDVIEW, STATE, NAME})
 # some coastal points (piers, harbours, whole city centres like Sevastopol's) by hundreds of
 # metres, so a point this close to a country is still reported in it.
 TERRITORIAL_KM = 12 * METRES_PER["nmi"] / 1000
+# Borders (placewise.engine._borders): a country pack's state or province corrects Natural Earth's
+# country only for points at least this far inside it; closer, the point is within the unit's own
+# generalisation (Census and StatCan cartographic boundaries are drawn to tens of metres), and
+# Natural Earth's answer stands (the brink of the Horseshoe Falls, 23 m inside New York's outline)
+BORDER_DEPTH_KM = 0.05
+# the id prefix of places named by an ISO code ("iso:US-NY"): the world pack's admin1 ids
+ISO_ID_PREFIX = "iso:"
 
 # 200 nautical miles, the exclusive economic zone: how far out `water` still names the nearest
 # country. Beyond it a point is just "Offshore".

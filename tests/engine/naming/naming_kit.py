@@ -233,11 +233,13 @@ def named_places(rows=CA_NAMED):
     )  # fmt: skip
 
 
-def write_ca(out, regions=None, tz=None):
-    """tz: {province, division or subdivision id: zone} (the `tz` column on all three)."""
-    provinces = polygons(
-        "provinces", [((10, -149, 11, -148), "statcan:35", "Ontario", "ON")], ("id", "name", "code")
-    )
+ONTARIO = [((10, -149, 11, -148), "statcan:35", "Ontario", "ON")]
+
+
+def write_ca(out, regions=None, tz=None, provinces=ONTARIO):
+    """tz: {province, division or subdivision id: zone} (the `tz` column on all three); provinces:
+    rows of (box, id, name, code)."""
+    provinces = polygons("provinces", provinces, ("id", "name", "code"))
     provinces = with_tz(provinces, tz)
     cd = with_tz(polygons("cd", CA_CD, ("id", "name", "cdtype", "province", "population")), tz)
     csd = with_tz(polygons("csd", CA_CSD, ("id", "name", "csdtype", "province", "population")), tz)
@@ -259,9 +261,10 @@ IN_PINCODES = [
 ]
 
 
-def write_in(out):
+def write_in(out, extra=()):
+    """extra: more layers (a `states` layer)."""
     pincodes = polygons("pincodes", IN_PINCODES, ("id", "name", "pincode", "district", "state_code"))
-    return write_pack(out / "in", "in", VERSION, [pincodes], created=CREATED)
+    return write_pack(out / "in", "in", VERSION, [pincodes, *extra], created=CREATED)
 
 
 def regions_layer(rows):

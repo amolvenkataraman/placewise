@@ -4,6 +4,8 @@
   TERRITORIAL_KM (12 nmi; Natural Earth's 1:10m coast misses some coastal points), rule "offshore".
   The point's disputed area (the world pack's worldviews layer; offshore, the nearest one of the
   same country within TERRITORIAL_KM) and the polygon are then mapped through the worldview order.
+- country, at borders and on islands Natural Earth draws coarsely: a country pack's state or
+  province holding the point decides (placewise.engine._borders), outside disputed areas.
 - admin1: the containing polygon if it belongs to that country, else the nearest of that country's
   admin1 features within TERRITORIAL_KM ("nearest" on land, "offshore" at sea); in a disputed area,
   the admin1 the view's table gives it (rule "worldview", placewise.constants.worldviews). Country
@@ -17,6 +19,7 @@ from placewise.constants import worldviews as wv_const
 from placewise.model import Disputed
 from placewise.packs import once
 
+from ._borders import Borders
 from ._index import best_per_query
 from ._worldview import Worldviews
 
@@ -35,6 +38,11 @@ class Admin:
         """The disputed areas (the worldviews layer of the first pack that has one), or None."""
         pack = next((p for p in self.layers.packs if wv_const.WORLDVIEWS in p), None)
         return self.layers.layer(self.layers.add(pack, wv_const.WORLDVIEWS)) if pack is not None else None
+
+    @once
+    def borders(self):
+        """The country packs' states and provinces (placewise.engine._borders); falsy without any."""
+        return Borders(self.layers, self)
 
     @once
     def worldviews(self):
@@ -112,6 +120,7 @@ class Admin:
         if self.countries is not None:
             self._countries(a, lat, lon)
         a["area"] = self._areas(a, lat, lon)
+        self.borders.answer(a, lat, lon)
         if self.worldviews is not None:
             a["view"], a["applied"] = self.worldviews.answer(order, a["cidx"], a["area"])
         else:

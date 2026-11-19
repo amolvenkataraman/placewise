@@ -57,6 +57,7 @@ def build(geo, lat, lon, a, named, order, locked):
 
     cidx = a["cidx"].tolist()
     cmode, amode = a["cmode"].tolist(), a["amode"].tolist()
+    csrc = a["csrc"].tolist() if a.get("csrc") is not None else None  # countries from _borders
     far_city = far_city.tolist()
     city_km = a.get("city_km", np.full(n, np.inf)).tolist()
     tz_zone, tz_source = (a[k].tolist() if k in a else [None] * n for k in ("tz_zone", "tz_source"))
@@ -94,7 +95,7 @@ def build(geo, lat, lon, a, named, order, locked):
         country, admin1 = country_l[i], admin1_l[i]
         tz = air = water_near = disputed = None
         if country is not None:
-            sources["country"] = src_country[cmode[i]]
+            sources["country"] = csrc[i] if csrc is not None and csrc[i] else src_country[cmode[i]]
         if admin1 is not None:
             sources["admin1"] = src_admin1[amode[i]]
         city_place = locality = city_l0[i]

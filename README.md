@@ -79,7 +79,9 @@ with its state, for every area India claims; `"CN"` puts Taiwan, Hong Kong and M
 **Current limitations**
 
 - Outside the US, Canada and India the city is the nearest notable GeoNames place, not a municipal
-  boundary, and state lines are Natural Earth's 1:10m outlines (a few hundred metres off at borders).
+  boundary, and state lines are Natural Earth's 1:10m outlines (a few hundred metres off at borders;
+  where a US, Canadian or Indian pack's state or province holds the point, it decides the country:
+  Niagara Falls, New York; Treasure Island; Petrapole, `docs/naming.md`).
 - India's districts and cities are unions of PIN-code areas: state lines agree with an independent
   reference 99.7% of the time, districts 85%; large fringe PIN areas can fall outside a city, and
   satellite cities (Salt Lake → Bidhannagar) aren't rolled up yet. India has no open park outlines.
