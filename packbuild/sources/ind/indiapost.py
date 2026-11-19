@@ -34,8 +34,8 @@ from placewise.constants.packs import E7
 from placewise.model import Feature
 from placewise.packs import IdTemplate, open_pack
 
-from ..layer import LayerData, write_pack
-from ._india import ISO_NAMES, normalise_name, read_wgs84_geojson, text
+from ...layer import LayerData, write_pack
+from ._common import ISO_NAMES, normalise_name, read_wgs84_geojson, text
 
 BOUNDARY_SOURCE = "indiapost-pincode-boundary"
 DIRECTORY_SOURCE = "indiapost-pincode-directory"

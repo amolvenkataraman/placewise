@@ -29,8 +29,8 @@ from pathlib import Path
 from placewise.io import read_shapefile
 from placewise.model import Feature
 
-from ..layer import LayerData
-from ._india import ISO_NAMES, read_wgs84_geojson, text
+from ...layer import LayerData
+from ._common import ISO_NAMES, read_wgs84_geojson, text
 
 SOURCE = "nwdp-soi-boundaries"
 _PORTAL_CODES = {"LK": "LA"}  # the portal's own code -> ISO 3166-2 suffix

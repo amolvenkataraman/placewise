@@ -26,9 +26,9 @@ import numpy as np
 
 from placewise.io.shapefile import _encoding, _read_dbf, _read_shp  # low-level parsers, no CRS check
 
-from ..layer import LayerData
-from ..polygons import to_features
-from ..projection import STATCAN_LAMBERT
+from ...layer import LayerData
+from ...polygons import to_features
+from ...projection import STATCAN_LAMBERT
 
 BOUNDARIES = "statcan-boundaries-2021"
 FSA = "statcan-fsa-2021"

@@ -35,7 +35,7 @@ from xml.etree import ElementTree
 from placewise.io import read_shapefile
 from placewise.model import Feature
 
-from ..layer import LayerData
+from ...layer import LayerData
 
 SOURCE = "uscensus"
 POPULATION_NULL = -1  # i8 sentinel: no estimate (CDPs, Island Areas)

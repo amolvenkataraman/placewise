@@ -164,7 +164,7 @@ same id as the world pack's admin1. Member lists (`counties`, `cbsas`) are comma
 
 - **Datum.** CB files are NAD83 (EPSG:4269), which `placewise.io.read_shapefile` refuses. NAD83 and
   WGS84 differ by 1-2 m in the US, well inside the 1:500k generalisation, so
-  `uscensus.read_census_shapefile` accepts a geographic NAD83 .prj and reads the coordinates as
+  `census.read_census_shapefile` accepts a geographic NAD83 .prj and reads the coordinates as
   WGS84 unchanged. Other datums (NAD27) and projected files are still refused.
 - **Places** are incorporated places first, then CDPs (and Puerto Rico's comunidades and zonas
   urbanas, `class` "cdp"), so an incorporated place would win where both cover a point (none was
@@ -206,7 +206,7 @@ same id as the world pack's admin1. Member lists (`counties`, `cbsas`) are comma
   ZIPs have no ZCTA, and unpopulated land is in none. ZCTAs are defined once a decade, so the
   2020 file is current. Polygons cost about 52 MB (26 MB of the archive; hence usa-zip); gazetteer
   points would be 2 MB, but the nearest internal point names the containing ZCTA only ~70% of
-  the time near populated places, so the pack ships polygons (`uscensus.zcta_points` is the
+  the time near populated places, so the pack ships polygons (`census.zcta_points` is the
   alternative).
 - **Shoreline.** CB shapes are clipped to the shoreline: points in bays and coastal water fall in
   no county, place or ZCTA, and gazetteer internal points (computed from full TIGER/Line) can fall
@@ -388,7 +388,7 @@ matches `iso:IN-KA`-style admin1 ids; district and state names stay upper case a
   source passed the licence gate. The Survey of India's
   Administrative Boundary Database is free but needs an account and an order, and its portal
   allows boundary files for consultative, research and education use. The National Water Data
-  Portal republishes it without an account (`packbuild/sources/nwdp.py` reads its attribute
+  Portal republishes it without an account (`packbuild/sources/ind/nwdp.py` reads its attribute
   schema, LGD codes included), but under "Other (Open)" with a copyright policy that excludes
   third-party material, and its SHP and GeoJSON are projected (EPSG:7755, refused; its KMZ is
   WGS84). geoBoundaries' India ADM1 is CC BY 2.5 India (not an accepted licence) and ADM2 is

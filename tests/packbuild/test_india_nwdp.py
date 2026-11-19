@@ -7,7 +7,7 @@ from india_fixtures import (
     write_nwdp_shapefile,
 )
 
-from packbuild.sources import nwdp
+from packbuild.sources.ind import nwdp
 
 
 def _col(layer, name):

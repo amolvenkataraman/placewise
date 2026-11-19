@@ -10,7 +10,7 @@ Downloads land once in ~/.placewise/packbuild/ (packbuild.fetch.DEFAULT_CACHE, $
 the pack is written to --out. data.gov.in can't be fetched automatically (see the registry notes),
 so by default the registry's mirror copies are fetched; a file downloaded by hand from data.gov.in
 replaces its mirror. State and district boundaries (--states, --districts) are read only once
-their source has a registry file, which needs its licence cleared first (packbuild/sources/nwdp.py).
+their source has a registry file, which needs its licence cleared first (packbuild/sources/ind/nwdp.py).
 
 How the derived layers are drawn (packbuild/README.md, India pack):
 
@@ -36,7 +36,8 @@ from .ind import layers as ind_layers
 from .ind import names as ind_names
 from .layer import write_pack
 from .regions_layer import feature_rings
-from .sources import SOURCES, indiapost, naturalearth, nwdp, url
+from .sources import SOURCES, naturalearth, url
+from .sources.ind import indiapost, nwdp
 
 log = logging.getLogger(__name__)
 NE_SOURCE = "naturalearth"

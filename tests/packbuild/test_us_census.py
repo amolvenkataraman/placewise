@@ -3,7 +3,7 @@ import math
 import pytest
 import us_fixtures as fx
 
-from packbuild.sources import uscensus
+from packbuild.sources.usa import census as uscensus
 from placewise.io import read_shapefile
 
 GOLDEN_GATE_PARK = (37.7694, -122.4862)

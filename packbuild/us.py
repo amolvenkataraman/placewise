@@ -27,8 +27,9 @@ from pathlib import Path
 from . import names, regions_layer, timezones
 from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads, fetch, unzip
 from .layer import write_pack
-from .sources import url, uscensus
+from .sources import url
 from .sources.usa import acs, postal, principal
+from .sources.usa import census as uscensus
 
 log = logging.getLogger(__name__)
 

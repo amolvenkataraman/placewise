@@ -11,7 +11,7 @@ leads with (barring changes since the 2020 Census).
 
 import re
 
-from ..uscensus import read_xlsx_rows
+from .census import read_xlsx_rows
 
 HEADER = "CBSA Code"
 
