@@ -226,3 +226,56 @@ def _resolve(index, layer, row, outlines):
         return index.resolve(layer, row, outlines=outlines)
     except TypeError:  # an index whose resolve always builds the outlines
         return index.resolve(layer, row)
+
+
+def build(packs, contexts, renames, pool, scores, groups, worldview, geometry):
+    """The Entities of the merged groups, best score first: each group's best candidate as the
+    place, the others as its alternates, with where they are looked up for all at once."""
+    if not groups:
+        return []
+    reps = [g[0] for g in groups]
+    kinds = [PLACE_KINDS[int(pool.kind[i])] for i in reps]
+    want_city = [level(k) >= const.CONTEXT_LEVEL_DEFAULT for k in kinds]
+    lats = [float(pool.lat[i]) for i in reps]
+    lons = [float(pool.lon[i]) for i in reps]
+    found = contexts.get(lats, lons, want_city, worldview)
+    out = []
+    for group, kind, where in zip(groups, kinds, found, strict=True):
+        i = group[0]
+        pack = packs[int(pool.pack[i])]
+        built, resolved = place(
+            pack.names, pack, int(pool.layer[i]), int(pool.row[i]), kind, where, renames, geometry
+        )
+        alternates = []
+        for j in group[1:]:
+            other = packs[int(pool.pack[j])]
+            alternates.append(
+                light_place(
+                    other.names,
+                    other,
+                    int(pool.layer[j]),
+                    int(pool.row[j]),
+                    int(pool.kind[j]),
+                    float(pool.lat[j]),
+                    float(pool.lon[j]),
+                )
+            )
+        score = max(float(scores[j]) for j in group)
+        out.append(entity(built, resolved, where, score, alternates, geometry))
+    out.sort(key=lambda e: -e.score)
+    return out
+
+
+def added(rule):
+    """An Entity for a place an override rule adds (it has no pack row)."""
+    built = Place(id=rule.id, name=rule.name, kind=rule.kind, point=rule.point)
+    km = rule.radius_m / 1000
+    from placewise.geo.shapes import bbox_around
+
+    return Entity(
+        place=built,
+        point=rule.point,
+        bbox=BBox(*bbox_around(rule.point.lat, rule.point.lon, km)),
+        radius_km=km,
+        score=1.0,
+    )

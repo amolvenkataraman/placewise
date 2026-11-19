@@ -8,10 +8,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
 from placewise.constants._keys import city_key
 from placewise.constants.names import CODE
 from placewise.geo.distances import haversine
+
+from . import rank
 
 _FIELDS = ("entry", "layer", "row", "kind", "rank", "name_kind", "match_score", "lat", "lon", "radius_km")
 
@@ -169,3 +172,36 @@ class Gatherer:
 
 def _row_id(pack, index, found, i):
     return pack[index.layers[int(found.layer[i])]].value("id", int(found.row[i]))
+
+
+def served_city(packs, cities, pool, i):
+    """(id, name, lat, lon) of the city (in the `cities` layer, which may be None) that airport
+    candidate i of the pool serves, or None."""
+    pack = packs[int(pool.pack[i])]
+    index = pack.names
+    airports = pack[index.layers[int(pool.layer[i])]]
+    row = int(pool.row[i])
+    if cities is None:
+        return None
+    served = airports.value(const.SERVED_COLUMN, row) if const.SERVED_COLUMN in airports.fields else None
+    if served:
+        rows = cities.find("id", served)
+        if len(rows):
+            c = int(rows[0])
+            return served, cities.value("name", c), float(cities.lat[c]), float(cities.lon[c])
+    country = airports.value("country", row) if "country" in airports.fields else None
+    found, _ = cities.within(float(pool.lat[i]), float(pool.lon[i]), const.SERVED_CITY_KM)
+    found = np.asarray(found, dtype=np.int64)
+    if not len(found):
+        return None
+    if country:
+        found = found[cities.column("country")[found] == country]
+    codes = cities.column("feature_code")[found] if "feature_code" in cities.fields else None
+    if codes is not None:
+        found = found[~np.isin(codes, list(lookup_const.CITY_EXCLUDED_FEATURE_CODES))]
+    if not len(found):
+        return None
+    km = haversine(float(pool.lat[i]), float(pool.lon[i]), cities.lat[found], cities.lon[found])
+    fit = rank.served_city_scores(np.asarray(cities.column("population"))[found], km)
+    c = int(found[np.argmax(fit)])
+    return cities.value("id", c), cities.value("name", c), float(cities.lat[c]), float(cities.lon[c])
