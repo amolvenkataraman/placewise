@@ -1,5 +1,5 @@
 """The park packs: usa-parks (NPS, USFS, PAD-US 4.1), can-parks (CPCAD), eur-parks (EEA Nationally
-designated areas) and world-parks (Wikidata points), read by placewise.engine._within (docs/parks.md).
+designated areas) and world-parks (Wikidata points), read by placewise.engine._nearby.parks (docs/parks.md).
 
     uv run python -m packbuild.parks usa --version 2026.11   # out/usa-parks-2026.11/
     uv run python -m packbuild.parks usa-local --version 2026.11   # out/usa-parks-local-2026.11/
@@ -24,7 +24,8 @@ from pathlib import Path
 from . import names
 from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads
 from .layer import write_pack
-from .sources.parks import _common, cpcad, eea, nps, padus, usfs, wikidata
+from .sources.parks import _common, cpcad, eea, wikidata
+from .sources.parks.usa import nps, padus, usfs
 
 log = logging.getLogger(__name__)
 

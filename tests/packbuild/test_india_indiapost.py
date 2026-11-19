@@ -13,7 +13,7 @@ from india_fixtures import (
     write_placement_directory,
 )
 
-from packbuild.sources import indiapost
+from packbuild.sources.ind import indiapost
 
 
 def _col(layer, name):

@@ -10,7 +10,7 @@ import numpy as np
 from placewise.constants import packs as consts
 from placewise.model import Feature
 
-from . import _geometry as gm
+from ._geometry import planar as gm
 
 
 def column(where, name, values, kind, null):

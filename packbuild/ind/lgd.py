@@ -30,8 +30,8 @@ from pathlib import Path
 
 from ..fetch import fetch
 from ..sources import url
-from ..sources._india import text
-from ..sources.indiapost import state_code
+from ..sources.ind._common import text
+from ..sources.ind.indiapost import state_code
 from . import sevenzip
 
 SOURCE = "lgd-directory"

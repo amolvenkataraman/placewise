@@ -1,6 +1,6 @@
 """Packs on demand for a Geocoder that opened its packs from the store: before a batch lookup or a
 search, work out the countries involved (from the world pack's country polygons) and the kinds of
-place asked for, let the store fetch what auto mode allows (placewise.store.ondemand), and attach
+place asked for, let the store fetch what auto mode allows (placewise.store.operations.ondemand), and attach
 the new packs. Manual and locked modes never download; the store hints once instead.
 
 A batch is checked once, before any point is looked up, and only while the store still has a

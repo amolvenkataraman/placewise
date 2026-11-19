@@ -27,8 +27,10 @@ from placewise.constants import names as names_consts
 from placewise.constants import packs as consts
 from placewise.model import Feature, PackInfo
 
-from . import _arrays, _grid_index, _ids, _names_write
-from . import _geometry as gm
+from . import _arrays, _ids
+from ._geometry import grid_index
+from ._geometry import planar as gm
+from ._names import write as names_write
 
 
 @dataclass
@@ -89,7 +91,7 @@ def write_pack(out_dir, name, version, layers, created=None, names=None, about=N
     if dupes := sorted(n for n, k in Counter(layer_names).items() if k > 1):
         raise ValueError(f"duplicate layer name(s): {', '.join(map(str, dupes))}")
     prepared = [_prepare(layer) for layer in layers]
-    plan = None if names is None else _names_write.prepare(names, {p.name: p for p in prepared})
+    plan = None if names is None else names_write.prepare(names, {p.name: p for p in prepared})
     sources = list(dict.fromkeys(s for p in prepared for s in p.sources))
 
     out_dir = Path(out_dir)
@@ -102,7 +104,7 @@ def write_pack(out_dir, name, version, layers, created=None, names=None, about=N
         for p in prepared:
             _write_layer(tmp / p.name, p)
         if plan is not None:
-            _names_write.write(tmp / names_consts.NAMES_DIR, plan, _save, _write_json)
+            names_write.write(tmp / names_consts.NAMES_DIR, plan, _save, _write_json)
         manifest = {
             "schema": consts.SCHEMA,
             "name": name,
@@ -322,9 +324,9 @@ def _write_layer(layer_dir, p):
 
 def _write_grid(grid_dir, geom, cell_deg):
     """Candidates per cell and the cells one feature answers outright, over the cells the layer
-    reaches (see _grid_index)."""
+    reaches (see _geometry/grid_index.py)."""
     rows, cols = gm.grid_shape(cell_deg)
-    offsets, items, inside, extent = _grid_index.crop(*_grid_index.build(geom, cell_deg), rows, cols)
+    offsets, items, inside, extent = grid_index.crop(*grid_index.build(geom, cell_deg), rows, cols)
     grid_dir.mkdir()
     _write_json(grid_dir / consts.GRID_META, {"cell_deg": cell_deg, **extent})
     _save(grid_dir / "cell.npy", offsets)

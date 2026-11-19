@@ -29,7 +29,7 @@ NEAREST = "nearest"  # inside the country, outside its admin1 polygons (sliver b
 SCORE = "score"  # the provisional city score below
 SPLIT = "split"  # a time-zone unit split along a line no pack draws: its nearest town's zone decided
 WORLDVIEW = "worldview"  # the zone of the country the worldview reports, not the administering one's
-# Result.matches (placewise.engine._matches): the rules that put the point inside the field's place;
+# Result.matches (placewise.engine._results.matches): the rules that put the point inside the field's place;
 # OFFSHORE is "offshore", every other rule a fallback ("near")
 MATCH_WITHIN_RULES = frozenset({POLYGON, WORLDVIEW, STATE, NAME})
 

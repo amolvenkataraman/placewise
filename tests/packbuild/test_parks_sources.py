@@ -7,7 +7,8 @@ import numpy as np
 import parks_fixtures as fx
 import pytest
 
-from packbuild.sources.parks import _common, cpcad, nps, padus, usfs, wikidata
+from packbuild.sources.parks import _common, cpcad, wikidata
+from packbuild.sources.parks.usa import nps, padus, usfs
 from placewise.constants.parks import LOCAL, NATIONAL, POINT_RADIUS_CAP_KM, REGIONAL, STATE
 from placewise.model import Outline
 

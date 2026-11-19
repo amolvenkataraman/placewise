@@ -6,8 +6,8 @@ import pytest
 from pack_kit import blob_features, box_feature, fiji
 
 from placewise.model import Feature, Outline
-from placewise.packs import _geometry as gm
-from placewise.packs import _grid_index
+from placewise.packs._geometry import grid_index as _grid_index
+from placewise.packs._geometry import planar as gm
 from placewise.packs.writer import LayerData, _prepare
 
 

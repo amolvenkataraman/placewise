@@ -22,8 +22,8 @@ from . import arcgis, names, regions_layer, timezones
 from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads, fetch, unzip
 from .layer import write_pack
 from .projection import STATCAN_LAMBERT
-from .sources import statcan, url
-from .sources.can import cgndb
+from .sources import url
+from .sources.can import cgndb, statcan
 
 log = logging.getLogger(__name__)
 

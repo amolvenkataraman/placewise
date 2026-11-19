@@ -14,7 +14,7 @@ import numpy as np
 from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
 from placewise.constants.names import PLACE_KINDS
-from placewise.engine._matches import matches as field_matches
+from placewise.engine._results.matches import matches as field_matches
 from placewise.geo.distances import haversine
 from placewise.text.parse import readings
 

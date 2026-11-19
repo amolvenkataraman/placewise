@@ -16,10 +16,10 @@ import heapq
 from placewise.model import Add, CityRule, Hide, Label, OverrideSet, RegionRule, Rename
 from placewise.model.overrides import RULE_TYPES
 
-from . import labels, names, places, regions
 from ._index import RuleIndex
+from .rules import labels, names, places, regions
+from .rules.tuning import Tunes, knobs
 from .state import LIST_FIELDS, Entry, State, tag
-from .tuning import Tunes, knobs
 
 _TYPE_NAMES = {rule_type: name for name, rule_type in RULE_TYPES.items()}
 

@@ -9,7 +9,7 @@ import re
 import unicodedata
 
 from placewise.constants.parks import LOCAL, NATIONAL, REGIONAL, STATE
-from placewise.engine._within import generic_name  # the name rule the engine shares
+from placewise.engine._nearby.parks import generic_name  # the name rule the engine shares
 
 # NPS UNIT_TYPE (plural, as the service has it) -> (tier, designation). Flagship types are
 # national; the rest (historic sites, memorials, battlefields) are small sites a person names only

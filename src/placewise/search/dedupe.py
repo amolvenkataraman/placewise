@@ -11,8 +11,13 @@ DEDUPE_POINT_KM of each other.
 
 import math
 
+import numpy as np
+
+from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
+from placewise.constants._keys import city_key
 from placewise.constants.earth import MEAN_RADIUS_KM
+from placewise.constants.names import PLACE_KINDS
 
 
 def family(kind):
@@ -98,3 +103,61 @@ def park_box(s, w, n, e):
     dlat = math.degrees(const.DEDUPE_PARK_KM / MEAN_RADIUS_KM)
     dlon = dlat / max(math.cos(math.radians(max(abs(s), abs(n)))), 0.01)
     return s - dlat, w - dlon, n + dlat, e + dlon
+
+
+def groups(packs, pool, order):
+    """The candidates `order` lists (best first) merged into groups of one place each, best first,
+    each group's best candidate first (merge), from their names, kinds, points and outlines."""
+    items = {}
+    for i in order:
+        pack = packs[int(pool.pack[i])]
+        index = pack.names
+        layer = int(pool.layer[i])
+        lyr = pack[index.layers[layer]]
+        keys = {index.key(int(pool.entry[i])), city_key(lyr.value("name", int(pool.row[i])))}
+        polygon = index.layer_kind(layer) == "polygon"
+        items[int(i)] = (
+            frozenset(keys),
+            PLACE_KINDS[int(pool.kind[i])],
+            float(pool.lat[i]),
+            float(pool.lon[i]),
+            polygon,
+            polygon and pack.name != lookup_const.DEFAULT_PACK,
+            lyr.value("id", int(pool.row[i])),
+        )
+
+    inside = _inside_pairs(packs, pool, items)
+    return merge([int(i) for i in order], items, lambda i, lat, lon: (i, lat, lon) in inside)
+
+
+def _inside_pairs(packs, pool, items):
+    """{(i, lat, lon)}: candidate i's outline holds that point of another candidate it could be
+    merged with (for a park, the point is within DEDUPE_PARK_KM of the outline's box); every
+    such test of one layer in one vectorised call."""
+    asks = {}  # (pack, layer) -> ([row], [lat], [lon], [i])
+    found = set()
+    for i, (keys_i, kind_i, *_rest) in items.items():
+        if not items[i][4]:
+            continue
+        lyr = _layer(packs, pool, i)
+        s, w, n, e = lyr.bboxes()[int(pool.row[i])].tolist()
+        park = park_box(s, w, n, e) if kind_i == const.PARK_KIND else None
+        for j, (keys_j, kind_j, lat, lon, *_more) in items.items():
+            if j == i or family(kind_i) != family(kind_j) or not (keys_i & keys_j):
+                continue
+            if park is not None and not items[j][4] and in_box(park, lat, lon):
+                found.add((i, lat, lon))
+            elif in_box((s, w, n, e), lat, lon):
+                ask = asks.setdefault((int(pool.pack[i]), int(pool.layer[i])), ([], [], [], []))
+                for part, value in zip(ask, (int(pool.row[i]), lat, lon, i), strict=True):
+                    part.append(value)
+    for (pack, layer), (rows, lats, lons, owners) in asks.items():
+        lyr = packs[pack][packs[pack].names.layers[layer]]
+        hit = np.atleast_1d(lyr.contains(np.array(lats), np.array(lons), np.array(rows)))
+        found.update((owners[k], lats[k], lons[k]) for k in np.flatnonzero(hit))
+    return found
+
+
+def _layer(packs, pool, i):
+    pack = packs[int(pool.pack[i])]
+    return pack[pack.names.layers[int(pool.layer[i])]]

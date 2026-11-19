@@ -6,11 +6,11 @@ the name index (`NameIndex`) forward search reads; `NameData` is what write_pack
 The on-disk format is docs/pack-format.md (schema 2).
 """
 
+from ._distances.points import PointIndex
 from ._ids import IdTemplate
 from ._lazy import once
-from ._names import Candidates, NameIndex, Resolved
-from ._names_write import NameData
-from ._points import PointIndex
+from ._names.index import Candidates, NameIndex, Resolved
+from ._names.write import NameData
 from .reader import Layer, Pack, PackFormatError, PackIntegrityError, PointLayer, PolygonLayer, open_pack
 from .writer import LayerData, archive, pack_info, write_index, write_pack
 

@@ -15,7 +15,7 @@ placewise.lookup(25.3069, 83.0107).near        # (..., Nearby(Ganges, near, 0.9 
 ```
 
 The pack is optional (`placewise data install world-water`); without it lookups answer exactly
-as before. Rules: `placewise.engine._water`; constants: `placewise.constants.water`; build:
+as before. Rules: `placewise.engine._nearby.water`; constants: `placewise.constants.water`; build:
 `packbuild.water` (see `packbuild/README.md`, "Water pack").
 
 ## On water

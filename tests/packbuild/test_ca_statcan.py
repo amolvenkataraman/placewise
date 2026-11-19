@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import statcan_fixtures as fx
 
-from packbuild.sources import statcan
+from packbuild.sources.can import statcan
 
 POP = statcan.read_population(*fx.POPULATION.values())
 

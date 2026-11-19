@@ -1,1 +1,2 @@
-"""Canada loaders beside `packbuild.sources.statcan`: CGNDB populated places (OGL-Canada 2.0)."""
+"""Canada loaders: Statistics Canada boundaries (statcan.py) and CGNDB populated places (cgndb.py,
+OGL-Canada 2.0)."""

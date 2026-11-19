@@ -1,4 +1,4 @@
-"""Parks and protected areas (placewise.engine._within, packbuild.parks, docs/parks.md)."""
+"""Parks and protected areas (placewise.engine._nearby.parks, packbuild.parks, docs/parks.md)."""
 
 # the packs that carry parks; the default Geocoder opens them when they are installed
 # usa-parks-local: city and county parks; eur-parks: outlines for Europe (EEA countries), optional

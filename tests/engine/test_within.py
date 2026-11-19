@@ -1,4 +1,4 @@
-"""Parks in Result.within and Result.near (placewise.engine._within) on synthetic packs (parks_kit)."""
+"""Parks in Result.within and Result.near (placewise.engine._nearby.parks) on synthetic packs (parks_kit)."""
 
 import dataclasses
 
@@ -7,7 +7,8 @@ import pytest
 from lookup_kit import write_world
 from parks_kit import write_parks
 
-from placewise.engine import Geocoder, _results
+from placewise.engine import Geocoder
+from placewise.engine._results import build as _results
 from placewise.model import LabelSettings, PlaceKind, Point, Relation, Settings
 
 

@@ -18,7 +18,7 @@ from placewise.engine.naming.rules import fold, office_area_name
 from placewise.packs import IdTemplate
 
 from ..layer import LayerData
-from ..sources.indiapost import DIRECTORY_SOURCE
+from ..sources.ind.indiapost import DIRECTORY_SOURCE
 
 LGD_SOURCE = "lgd-directory"  # the city each point belongs to
 ID_TEMPLATE = IdTemplate("indiapost:{pincode}:{office}")  # the office's own id

@@ -2,9 +2,9 @@
 them. The install procedure follows docs/pack-format.md, "Distribution": a pack is either fully in
 place and verified, or not there at all.
 
-`Store` composes the index (index.py), installing (install.py), maintenance (maintenance.py) and
-packs on demand (ondemand.py);
-this module holds what they share: settings, the on-disk layout, what's installed and the lock.
+`Store` composes its operations (operations/): the index (index.py), installing (install.py),
+maintenance (maintenance.py) and packs on demand (ondemand.py); this module holds what they share:
+settings, the on-disk layout, what's installed and the lock.
 """
 
 import os
@@ -15,11 +15,11 @@ from placewise.constants import store as const
 from placewise.model import DataSettings
 
 from .errors import PackNotInstalled
-from .index import IndexMixin
-from .install import InstallMixin
 from .lock import DirLock
-from .maintenance import MaintenanceMixin
-from .ondemand import OnDemandMixin
+from .operations.index import IndexMixin
+from .operations.install import InstallMixin
+from .operations.maintenance import MaintenanceMixin
+from .operations.ondemand import OnDemandMixin
 from .paths import Layout, check_name, parse_pack_dir, resolve_data_dir, version_key
 
 

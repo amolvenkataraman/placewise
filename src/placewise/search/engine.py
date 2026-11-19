@@ -17,13 +17,13 @@ from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
 from placewise.constants.countries.conventions import ALPHA3_ANY_CASE
 from placewise.constants.names import CODE, NAME_KINDS, PLACE_KINDS
-from placewise.engine._within import generic_name
+from placewise.engine._nearby.parks import generic_name
 from placewise.geo.distances import haversine
-from placewise.model import Add, BBox, Entity, Hide, Place, Point, RegionRule, Rename
+from placewise.model import Add, BBox, Entity, Hide, Point, RegionRule, Rename
 
 from . import context as ctx_mod
 from . import dedupe, entities, rank
-from .gather import Gatherer
+from .gather import Gatherer, served_city
 from .query import parse_query
 
 _AIRPORT = PLACE_KINDS.index("airport")
@@ -74,7 +74,7 @@ class Search:
         if not groups and not prefix:  # "Lake" within a region: the lakes there
             pool, scores, groups = self._search(q, ctx, limit, True)
         found = self._entities(pool, scores, groups, worldview, geometry)
-        added = [_added(self.added[i]) for i in self._override_ids(q, ctx) if i in self.added]
+        added = [entities.added(self.added[i]) for i in self._override_ids(q, ctx) if i in self.added]
         return (added + found)[:limit] if added else found
 
     def get(self, ident, *, worldview=None, geometry=False):
@@ -92,11 +92,11 @@ class Search:
         pool = g.pool()
         if not len(pool) or ident in self.hidden:
             if ident in self.added and ident not in self.hidden:
-                return _added(self.added[ident])
+                return entities.added(self.added[ident])
             raise KeyError(f"no place with id {ident!r} in the open packs")
         scores = rank.base_scores(pool.match_score, pool.rank, pool.name_kind, pool.fuzzy, pool.factor)
         order = rank.best_first(scores, pool.rank)
-        groups = self._merge(pool, order[: const.POOL_FACTOR])[:1]
+        groups = dedupe.groups(self.packs, pool, order[: const.POOL_FACTOR])[:1]
         return self._entities(pool, scores, groups, worldview, geometry)[0]
 
     def context(self, *, country=None, admin1=None, state=None, near=None, radius_km=None, bbox=None,
@@ -175,7 +175,7 @@ class Search:
         order = rank.best_first(scores, pool.rank)
         order = order[scores[order] > 0][: const.POOL_FACTOR * limit + const.POOL_FACTOR]
         order = self._visible(pool, order)
-        return pool, scores, self._merge(pool, order)[:limit]
+        return pool, scores, dedupe.groups(self.packs, pool, order)[:limit]
 
     def _known(self, key):
         """Whether `key` is a prominent enough name, exactly, in some pack."""
@@ -213,7 +213,7 @@ class Search:
         if not len(hits):
             return pool, scores
         best = hits[np.argmax(scores[hits])]
-        city = self._served_city(pool, best)
+        city = served_city(self.packs, self.geocoder.layers.layer(lookup_const.CITIES), pool, best)
         if city is None:
             return pool, scores
         ident, name, lat, lon = city
@@ -247,41 +247,9 @@ class Search:
         )
         return merged, np.concatenate([scores, added])
 
-    def _served_city(self, pool, i):
-        """(id, name, lat, lon) of the city airport candidate i serves, or None."""
-        pack = self.packs[int(pool.pack[i])]
-        index = pack.names
-        airports = pack[index.layers[int(pool.layer[i])]]
-        row = int(pool.row[i])
-        cities = self.geocoder.layers.layer(lookup_const.CITIES)
-        if cities is None:
-            return None
-        served = airports.value(const.SERVED_COLUMN, row) if const.SERVED_COLUMN in airports.fields else None
-        if served:
-            rows = cities.find("id", served)
-            if len(rows):
-                c = int(rows[0])
-                return served, cities.value("name", c), float(cities.lat[c]), float(cities.lon[c])
-        country = airports.value("country", row) if "country" in airports.fields else None
-        found, _ = cities.within(float(pool.lat[i]), float(pool.lon[i]), const.SERVED_CITY_KM)
-        found = np.asarray(found, dtype=np.int64)
-        if not len(found):
-            return None
-        if country:
-            found = found[cities.column("country")[found] == country]
-        codes = cities.column("feature_code")[found] if "feature_code" in cities.fields else None
-        if codes is not None:
-            found = found[~np.isin(codes, list(lookup_const.CITY_EXCLUDED_FEATURE_CODES))]
-        if not len(found):
-            return None
-        km = haversine(float(pool.lat[i]), float(pool.lon[i]), cities.lat[found], cities.lon[found])
-        fit = rank.served_city_scores(np.asarray(cities.column("population"))[found], km)
-        c = int(found[np.argmax(fit)])
-        return cities.value("id", c), cities.value("name", c), float(cities.lat[c]), float(cities.lon[c])
-
     def _visible(self, pool, order):
         """Without hidden places and parks named only by a kind of land ("Open Space", in packs
-        built before the park build dropped them: placewise.engine._within.generic_name)."""
+        built before the park build dropped them: placewise.engine._nearby.parks.generic_name)."""
         parks = pool.kind[order] == _PARK
         if not self.hidden and not parks.any():
             return order
@@ -302,93 +270,10 @@ class Search:
         pack = self.packs[int(pool.pack[i])]
         return pack[pack.names.layers[int(pool.layer[i])]].value("id", int(pool.row[i]))
 
-    def _merge(self, pool, order):
-        items = {}
-        for i in order:
-            pack = self.packs[int(pool.pack[i])]
-            index = pack.names
-            layer = int(pool.layer[i])
-            lyr = pack[index.layers[layer]]
-            keys = {index.key(int(pool.entry[i])), entities.name_key(lyr.value("name", int(pool.row[i])))}
-            polygon = index.layer_kind(layer) == "polygon"
-            items[int(i)] = (
-                frozenset(keys),
-                PLACE_KINDS[int(pool.kind[i])],
-                float(pool.lat[i]),
-                float(pool.lon[i]),
-                polygon,
-                polygon and pack.name != lookup_const.DEFAULT_PACK,
-                lyr.value("id", int(pool.row[i])),
-            )
-
-        inside = self._inside_pairs(pool, items)
-        return dedupe.merge([int(i) for i in order], items, lambda i, lat, lon: (i, lat, lon) in inside)
-
-    def _inside_pairs(self, pool, items):
-        """{(i, lat, lon)}: candidate i's outline holds that point of another candidate it could be
-        merged with (for a park, the point is within DEDUPE_PARK_KM of the outline's box); every
-        such test of one layer in one vectorised call."""
-        asks = {}  # (pack, layer) -> ([row], [lat], [lon], [i])
-        found = set()
-        for i, (keys_i, kind_i, *_rest) in items.items():
-            if not items[i][4]:
-                continue
-            lyr = self._layer(pool, i)
-            s, w, n, e = lyr.bboxes()[int(pool.row[i])].tolist()
-            park = dedupe.park_box(s, w, n, e) if kind_i == const.PARK_KIND else None
-            for j, (keys_j, kind_j, lat, lon, *_more) in items.items():
-                if j == i or dedupe.family(kind_i) != dedupe.family(kind_j) or not (keys_i & keys_j):
-                    continue
-                if park is not None and not items[j][4] and dedupe.in_box(park, lat, lon):
-                    found.add((i, lat, lon))
-                elif dedupe.in_box((s, w, n, e), lat, lon):
-                    ask = asks.setdefault((int(pool.pack[i]), int(pool.layer[i])), ([], [], [], []))
-                    for part, value in zip(ask, (int(pool.row[i]), lat, lon, i), strict=True):
-                        part.append(value)
-        for (pack, layer), (rows, lats, lons, owners) in asks.items():
-            lyr = self.packs[pack][self.packs[pack].names.layers[layer]]
-            hit = np.atleast_1d(lyr.contains(np.array(lats), np.array(lons), np.array(rows)))
-            found.update((owners[k], lats[k], lons[k]) for k in np.flatnonzero(hit))
-        return found
-
-    def _layer(self, pool, i):
-        pack = self.packs[int(pool.pack[i])]
-        return pack[pack.names.layers[int(pool.layer[i])]]
-
     def _entities(self, pool, scores, groups, worldview, geometry):
-        if not groups:
-            return []
-        reps = [g[0] for g in groups]
-        kinds = [PLACE_KINDS[int(pool.kind[i])] for i in reps]
-        want_city = [entities.level(k) >= const.CONTEXT_LEVEL_DEFAULT for k in kinds]
-        lats = [float(pool.lat[i]) for i in reps]
-        lons = [float(pool.lon[i]) for i in reps]
-        found = self.contexts.get(lats, lons, want_city, worldview)
-        out = []
-        for group, kind, where in zip(groups, kinds, found, strict=True):
-            i = group[0]
-            pack = self.packs[int(pool.pack[i])]
-            built, resolved = entities.place(
-                pack.names, pack, int(pool.layer[i]), int(pool.row[i]), kind, where, self.renames, geometry
-            )
-            alternates = []
-            for j in group[1:]:
-                other = self.packs[int(pool.pack[j])]
-                alternates.append(
-                    entities.light_place(
-                        other.names,
-                        other,
-                        int(pool.layer[j]),
-                        int(pool.row[j]),
-                        int(pool.kind[j]),
-                        float(pool.lat[j]),
-                        float(pool.lon[j]),
-                    )
-                )
-            score = max(float(scores[j]) for j in group)
-            out.append(entities.entity(built, resolved, where, score, alternates, geometry))
-        out.sort(key=lambda e: -e.score)
-        return out
+        return entities.build(
+            self.packs, self.contexts, self.renames, pool, scores, groups, worldview, geometry
+        )
 
     def _point(self, point, worldview):
         lat, lon = point
@@ -460,18 +345,3 @@ def _replace(ctx, **changes):
     import dataclasses
 
     return dataclasses.replace(ctx, **changes)
-
-
-def _added(rule):
-    """An Entity for a place an override rule adds (it has no pack row)."""
-    built = Place(id=rule.id, name=rule.name, kind=rule.kind, point=rule.point)
-    km = rule.radius_m / 1000
-    from placewise.geo.shapes import bbox_around
-
-    return Entity(
-        place=built,
-        point=rule.point,
-        bbox=BBox(*bbox_around(rule.point.lat, rule.point.lon, km)),
-        radius_km=km,
-        score=1.0,
-    )

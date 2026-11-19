@@ -1,5 +1,5 @@
 """World postcodes: the optional `world-postal` pack (packbuild.postal) and how lookup reads it
-(placewise.engine._postal, docs/postal.md). GeoNames' postal codes are points, not areas, so a
+(placewise.engine._nearby.postal, docs/postal.md). GeoNames' postal codes are points, not areas, so a
 lookup only ever says a point is *near* a postcode."""
 
 # the optional pack and its one point layer; the default Geocoder opens the pack when installed

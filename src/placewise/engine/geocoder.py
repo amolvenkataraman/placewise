@@ -9,18 +9,18 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 4. country packs' names: sublocality, locality, city, borough, admin2, postal, regions (naming);
    elsewhere, the town or city outline a point is in, when the world-towns pack is open
    (naming.towns);
-   elsewhere the nearest postcode of the world-postal pack (_postal);
-5. airport, and the nearest country far offshore (_nearby);
-6. parks the point is within or near, from the park packs (_within);
-7. the sea or lake a point is on, and the water beside it, when a water pack is open (_water);
-8. notable places near it, when the world-notable pack is open (_notable);
+   elsewhere the nearest postcode of the world-postal pack (_nearby.postal);
+5. airport, and the nearest country far offshore (_nearby.references);
+6. parks the point is within or near, from the park packs (_nearby.parks);
+7. the sea or lake a point is on, and the water beside it, when a water pack is open (_nearby.water);
+8. notable places near it, when the world-notable pack is open (_nearby.notable);
 9. the Results and their labels (_results).
 
 `lookup_many` runs every spatial query for all points at once and then builds the Results;
 `lookup` is `lookup_many` with one point, so the two always agree. A point given more than once
 in a batch (at the same altitude, if any) is looked up once, and its Result (frozen) is shared by
 every position that has it. The optional altitude (metres above mean sea level) only decides
-whether a point on water is ON it or OVER it (placewise.engine._water.relation).
+whether a point on water is ON it or OVER it (placewise.engine._nearby.water.relation).
 """
 
 import inspect
@@ -33,15 +33,18 @@ from placewise.constants import lookup as const
 from placewise.model import CityRule, PlaceKind, Settings
 from placewise.packs import Pack, once, open_pack
 
-from . import _nearby, _ondemand, _results
+from . import _ondemand
 from ._admin import Admin
 from ._cities import Cities
 from ._layers import Layers
-from ._notable import Notable
-from ._postal import WorldPostal
+from ._nearby import references
+from ._nearby.notable import Notable
+from ._nearby.parks import Parks
+from ._nearby.postal import WorldPostal
+from ._nearby.water import Water, in_flight
+from ._results.build import build as build_results
+from ._results.build import compose
 from ._timezones import Timezones
-from ._water import Water, in_flight
-from ._within import Parks
 from .naming import Naming
 from .naming.towns import Towns
 
@@ -103,22 +106,24 @@ class Geocoder:
 
     @once
     def parks(self):
-        """The park packs' layers (placewise.engine._within), or None when no pack has any."""
+        """The park packs' layers (placewise.engine._nearby.parks), or None when no pack has any."""
         return Parks(self.packs, self.layers, self.settings.near) or None
 
     @once
     def water(self):
-        """The water layers (placewise.engine._water); falsy when no pack has them."""
+        """The water layers (placewise.engine._nearby.water); falsy when no pack has them."""
         return Water(self.packs, self.layers)
 
     @once
     def notable(self):
-        """The world-notable pack's layer (placewise.engine._notable), or None when no pack has it."""
+        """The world-notable pack's layer (placewise.engine._nearby.notable), or None when no pack
+        has it."""
         return Notable(self.packs, self.layers) or None
 
     @once
     def postal(self):
-        """The world-postal pack's postcodes (placewise.engine._postal), or None when no pack has them."""
+        """The world-postal pack's postcodes (placewise.engine._nearby.postal), or None when no pack
+        has them."""
         return WorldPostal(self.packs, self.layers) or None
 
     @once
@@ -191,7 +196,7 @@ class Geocoder:
         a, named = self._answer(lat, lon, order, near, everything)
         if alt is not None:
             a["altitude"] = alt
-        results = _results.build(self, lat, lon, a, named, order, locked)
+        results = build_results(self, lat, lon, a, named, order, locked)
         if self.overrides is not None:
             apply = self.overrides.apply
             extra = {"relabel": self._relabel} if self._overrides_relabel else {}
@@ -226,8 +231,10 @@ class Geocoder:
                 todo &= np.array([p is None for p in named["postal"].tolist()], dtype=bool)
             a["postal_row"], _ = self.postal.answer(lat, lon, self.admin.iso2_of_view(a), todo)
         if everything and self.layers.has(const.AIRPORTS):
-            _nearby.airports(a, self.layers.layer(const.AIRPORTS), lat, lon, self._near_km(PlaceKind.AIRPORT))
-        _nearby.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
+            references.airports(
+                a, self.layers.layer(const.AIRPORTS), lat, lon, self._near_km(PlaceKind.AIRPORT)
+            )
+        references.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
         if (everything or self._rules_read_parks) and self.parks is not None:
             a["parks"] = self.parks.answer(lat, lon, near)
         if everything and self.water:
@@ -271,7 +278,7 @@ class Geocoder:
         """The label recomposed from a Result's fields, for the override engine after a rename."""
         if result.country is None and result.admin1 is None:
             return result.label  # offshore labels name a reference place, not the result's fields
-        return _results.compose(self.settings.label, result)
+        return compose(self.settings.label, result)
 
 
 def _altitudes(altitude, n):

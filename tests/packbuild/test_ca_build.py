@@ -13,8 +13,8 @@ from regions_kit import CA_REGIONS, use_regions
 from timezones_kit import use_timezones
 
 from packbuild import arcgis, ca
-from packbuild.sources import SOURCES, statcan, url
-from packbuild.sources.can import cgndb
+from packbuild.sources import SOURCES, url
+from packbuild.sources.can import cgndb, statcan
 from placewise.packs import open_pack
 
 BASE = ["provinces", "cd", "csd", "cma", "fsa"]

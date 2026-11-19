@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 
-from placewise.packs._name_match import Trigrams, edit_distance, ranges
+from placewise.packs._names.match import Trigrams, edit_distance, ranges
 
 
 def _reference(a, b):
@@ -68,7 +68,7 @@ def test_shared_trigram_counts_match_a_full_count():
 
 
 def test_varint_round_trips_every_size():
-    from placewise.packs._name_match import _unvarint, _varint
+    from placewise.packs._names.match import _unvarint, _varint
 
     rng = np.random.default_rng(5)
     values = np.concatenate([[0, 1, 127, 128, 16383, 16384, 2**31 - 1, 2**40], rng.integers(0, 2**24, 500)])
@@ -92,7 +92,7 @@ class _LengthTable(_Table):
 
 
 def test_packed_trigrams_read_back_the_same_postings_and_answers(tmp_path):
-    from placewise.packs._name_match import PackedTrigrams
+    from placewise.packs._names.match import PackedTrigrams
 
     rng = random.Random(11)
     words = ["toronto", "banana", "bananarama", "mississauga", "zürich", "東京", "a", "aaaa"]
@@ -118,7 +118,7 @@ def test_packed_trigrams_read_back_the_same_postings_and_answers(tmp_path):
 
 
 def test_an_empty_trigram_index_packs_and_reads_back(tmp_path):
-    from placewise.packs._name_match import PackedTrigrams
+    from placewise.packs._names.match import PackedTrigrams
 
     table = _LengthTable([])
     _write_packed(Trigrams.build(table), tmp_path)
@@ -128,7 +128,7 @@ def test_an_empty_trigram_index_packs_and_reads_back(tmp_path):
 
 def test_packed_trigrams_keep_only_a_bounded_set_of_big_decoded_postings(tmp_path, monkeypatch):
     from placewise.constants import names as nc
-    from placewise.packs._name_match import PackedTrigrams
+    from placewise.packs._names.match import PackedTrigrams
 
     rng = random.Random(2)
     table = _LengthTable({"".join(rng.choice("ab") for _ in range(rng.randint(3, 10))) for _ in range(600)})
