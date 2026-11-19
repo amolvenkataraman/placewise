@@ -1,4 +1,4 @@
-"""Notable places in Result.near (placewise.engine._notable) on a synthetic pack (notable_kit)."""
+"""Notable places in Result.near (placewise.engine._nearby.notable) on a synthetic pack (notable_kit)."""
 
 import pytest
 from lookup_kit import write_world

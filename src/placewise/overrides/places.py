@@ -38,7 +38,7 @@ def add(state, entry, lat, lon):
         state.fields["airport"] = Nearby(place, Relation.AT, distance)
         field = "airport"
     elif rule.kind is PlaceKind.WATER:
-        state.fields["water"] = Nearby(place, Relation.ON, distance)  # OVER: engine._water.in_flight
+        state.fields["water"] = Nearby(place, Relation.ON, distance)  # OVER: engine._nearby.water.in_flight
         field = "water"
     else:
         field = "regions" if rule.kind is PlaceKind.REGION else "within"

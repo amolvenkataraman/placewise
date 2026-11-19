@@ -1,5 +1,5 @@
 """Notable places: landmarks, universities, stations, stadiums, museums ... (packbuild.notable,
-placewise.engine._notable)."""
+placewise.engine._nearby.notable)."""
 
 # the pack and its one point layer; the default Geocoder opens the pack when it is installed
 PACK = "world-notable"

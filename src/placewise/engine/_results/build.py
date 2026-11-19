@@ -2,10 +2,10 @@
 
 The label is "<name>, <admin1>, <country>", consecutive repeats dropped ("New York, United States"),
 where <name> is the locality (label.style "locality", the default) or the city (style "city"),
-each falling back to the other; in a national or state park (_within.label_park) it is "<name>,
+each falling back to the other; in a national or state park (_nearby.parks.label_park) it is "<name>,
 <park>", or the park alone without one (label.parks, on by default); label.template formats any
 field instead. Far offshore, the label names a reference place: "Offshore, 15 km S of Toronto".
-On a sea or lake, the label names it ("On Lake Ontario"; placewise.engine._water).
+On a sea or lake, the label names it ("On Lake Ontario"; placewise.engine._nearby.water).
 """
 
 import numpy as np
@@ -14,11 +14,11 @@ from placewise.constants import lookup as const
 from placewise.constants.worldviews import WORLDVIEW_RULE
 from placewise.model import Nearby, PlaceKind, Relation, Result
 
-from . import _nearby as nearby
-from ._matches import matches
-from ._notable import RADIUS
-from ._within import label_park
-from .naming.rules import same_name
+from .._nearby import references as nearby
+from .._nearby.notable import RADIUS
+from .._nearby.parks import label_park
+from ..naming.rules import same_name
+from .matches import matches
 
 NAMED = ("sublocality", "locality", "city", "borough", "admin2", "postal")
 
@@ -81,8 +81,8 @@ def build(geo, lat, lon, a, named, order, locked):
         post_l = _world_postal(geo, a["postal_row"], post_l)
         src_postal = geo.postal.source
     regions_l, sources_l = named_lists.get("regions", empty), named_lists.get("sources", empty)
-    parks = a.get("parks")  # (within, near, sources) per point (placewise.engine._within)
-    notable = a.get("notable_places")  # (near, layer key) per point (placewise.engine._notable)
+    parks = a.get("parks")  # (within, near, sources) per point (placewise.engine._nearby.parks)
+    notable = a.get("notable_places")  # (near, layer key) per point (placewise.engine._nearby.notable)
     label_settings, data_version = geo.settings.label, geo.data_version
     by_locality, template = label_settings.style == "locality", label_settings.template
     park_labels = label_settings.parks and not template
@@ -176,7 +176,7 @@ def build(geo, lat, lon, a, named, order, locked):
             label = f"{const.OFFSHORE_LABEL}, {km} {word} of {water_near.place.name}"
         else:
             label = const.OFFSHORE_LABEL
-        if water_rows[i] is not None:  # on a sea or lake, or beside water (placewise.engine._water)
+        if water_rows[i] is not None:  # on a sea or lake, or beside water (placewise.engine._nearby.water)
             label, near = water_rows[i].apply(fields, label, near, sources, ci >= 0)
         results.append(
             Result(

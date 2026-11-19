@@ -18,7 +18,7 @@ from placewise.geo import compass, initial_bearing
 from placewise.model import Nearby, Place, PlaceKind, Point, Relation
 from placewise.packs import PointIndex
 
-from ._layers import codes, source_of
+from .._layers import codes, source_of
 
 RADIUS = "radius"  # rule name in Result.sources: within the reach its fame gives
 _CODES = ("iata", "icao", "ipeds", "aishe", "station_code")

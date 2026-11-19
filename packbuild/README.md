@@ -109,7 +109,7 @@ a shape of that pack containing the point, else the `tz` of the county or subdiv
 rules found the point inside (not one it was only snapped to); else the world unit the admin answer
 found (a shape of its country, else its admin-1 unit's entry, else its country's); else the nearest
 city of the same country (as before). At sea beyond the territorial sea: none. Packs built before
-the column (whose `timezones` layer copies every unit) are still read (`engine/_tz_legacy.py`).
+the column (whose `timezones` layer copies every unit) are still read (`engine/_timezones/legacy.py`).
 India is one zone (Asia/Kolkata); with the de facto polygons it covers India-administered ground.
 On the 2026.11 packs the column answers exactly as the copied polygons did (see the proof under
 [Pack sizes](#pack-sizes)).
@@ -569,7 +569,7 @@ Registry `sources/notable.json` (`wikidata`, `qrank`).
   place at fame 0.98+ and every university, campus and airport: 177,373 places, 39 MB (the layer
   22 MB, the name index 18 MB; the budget is 40 MB); the build takes about 65 s and 1 GB from the
   cache. Viewpoints are all landmarks too, so none keeps that kind.
-- **Lookups** (`placewise.engine._notable`): `Result.near` lists up to 3 notable places after the
+- **Lookups** (`placewise.engine._nearby.notable`): `Result.near` lists up to 3 notable places after the
   cities and parks, each only within the reach its fame gives (0.99+: 2 km, 0.9+: 1 km, else
   300 m): the 3 best by `fame x (1 - distance / reach)`, listed nearest first. Airports
   (`Result.airport`) and places already named in `within` or `near` are left out. The label never

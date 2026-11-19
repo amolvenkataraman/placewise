@@ -31,7 +31,7 @@ from placewise.constants.overrides import SOURCE_PREFIX
 from placewise.geo import compass, initial_bearing
 from placewise.model import Nearby, Place, PlaceKind, Relation
 
-from ._index import best_per_query
+from .._index import best_per_query
 
 _ON = (const.MARINE, *const.LAKE_LAYERS)  # a["wet_layer"] indexes this
 

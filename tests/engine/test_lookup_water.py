@@ -1,4 +1,4 @@
-"""Water in lookups (placewise.engine._water) over lookup_kit's world and a synthetic
+"""Water in lookups (placewise.engine._nearby.water) over lookup_kit's world and a synthetic
 world-water pack (lookup_water_kit): on a sea or lake, and near one or a river."""
 
 import numpy as np
@@ -7,7 +7,8 @@ from lookup_kit import write_world
 from lookup_water_kit import write_water
 
 from placewise.constants import water as const
-from placewise.engine import Geocoder, _water
+from placewise.engine import Geocoder
+from placewise.engine._nearby import water as _water
 from placewise.model import PlaceKind, Relation
 
 KM_PER_DEG = 111.195  # on the mean sphere

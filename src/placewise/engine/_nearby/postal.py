@@ -16,7 +16,7 @@ from placewise.geo import haversine
 from placewise.model import Place, PlaceKind, Point
 from placewise.packs import once
 
-from ._layers import codes, source_of
+from .._layers import codes, source_of
 
 
 class WorldPostal:

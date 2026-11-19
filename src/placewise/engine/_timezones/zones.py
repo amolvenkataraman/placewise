@@ -22,7 +22,7 @@ Result.sources names the pack's `timezones` ("world/timezones:polygon"), whichev
 zone.
 
 Packs built before the zones moved onto the admin layers carry them as a `timezones` layer of
-polygons copying each unit's outline; placewise.engine._tz_legacy reads those.
+polygons copying each unit's outline; placewise.engine._timezones.legacy reads those.
 
 Fills a["tz_zone"] (zone or None per point) and a["tz_source"] ("world/timezones:polygon" ...).
 """
@@ -32,8 +32,8 @@ import numpy as np
 from placewise.constants import lookup as const
 from placewise.packs import once
 
-from . import _tz_legacy as legacy
-from ._index import RowIndex
+from .._index import RowIndex
+from . import legacy
 
 
 class Timezones:

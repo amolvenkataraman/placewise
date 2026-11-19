@@ -1,5 +1,5 @@
 """The park packs: usa-parks (NPS, USFS, PAD-US 4.1), can-parks (CPCAD), eur-parks (EEA Nationally
-designated areas) and world-parks (Wikidata points), read by placewise.engine._within (docs/parks.md).
+designated areas) and world-parks (Wikidata points), read by placewise.engine._nearby.parks (docs/parks.md).
 
     uv run python -m packbuild.parks usa --version 2026.11   # out/usa-parks-2026.11/
     uv run python -m packbuild.parks usa-local --version 2026.11   # out/usa-parks-local-2026.11/

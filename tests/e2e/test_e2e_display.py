@@ -8,7 +8,7 @@ import pytest
 from e2e_kit import geocoder, us_parks
 
 import placewise.model as model
-from placewise.engine._within import generic_name
+from placewise.engine._nearby.parks import generic_name
 from placewise.model import PlaceKind
 
 US = ("world", "usa", *us_parks())

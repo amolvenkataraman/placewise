@@ -2,7 +2,7 @@
 
 `Result.within` lists every park whose outline contains the point, most significant first (lower
 tier first, then the smaller park); `Result.near` lists, after the notable cities, up to 3 parks the
-point is not inside, nearest first. Engine: `placewise.engine._within`; constants:
+point is not inside, nearest first. Engine: `placewise.engine._nearby.parks`; constants:
 `placewise.constants.parks`; distances: `NearSettings.park_tier1..3`. Inside a tier 1 or 2 park
 (not a national forest or grassland) the default label names it: "Yosemite Valley, Yosemite
 National Park" (docs/naming.md, `label.parks`); label templates get `{within}`.

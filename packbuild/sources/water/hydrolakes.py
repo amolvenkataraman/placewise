@@ -12,7 +12,7 @@ from Natural Earth and Wikidata. HydroLAKES' `Country` is the country of the lak
 Lake Ontario is "United States of America": it is never used (the country comes from the world
 pack's polygons, with the worldview applied). `Elevation`, the lake surface in metres above sea
 level (from the EarthEnv-DEM90 terrain model), is the `elevation_m` column that tells "on" a lake
-from "over" it (placewise.engine._water.relation).
+from "over" it (placewise.engine._nearby.water.relation).
 """
 
 import datetime as dt

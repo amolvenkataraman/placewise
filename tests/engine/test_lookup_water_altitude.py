@@ -1,4 +1,4 @@
-"""On or over water by altitude (placewise.engine._water.relation): "On" with no altitude, "Over"
+"""On or over water by altitude (placewise.engine._nearby.water.relation): "On" with no altitude, "Over"
 from OVER_HEIGHT_M above the water's surface, or from AIRBORNE_M where the surface isn't known.
 Over lookup_kit's world and lookup_water_kit's synthetic water pack (nothing real)."""
 
@@ -10,7 +10,8 @@ from lookup_kit import write_world
 from lookup_water_kit import write_water
 
 from placewise.constants import water as const
-from placewise.engine import Geocoder, _water
+from placewise.engine import Geocoder
+from placewise.engine._nearby import water as _water
 from placewise.model import Add, PlaceKind, Point, Relation
 
 LAKE = (0.35, -139.85)  # on Lake Alpha, whose surface is at 1,897 m

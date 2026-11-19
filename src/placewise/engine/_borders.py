@@ -11,7 +11,7 @@ India Post boundaries, drawn at 1:500k or finer) are where the border really is.
   unit's country, with that layer as its source ("usa/states:polygon"), so Result.matches says
   `within`. Admin1 and the lower levels then follow from that country as everywhere (its pack's
   counties, subdivisions or PIN areas name them), and the sea around an island is only near
-  (placewise.engine._water puts on the sea only points off every country polygon);
+  (placewise.engine._nearby.water puts on the sea only points off every country polygon);
 - Natural Earth's answer stands where its own country's pack also has a unit there (two packs'
   generalised borders overlap by metres) and within BORDER_DEPTH_KM of the unit's edge (inside the
   unit's own generalisation); where two other packs both claim the point, the one it lies deeper

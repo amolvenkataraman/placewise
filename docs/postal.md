@@ -19,7 +19,7 @@ placewise.find("SW1A 1AA")[0].place.name    # "SW1A": the UK file has outward co
 
 Install it with `placewise data install world-postal`, or let auto mode fetch it (add `postal` to
 `data.auto_packs`): its `pack.json` lists the countries it covers, so it comes only for those.
-Without it lookups answer exactly as before. Rules: `placewise.engine._postal`; constants:
+Without it lookups answer exactly as before. Rules: `placewise.engine._nearby.postal`; constants:
 `placewise.constants.postal`; build: `packbuild.postal` (see `packbuild/README.md`).
 
 ## The rule

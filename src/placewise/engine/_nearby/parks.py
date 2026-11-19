@@ -30,8 +30,8 @@ from placewise.constants.lookup import COMPASS_POINTS, POLYGON
 from placewise.geo import compass, initial_bearing
 from placewise.model import Nearby, Place, PlaceKind, Point, Relation
 
-from ._layers import codes, source_of
-from .naming.rules import fold
+from .._layers import codes, source_of
+from ..naming.rules import fold
 
 RADIUS = "radius"  # rule name in Result.sources: within a point park's circle plus its near distance
 

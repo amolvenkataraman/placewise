@@ -17,7 +17,7 @@ from placewise.constants import lookup as lookup_const
 from placewise.constants import search as const
 from placewise.constants.countries.conventions import ALPHA3_ANY_CASE
 from placewise.constants.names import CODE, NAME_KINDS, PLACE_KINDS
-from placewise.engine._within import generic_name
+from placewise.engine._nearby.parks import generic_name
 from placewise.geo.distances import haversine
 from placewise.model import Add, BBox, Entity, Hide, Place, Point, RegionRule, Rename
 
@@ -281,7 +281,7 @@ class Search:
 
     def _visible(self, pool, order):
         """Without hidden places and parks named only by a kind of land ("Open Space", in packs
-        built before the park build dropped them: placewise.engine._within.generic_name)."""
+        built before the park build dropped them: placewise.engine._nearby.parks.generic_name)."""
         parks = pool.kind[order] == _PARK
         if not self.hidden and not parks.any():
             return order

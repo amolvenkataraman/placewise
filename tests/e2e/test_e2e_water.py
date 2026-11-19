@@ -119,7 +119,7 @@ def test_tehri_comes_from_global_dam_watch_and_search_finds_it(geo):
     assert found and found[0].place.id == r.water.place.id and found[0].place.kind == PlaceKind.WATER
 
 
-# --- on or over, by altitude (placewise.engine._water.relation) -----------------------------------
+# --- on or over, by altitude (placewise.engine._nearby.water.relation) -----------------------------------
 
 
 def test_a_plane_over_lake_ontario(geo):

@@ -1,4 +1,4 @@
-"""Water: the `world-water` pack's layers and how lookup uses them (placewise.engine._water,
+"""Water: the `world-water` pack's layers and how lookup uses them (placewise.engine._nearby.water,
 docs/water.md). Distances are starting points, to tune against public places (tests/e2e)."""
 
 # the optional pack the default Geocoder opens beside "world" when it is installed

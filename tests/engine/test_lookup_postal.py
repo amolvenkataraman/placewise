@@ -1,4 +1,4 @@
-"""World postcodes in lookups (placewise.engine._postal) over lookup_kit's world and a synthetic
+"""World postcodes in lookups (placewise.engine._nearby.postal) over lookup_kit's world and a synthetic
 world-postal pack (postal_kit): the nearest code of the point's own country within its reach,
 always `near` (the codes are points, not areas)."""
 
