@@ -12,7 +12,10 @@ from .geometry import BBox, Outline, Point
 
 
 class _Named:
-    """repr as Python reads it back (`PlaceKind.PARK`), so a Result's repr round-trips through eval."""
+    """repr as Python reads it back (`PlaceKind.PARK`), so a Result's repr round-trips through eval.
+    Members equal their values (`PlaceKind.PARK == "park"`) and hash as them, so `kind in {"park"}`
+    and `{"park": ...}[kind]` agree with `==` (str.__hash__ set on each enum, not left to Enum's,
+    which hashes the member's name)."""
 
     __slots__ = ()
 
@@ -43,6 +46,7 @@ class _Card:
 
 
 class PlaceKind(_Named, str, Enum):
+    __hash__ = str.__hash__
     COUNTRY = "country"
     ADMIN1 = "admin1"  # state, province, region
     ADMIN2 = "admin2"  # county, district
@@ -71,6 +75,8 @@ class PlaceKind(_Named, str, Enum):
 
 class Relation(_Named, str, Enum):
     """How a point relates to a place."""
+
+    __hash__ = str.__hash__
 
     AT = "at"  # airports, stations, buildings
     WITHIN = "within"  # areas
