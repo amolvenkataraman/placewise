@@ -104,3 +104,13 @@ VIEW_COLUMN = "adm0_a3_{view}"  # the admin-0 unit a view groups each polygon in
 NO_VIEW = "-99"  # Natural Earth's "no value" (the un and wb columns hold nothing else)
 DE_FACTO = "de_facto"  # the default polygons: who administers the ground
 DISPUTED = "disputed"  # in an order: report no country where the views disagree
+
+# lookup_many looks up at most this many distinct points in one pass of the steps; bigger batches
+# run in chunks, so the steps' per-point arrays (candidates for cities, parks, water, notable
+# places, postcodes) stay bounded whatever the batch size. Measured with all 14 packs on points
+# near cities, indexes already built (docs/naming.md, "Batches"): 100,000 points with `near` in one
+# pass took +1.1 GB at its peak and 1,900 points/s; in passes of 10,000, +0.16 GB (the Results
+# themselves) and 2,950 points/s; 5,000 was slower again (2,200/s). Batches up to the size run in
+# one pass, as before.
+CHUNK_POINTS_NEAR = 10_000  # near=True: every distance index answers each point
+CHUNK_POINTS = 50_000  # near=False (100,000 points: 28 s in passes of 50,000, 30 s in one), search context

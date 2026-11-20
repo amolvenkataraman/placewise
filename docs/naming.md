@@ -220,6 +220,18 @@ inverted sign (`Etc/GMT+10` for UTC-10, `Etc/GMT` for UTC), and `sources["tz"]` 
 `"nautical:longitude"` so a caller can tell it from a land zone. Ships and aircraft keep other
 times in practice; this is the zone a local date at sea is usually computed in.
 
+## Batches
+
+`lookup_many` takes any number of points. Exactly repeated points are looked up once; the
+distinct ones run through the steps in passes of at most 10,000 points with `near` (50,000
+without), so the per-point working arrays stay bounded however big the batch
+(`placewise.constants.lookup.CHUNK_POINTS_NEAR`, `CHUNK_POINTS`). Measured with all 14 packs on
+points near cities, after the indexes were built: a 100,000-point batch with `near` peaked 1.1 GB
+above its starting memory in one pass and 0.16 GB (the Results themselves) in passes, and ran
+faster (2,950 points/s instead of 1,900). What remains is the indexes the parks, water, notable
+and postal packs build on first use, per region a batch touches (about 1.5 GB for all of them),
+which no batch size changes; `near=False` skips most of them.
+
 ## Labels
 
 `label.style = "locality"` (the default) gives "<locality>, <admin1>, <country>", falling back to

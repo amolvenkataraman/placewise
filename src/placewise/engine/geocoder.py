@@ -17,8 +17,10 @@ The rules, in the order they run (constants in placewise.constants.lookup):
 8. notable places near it, when the world-notable pack is open (_nearby.notable);
 9. the Results and their labels (_results).
 
-`lookup_many` runs every spatial query for all points at once and then builds the Results;
-`lookup` is `lookup_many` with one point, so the two always agree. A point given more than once
+`lookup_many` runs every spatial query for all points at once and then builds the Results, in
+chunks of constants.lookup.CHUNK_POINTS distinct points (CHUNK_POINTS_NEAR with `near`) so a batch
+of any size stays within a bounded amount of memory; `lookup` is `lookup_many` with one point, so
+the two always agree. A point given more than once
 in a batch (at the same altitude, if any) is looked up once, and its Result (frozen) is shared by
 every position that has it. The optional altitude (metres above mean sea level) only decides
 whether a point on water is ON it or OVER it (placewise.engine._nearby.water.relation).
@@ -208,6 +210,22 @@ class Geocoder:
                 lat[first], lon[first], worldview, near, everything, None if alt is None else alt[first]
             )
             return [unique[i] for i in inverse.tolist()]
+        chunk = self._chunk_points(near, everything)
+        if len(lat) > chunk:  # bounded memory: the steps' arrays grow with the points looked up at once
+            results = []
+            for start in range(0, len(lat), chunk):
+                part = slice(start, start + chunk)
+                results += self._run(lat[part], lon[part], None if alt is None else alt[part], order, locked,
+                                     near, everything)  # fmt: skip
+            return results
+        return self._run(lat, lon, alt, order, locked, near, everything)
+
+    def _chunk_points(self, near, everything):
+        """How many distinct points one pass of the steps takes (constants.lookup.CHUNK_POINTS)."""
+        return const.CHUNK_POINTS_NEAR if near and everything else const.CHUNK_POINTS
+
+    def _run(self, lat, lon, alt, order, locked, near, everything):
+        """The Results of distinct, valid points, in one pass of the steps."""
         a, named = self._answer(lat, lon, order, near, everything)
         if alt is not None:
             a["altitude"] = alt

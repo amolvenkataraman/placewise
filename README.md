@@ -74,7 +74,9 @@ thread, Python 3.14), placewise 0.1.0a2, data 2026.11.1. Run it on your own pack
 With every pack installed most of the time goes to `near`: distances to the nearest park, lake,
 landmark and postcode outline. `near=False` skips it when only the containing places are needed.
 First lookups are slower with the parks and water packs because their distance indexes are built
-on first use (making that lazy by region is planned).
+on first use (making that lazy by region is planned). Batches now run in passes of 10,000 points
+(`docs/naming.md`, "Batches"): measured since the table above, a 100k-point batch peaks about 1 GB
+lower and runs faster.
 
 **Accuracy** (`tests/e2e`, real packs, public places only)
 
