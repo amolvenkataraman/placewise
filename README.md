@@ -375,6 +375,17 @@ so an app that ships placewise data can link to that one file.
 Packs are published as release assets of `amolvenkataraman/placewise-data` (`index.json` plus one
 `.tar.xz` per pack); any copy of a release's files works as a mirror (`--index-url`, `data.mirrors`).
 
+## Settings
+
+Settings come from shipped defaults, then `placewise.toml` (`./placewise.toml`, else the user
+config folder, or `$PLACEWISE_CONFIG`), then environment variables, then keyword arguments
+(`placewise.load_settings(near_airport=5)`). Environment variables are
+`PLACEWISE_<SECTION>_<KEY>` (`PLACEWISE_NEAR_AIRPORT=5`, `PLACEWISE_DATA_MODE=locked`).
+**placewise reads every `PLACEWISE_*` variable and rejects one it doesn't know** with an error that
+names it, so a typo never silently does nothing; an app must name its own settings with another
+prefix (`MYAPP_PLACES_DB`, not `PLACEWISE_MYAPP_DB`). The only other names it takes are
+`PLACEWISE_CONFIG` (the settings file) and `PLACEWISE_KEYS_FILE` (the server's API keys).
+
 ## Conventions
 
 - Coordinates are WGS84 degrees, always in `(lat, lon)` order (GeoJSON uses `(lon, lat)`).
