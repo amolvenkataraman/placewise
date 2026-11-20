@@ -27,7 +27,8 @@ SIDES = [
     ("Blaine, WA", (48.9930, -122.7470), "United States", "Washington"),
     ("White Rock, BC", (49.0250, -122.8030), "Canada", "British Columbia"),
     ("Derby Line, VT", (45.0030, -72.0980), "United States", "Vermont"),
-    ("Stanstead, QC", (45.0090, -72.0970), "Canada", "Québec"),
+    # Natural Earth's own name in world packs up to 2026.11.1, its English name after
+    ("Stanstead, QC", (45.0090, -72.0970), "Canada", ("Québec", "Quebec")),
     ("Cornwall, ON", (45.0213, -74.7300), "Canada", "Ontario"),
     ("Massena, NY", (44.9281, -74.8919), "United States", "New York"),
     ("Raxaul, Bihar", (26.9800, 84.8500), "India", "Bihar"),
@@ -47,7 +48,7 @@ def test_each_side_of_the_border(geo, name, point, country, admin1):
     r = geo.lookup(*point)
     assert r.country is not None and r.country.name == country, name
     if admin1 is not None:
-        assert r.admin1.name == admin1, name
+        assert r.admin1.name in ((admin1,) if isinstance(admin1, str) else admin1), name
     assert r.matches["country"].relation is Relation.WITHIN and r.disputed is None
 
 
