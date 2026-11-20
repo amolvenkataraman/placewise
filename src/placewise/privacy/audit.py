@@ -53,14 +53,19 @@ class AuditReport(Model):
 def audit(data, *, utc_offset_h=0.0, cell_m=c.AUDIT_CELL_M):
     """Report the likely home, likely work and repeated endpoints in `data`: a Track, several
     Tracks, or a (time, lat, lon) tuple of arrays (a bag of points with no segments, so no
-    endpoints). utc_offset_h turns UTC times into the local clock that "night" refers to."""
-    tracks, bag = _as_tracks(data)
+    endpoints). utc_offset_h turns UTC times into the local clock that "night" refers to: one
+    offset in hours for every point, or one per point (a history that crosses time zones; all the
+    tracks' points in order, a bag's in the order given), e.g. from each fix's lookup time zone."""
+    tracks, bag, order = _as_tracks(data)
+    offsets = _offsets(utc_offset_h, sum(len(t) for t in tracks), order)
     time, lat, lon, stationary, day = [], [], [], [], []
     starts, ends = [], []
+    at = 0
     for track in tracks:
         if len(track) == 0:
             continue
-        local = track.time + utc_offset_h * 3600.0
+        local = track.time + offsets[at : at + len(track)] * 3600.0
+        at += len(track)
         time.append(local)
         lat.append(track.lat)
         lon.append(track.lon)
@@ -89,13 +94,28 @@ def audit(data, *, utc_offset_h=0.0, cell_m=c.AUDIT_CELL_M):
 
 
 def _as_tracks(data):
-    """(tracks, whether the input was a bare bag of points)."""
+    """(tracks, whether the input was a bare bag of points, the order a bag's points were sorted
+    into or None)."""
     if isinstance(data, Track):
-        return [data], False
+        return [data], False, None
     if isinstance(data, tuple) and len(data) == 3 and not any(isinstance(d, Track) for d in data):
         points = Track(*data)
-        return [points[np.argsort(points.time, kind="stable")]], True  # speeds need time order
-    return list(data), False
+        order = np.argsort(points.time, kind="stable")
+        return [points[order]], True, order  # speeds need time order
+    return list(data), False, None
+
+
+def _offsets(utc_offset_h, n, order):
+    """utc_offset_h as n hours, one per point in the tracks' order (a bag's offsets re-sorted)."""
+    hours = np.asarray(utc_offset_h, dtype=np.float64)
+    if hours.ndim == 0:
+        return np.full(n, float(hours))
+    hours = hours.ravel()
+    if len(hours) != n:
+        raise ValueError(f"{n} points but {len(hours)} UTC offsets")
+    if not np.isfinite(hours).all():
+        raise ValueError("UTC offsets must be finite hours")
+    return hours[order] if order is not None else hours
 
 
 def _within(hour, bounds):

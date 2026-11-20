@@ -102,3 +102,20 @@ def test_a_tuple_of_three_tracks_is_tracks_not_points():
     tracks = tuple(_fortnight(1)[:3])
     assert len(tracks) == 3
     assert audit(tracks, utc_offset_h=UTC_OFFSET_H).endpoints != ()
+
+
+def test_one_utc_offset_per_point():
+    tracks = _fortnight()
+    n = sum(len(t) for t in tracks)
+    same = audit(tracks, utc_offset_h=np.full(n, UTC_OFFSET_H))
+    assert same == audit(tracks, utc_offset_h=UTC_OFFSET_H)
+    # the second week read at UTC+11 (a trip across zones): its nights stop counting for home
+    split = sum(len(t) for t in tracks[: len(tracks) // 2])
+    mixed = np.where(np.arange(n) < split, UTC_OFFSET_H, 11.0)
+    report = audit(tracks, utc_offset_h=mixed)
+    assert report.home.evidence < 14
+    bag = tuple(np.concatenate([getattr(t, f) for t in tracks[::-1]]) for f in ("time", "lat", "lon"))
+    per_point = audit(bag, utc_offset_h=np.full(n, UTC_OFFSET_H))
+    assert per_point.home == audit(bag, utc_offset_h=UTC_OFFSET_H).home
+    with pytest.raises(ValueError):
+        audit(tracks, utc_offset_h=np.zeros(n - 1))
