@@ -379,3 +379,13 @@ def test_location_search_gets_places_from_search(geo):
     assert mississauga.city_verified and mississauga.place.codes["admin1"] == "ON"
     assert 43.5 < mississauga.place.point.lat < 43.7
     assert menlo.place.id == "census:0646870" and menlo.place.bbox is not None
+
+
+def test_search_and_lookup_share_region_and_park_ids(geo):
+    """A stored lookup id (Result.regions, Result.within) joins with the Entity search finds."""
+    if not has(geo, "can", "usa-parks"):
+        pytest.skip("needs the can and usa-parks packs")
+    cn_tower = geo.lookup(43.6426, -79.3871)
+    assert geo.find("GTA")[0].place.id in {p.id for p in cn_tower.regions}
+    valley = geo.lookup(37.7456, -119.5936)
+    assert geo.find("Yosemite National Park")[0].place.id == valley.within[0].id
