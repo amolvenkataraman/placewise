@@ -15,6 +15,7 @@ the pack is written to --out.
 import argparse
 import dataclasses
 import datetime as dt
+import json
 import logging
 from collections import Counter
 from pathlib import Path
@@ -22,7 +23,7 @@ from pathlib import Path
 from placewise.constants._keys import city_key
 from placewise.constants.lookup import CITY_EXCLUDED_FEATURE_CODES
 
-from . import country_profiles, names, served, timezones, world_aliases
+from . import country_profiles, datasets, names, served, timezones, world_aliases
 from .fetch import DEFAULT_CACHE, add_keep_downloads, delete_downloads, fetch, unzip
 from .layer import write_pack
 from .sources import geonames, naturalearth, ourairports, url
@@ -43,7 +44,7 @@ def build_layers(cache_dir, refresh=False):
 
     countries_shp = shapefile(url("naturalearth", "countries"))
     countries = naturalearth.countries(countries_shp)
-    admin1 = naturalearth.admin1(shapefile(url("naturalearth", "admin1")))
+    admin1 = naturalearth.admin1(shapefile(url("naturalearth", "admin1")), admin1_english())
     worldviews = naturalearth.disputed_areas(shapefile(url("naturalearth", "disputed_areas")))
     cities_zip = get(url("geonames", "cities"))
     cities_txt = unzip(cities_zip) / f"{cities_zip.stem}.txt"
@@ -76,6 +77,15 @@ def build_layers(cache_dir, refresh=False):
     )
     countries, admin1, shapes = timezones.world_tables(timezones.load("world"), countries, admin1)
     return [countries, admin1, worldviews, cities, airports, facts, *([shapes] if shapes else [])]
+
+
+def admin1_english():
+    """{admin1 id: English name} from the curated datasets/names/admin1.json ({} without it)."""
+    found = datasets.path("names", "admin1.json")
+    if not found.is_file():
+        log.warning("no %s: admin-1 names are Natural Earth's name_en alone", found)
+        return {}
+    return {row["id"]: row["name"] for row in json.loads(found.read_text(encoding="utf-8"))["names"]}
 
 
 def admin1_population(admin1, cities, admin1_codes_path):

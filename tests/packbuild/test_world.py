@@ -183,3 +183,14 @@ def test_every_source_licence_is_a_known_id():
 
     assert {s.licence for s in SOURCES.values()} <= licences.KNOWN
     assert not {s.licence for s in SOURCES.values()} & licences.SHARE_ALIKE  # world pack is not share-alike
+
+
+def test_curated_admin1_english_names():
+    from packbuild import datasets
+    from packbuild.world import admin1_english
+
+    if not datasets.path("names", "admin1.json").is_file():
+        pytest.skip("no placewise-data checkout")
+    names = admin1_english()
+    assert names["iso:MX-DIF"] == "Mexico City"
+    assert all(k.startswith("iso:") and v.strip() == v and v for k, v in names.items())

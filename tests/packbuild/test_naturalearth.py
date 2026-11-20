@@ -111,3 +111,36 @@ def test_placeholder_codes_without_a_tilde_are_not_iso(tmp_path):
     layer = naturalearth.admin1(base.with_suffix(".shp"))
     assert _col(layer, "id") == ["ne:AIA-1", "iso:AR-X", "iso:CN-XJ"]
     assert _col(layer, "code") == ["", "X", "XJ"]
+
+
+def _admin1_file(tmp_path, rows):
+    base = tmp_path / "admin1"
+    fields = ("adm1_code", "iso_3166_2", "iso_a2", "admin", "name", "name_en", "region", "region_cod")
+    with shapefile.Writer(str(base), shapeType=shapefile.POLYGON) as w:
+        for field in fields:
+            w.field(field, "C", 60)
+        for i, row in enumerate(rows):
+            w.poly([[(i, 0), (i, 1), (i + 1, 1), (i + 1, 0), (i, 0)]])
+            w.record(*row)
+    return base.with_suffix(".shp")
+
+
+def test_admin1_names_are_english_with_the_local_name_kept(tmp_path):
+    rows = [
+        ("NLD-1", "NL-NH", "NL", "Netherlands", "Noord-Holland", "North Holland", "", ""),
+        ("FRA-1", "FR-77", "FR", "France", "Seien-et-Marne", "Seine-et-Marne", "Île-de-France", "FR-IDF\t"),
+        ("DNK-1", "DK-84", "DK", "Denmark", "Hovedstaden", "Denmark", "", ""),  # name_en: the country
+        ("LVA-1", "LV-084", "LV", "Latvia", "Rujienas", "Valmiera", "", ""),  # name_en shared below
+        ("LVA-2", "LV-060", "LV", "Latvia", "Mazsalacas", "Valmiera", "", ""),
+        ("MEX-1", "MX-DIF", "MX", "Mexico", "Distrito Federal", "Mexico", "", ""),
+        ("XXX-1", "XX-01", "XX", "Exland", "Plain", "", "", ""),  # no name_en
+    ]
+    layer = naturalearth.admin1(_admin1_file(tmp_path, rows), english={"iso:MX-DIF": "Mexico City"})
+    assert _col(layer, "name") == [
+        "North Holland", "Seine-et-Marne", "Hovedstaden", "Rujienas", "Mazsalacas", "Mexico City", "Plain",
+    ]  # fmt: skip
+    assert _col(layer, "name_local") == [
+        "Noord-Holland", "Seien-et-Marne", "", "", "", "Distrito Federal", "",
+    ]  # fmt: skip
+    assert _col(layer, "region")[1] == "Île-de-France" and _col(layer, "region_code")[1] == "FR-IDF"
+    assert _col(layer, "region_code")[0] == ""

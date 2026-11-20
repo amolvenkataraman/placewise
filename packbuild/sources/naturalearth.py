@@ -77,11 +77,17 @@ def label_points(shp_path):
     return found
 
 
-def admin1(shp_path):
+def admin1(shp_path, english=None):
     """Admin-1 units (states, provinces, ...). id is "iso:<iso_3166_2>"; placeholder codes such as
     "-99-X11~" or "AI-X00", and codes Natural Earth gives to more than one feature (Bosnia's
     cantons all read "BA-BIH"), fall back to "ne:<adm1_code>". `geonames` is Natural Earth's
-    GeoNames id for the unit ("geonames:6093943"), for joining GeoNames alternate names."""
+    GeoNames id for the unit ("geonames:6093943"), for joining GeoNames alternate names.
+
+    `name` is English (english_names): `english` ({id: name}, the curated datasets/names/admin1.json)
+    first, else Natural Earth's name_en, else its name; `name_local` is Natural Earth's name where
+    it differs (Noord-Holland, Nordrhein-Westfalen), kept for search. `region` and `region_code`
+    are Natural Earth's grouping of the units, where it gives one: for France and Italy the ISO
+    3166-2 first-level region its departments and provinces belong to (Île-de-France, FR-IDF)."""
     raw = read_shapefile(shp_path)
     props = [f.properties for f in raw]
     iso = [_text(p.get("iso_3166_2")) for p in props]
@@ -91,9 +97,14 @@ def admin1(shp_path):
         f"iso:{c}" if ok and counts[c] == 1 else f"ne:{_text(p.get('adm1_code'))}"
         for c, ok, p in zip(iso, valid, props, strict=True)
     ]
+    local = [_text(p.get("name")) for p in props]
+    names = english_names(ids, props, english or {})
     columns = {
         "id": ids,
-        "name": [_text(p.get("name")) for p in props],
+        "name": names,
+        "name_local": [n if n != e else "" for n, e in zip(local, names, strict=True)],
+        "region": [_text(p.get("region")) for p in props],
+        "region_code": [_text(p.get("region_cod")) for p in props],
         "country": [_code(p.get("iso_a2"), _ISO2) for p in props],
         "code": [c.split("-", 1)[1] if ok else "" for c, ok in zip(iso, valid, strict=True)],
         "adm0_a3": [_text(p.get("adm0_a3")) for p in props],
@@ -104,6 +115,26 @@ def admin1(shp_path):
     columns.update(_worldview_columns(props))
     types = {name: "str" for name in columns}
     return LayerData("admin1", "polygon", columns, (SOURCE,), features=_with_ids(raw, ids), types=types)
+
+
+def english_names(ids, props, english):
+    """Each unit's English name: the curated one, else Natural Earth's name_en (it fixes NE's own
+    typos: "Seien-et-Marne"), except where name_en is the country's name (Hovedstaden: "Denmark")
+    or another unit of that country has the same name_en (Latvia's municipalities named after
+    their old district), where Natural Earth's name stays; else its name."""
+    en = [_text(p.get("name_en")) for p in props]
+    country = [_text(p.get("iso_a2")) for p in props]
+    shared = Counter((c, e) for c, e in zip(country, en, strict=True) if e)
+    out = []
+    for pid, p, c, e in zip(ids, props, country, en, strict=True):
+        own = _text(p.get("name"))
+        if pid in english:
+            out.append(english[pid])
+        elif e and shared[c, e] == 1 and e != _text(p.get("admin")):
+            out.append(e)
+        else:
+            out.append(own)
+    return out
 
 
 def disputed_areas(shp_path):

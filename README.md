@@ -133,6 +133,13 @@ with its state, for every area India claims; `"CN"` puts Taiwan, Hong Kong and M
   boundary, and state lines are Natural Earth's 1:10m outlines (a few hundred metres off at borders;
   where a US, Canadian or Indian pack's state or province holds the point, it decides the country:
   Niagara Falls, New York; Treasure Island; Petrapole, `docs/naming.md`).
+- Outside those three countries admin1 is Natural Earth's first-level unit, which for France and
+  Italy is the department or province (Seine-et-Marne, not Île-de-France) and for the UK and
+  Ireland the county. The 2026.11.1 world pack gives some in the local language (Noord-Holland,
+  Nordrhein-Westfalen); packs built after it carry Natural Earth's English names (North Holland),
+  keeping the local name for search, and each unit's region (Île-de-France) as data.
+- "At" an airport is a radius around its reference point that follows the airport's size (2.5 km
+  large, 1 km medium), not its outline (`docs/naming.md`, "Airports").
 - India's districts and cities are unions of PIN-code areas: state lines agree with an independent
   reference 99.7% of the time, districts 85%; large fringe PIN areas can fall outside a city, and
   satellite cities (Salt Lake → Bidhannagar) aren't rolled up yet. India has no open park outlines.

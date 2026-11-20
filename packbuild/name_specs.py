@@ -51,7 +51,7 @@ WORLD = (
     LayerNames(
         "admin1",
         "admin1",
-        aliases=("name_alt", *_WORLD_ALIASES),
+        aliases=("name_local", "name_alt", *_WORLD_ALIASES),  # name_local: Nordrhein-Westfalen
         former=_FORMER,
         id_codes=("iso:",),
         # by the people of its cities (packbuild.world.admin1_population): 100k -> base, 100M ->

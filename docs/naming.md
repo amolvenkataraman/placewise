@@ -246,6 +246,16 @@ Earth's longer form stays in `country.aliases`.
 
 ## Known gaps
 
+- Outside the US, Canada and India the admin1 is Natural Earth's unit. Its level isn't always
+  ISO 3166-2's first level: France's departments (Seine-et-Marne) and Italy's provinces (Milan)
+  stand where the regions (Île-de-France, Lombardy) are the first level, and the UK and Ireland
+  have counties. World packs built after 2026.11.1 carry each unit's `region` and `region_code`
+  (Natural Earth's; for France and Italy the ISO region, FR-IDF, IT-25), so a later placewise can
+  answer the region as admin1 with the department as admin2. Those packs also take Natural
+  Earth's English names (North Holland, North Rhine-Westphalia, Basra) with a curated list of
+  corrections (placewise-data `datasets/names/admin1.json`), keeping the local name
+  (`name_local`) for search; the 2026.11.1 pack has the local names, and Natural Earth's typo
+  "Seien-et-Marne".
 - US postal cities are ZIP Code Business Patterns' and GeoNames' names, not USPS's own file
   (copyrighted and sold per copy), and a ZCTA is only an approximation of a ZIP Code. A postal
   name that is no census place (Universal City, Yosemite National Park, Brooklyn) is never a
