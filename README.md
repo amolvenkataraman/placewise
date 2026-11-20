@@ -214,6 +214,7 @@ placewise.find("Yosemite")[0]                 # Entity: place, a point inside it
 placewise.find("Paris", country="USA")[0]     # Paris, Texas; also state=, near=, within=, kinds=
 placewise.find("YYZ")[0].place.name           # "Toronto" (the city it serves); kinds="airport" for the airport
 placewise.get("census:0646870")               # by id; placewise.suggest("Mississ") for type-ahead
+placewise.outline("iso:US-CA", simplify_m=500)  # its outline as GeoJSON (docs/search.md)
 
 from placewise.text import parse_location
 parse_location("US-CA-Menlo Park; Remote - US and Canada")  # structured places, offline

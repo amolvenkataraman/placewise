@@ -162,6 +162,13 @@ class Geocoder:
         """The Entity with placewise id `ident` (placewise.search.get)."""
         return self.search.get(ident, **options)
 
+    def outline(self, ident, simplify_m=None):
+        """The outline of the place with id `ident` as a GeoJSON geometry dict ((lon, lat) order,
+        holes under their rings; simplify_m: within that many metres), or None for a place known
+        only as a point; KeyError for an unknown id."""
+        entity = self.get(ident, geometry=True)
+        return entity.outline.to_geojson(simplify_m) if entity.outline is not None else None
+
     def lookup(self, lat, lon, *, worldview=None, near=True, altitude_m=None):
         """The Result for one point (WGS84 degrees). `altitude_m`, metres above mean sea level
         (None: unknown), turns "On Lake Ontario" into "Over Lake Ontario" from 100 m above the

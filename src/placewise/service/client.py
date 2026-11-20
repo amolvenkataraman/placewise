@@ -220,6 +220,11 @@ class Client:
         except (TypeError, ValueError) as e:
             raise TransportError(f"unexpected answer from {self.url}: {e}") from None
 
+    def outline(self, ident, simplify_m=None):
+        """The place's outline as a GeoJSON geometry dict, as Geocoder.outline (simplified here)."""
+        entity = self.get(ident, geometry=True)
+        return entity.outline.to_geojson(simplify_m) if entity.outline is not None else None
+
     @property
     def data_version(self):
         return self.health().get("data_version")

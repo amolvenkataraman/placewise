@@ -6,6 +6,7 @@
     placewise.find("Springfield, IL")              # context in the text
     placewise.find("YYZ")                          # Toronto (the city it serves), then the airport
     placewise.get("census:0646870")                # by placewise id
+    placewise.outline("iso:US-CA", simplify_m=500) # its outline as GeoJSON
     placewise.suggest("Mississ")                   # type-ahead
 
 Queries are read by `query`, candidates come from every open pack's name index (`gather`), are
@@ -18,7 +19,7 @@ from .engine import Search
 from .gazetteer import SearchGazetteer
 from .query import Query, parse_query
 
-__all__ = ["Query", "Search", "SearchGazetteer", "find", "get", "parse_query", "suggest"]
+__all__ = ["Query", "Search", "SearchGazetteer", "find", "get", "outline", "parse_query", "suggest"]
 
 
 def _default():
@@ -55,6 +56,14 @@ def get(ident, *, worldview=None, geometry=False):
     """The Entity with placewise id `ident` ("census:0646870", "iso:IN-KA", "wikidata:Q1049470",
     "geo:43.6426,-79.3871"); KeyError when the open packs don't have it."""
     return _default().get(ident, worldview=worldview, geometry=geometry)
+
+
+def outline(ident, simplify_m=None):
+    """The outline of the place with id `ident` as a GeoJSON geometry dict ((lon, lat) order, a
+    Polygon or MultiPolygon with each hole under its ring), simplified to within simplify_m metres
+    if given; None for a place known only as a point; KeyError when the open packs don't have it.
+    `placewise.get(ident, geometry=True).geojson()` gives the whole Feature."""
+    return _default().outline(ident, simplify_m)
 
 
 def suggest(text, limit=10, **context):

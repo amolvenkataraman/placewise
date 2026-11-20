@@ -16,6 +16,7 @@ _LAZY = {
     "Geocoder": ("placewise.engine", "Geocoder"),
     "find": ("placewise.search", "find"),
     "get": ("placewise.search", "get"),
+    "outline": ("placewise.search", "outline"),
     "suggest": ("placewise.search", "suggest"),
     "Client": ("placewise.service", "Client"),
     "load_settings": ("placewise.config", "load_settings"),

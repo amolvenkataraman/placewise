@@ -168,3 +168,23 @@ def test_polyline_length_of_fewer_than_two_points_is_zero():
     assert ln.polyline_length([]) == 0.0
     length = ln.polyline_length(_on_equator(0))
     assert length == 0.0 and type(length) is float
+
+
+def test_simplify_ring_keeps_corners_and_drops_points_along_edges():
+    side = np.linspace(0, 1, 11)[:-1]
+    ring = np.concatenate([
+        np.column_stack([np.zeros(10), W + side]),
+        np.column_stack([side, np.full(10, W + 1)]),
+        np.column_stack([np.ones(10), W + 1 - side]),
+        np.column_stack([1 - side, np.full(10, W)]),
+    ])  # fmt: skip
+    keep = ln.simplify_ring(ring, 10.0)
+    assert keep.tolist() == [0, 10, 20, 30]
+    closed = np.vstack([ring, ring[:1]])
+    assert ln.simplify_ring(closed, 10.0).tolist() == [0, 10, 20, 30]  # the closing repeat never comes back
+
+
+def test_simplify_ring_smaller_than_the_tolerance_collapses():
+    tiny = [(0.0, W), (0.0, W + 1e-5), (1e-5, W + 1e-5), (1e-5, W)]  # a 1 m square
+    assert len(ln.simplify_ring(tiny, 100.0)) < 3
+    assert ln.simplify_ring(tiny[:3], 100.0).tolist() == [0, 1, 2]  # three vertices: nothing to drop

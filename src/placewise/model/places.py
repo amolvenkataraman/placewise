@@ -208,6 +208,15 @@ class Entity(_Card, Model):
             raise ValueError("radius can't be negative")
         set_field(self, "alternates", tuple(self.alternates))
 
+    def geojson(self, simplify_m=None):
+        """This entity as a GeoJSON Feature dict, (lon, lat) order: its outline (search with
+        geometry=True for one) as a Polygon or MultiPolygon, else its point; id the place's id,
+        properties its name, kind, codes and context. simplify_m: the outline within that many
+        metres of the original (placewise.io.entity_feature)."""
+        from placewise.io.geojson import entity_feature
+
+        return entity_feature(self, simplify_m)
+
     def contains(self, lat, lon):
         """Which points lie in this entity: inside its outline when it has one, otherwise within
         radius_km of its point (so points still work for things known only as a location)."""

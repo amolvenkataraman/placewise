@@ -78,6 +78,60 @@ def area(polygon, radius_km=MEAN_RADIUS_KM):
     return excess * radius_km**2
 
 
+def nest(polygon):
+    """The rings of an even-odd polygon (several polygons' rings together, as an Outline holds them)
+    grouped into polygons: [[outer, hole, ...], ...] as ring indexes, outers in ring order. A ring
+    held by an even number of the others is an outer ring; held by an odd number, a hole of the
+    one ring that holds it one level up (an island in a lake in an island is an outer again). A
+    ring counts as held when most of a sample of its vertices lies inside the other, so rings that
+    touch at a vertex still nest."""
+    rings = [open_ring(r) for r in polygon]
+    boxes = np.array([[r[:, 0].min(), r[:, 1].min(), r[:, 0].max(), r[:, 1].max()] for r in rings])
+    holders = []
+    for i, ring in enumerate(rings):
+        sample = ring[np.unique(np.linspace(0, len(ring) - 1, min(len(ring), _NEST_SAMPLE)).astype(int))]
+        around = np.all(boxes[:, :2] <= boxes[i, :2], axis=1) & np.all(boxes[:, 2:] >= boxes[i, 2:], axis=1)
+        around[i] = False
+        held = [j for j in np.flatnonzero(around).tolist() if _inside_ring(rings[j], sample).mean() > 0.5]
+        holders.append(held)
+    depth = [len(h) for h in holders]
+    groups = {i: [i] for i in range(len(rings)) if depth[i] % 2 == 0}
+    for i in range(len(rings)):
+        if depth[i] % 2:
+            owner = next((j for j in holders[i] if depth[j] == depth[i] - 1), None)
+            if owner is not None:
+                groups[owner].append(i)
+    return list(groups.values())
+
+
+def planar_signed_area(ring):
+    """Shoelace area of a ring in the (lon, lat) plane, square degrees: positive when it runs
+    counter-clockwise on a map (GeoJSON's outer rings), negative clockwise (its holes)."""
+    r = open_ring(ring)
+    x, y = r[:, 1], r[:, 0]
+    return float(np.dot(x, np.roll(y, -1)) - np.dot(np.roll(x, -1), y)) / 2
+
+
+_NEST_SAMPLE = 9  # vertices of a ring tested against each ring whose box holds it
+
+
+def open_ring(ring):
+    """A ring as an (n, 2) float array without its closing repeat."""
+    r = np.asarray(ring, dtype=np.float64).reshape(-1, 2)
+    return r[:-1] if len(r) > 1 and np.array_equal(r[0], r[-1]) else r
+
+
+def _inside_ring(ring, points):
+    """Which of a few points lie inside one ring (even-odd), vectorised over the ring's edges."""
+    y1, x1 = ring[:, 0], ring[:, 1]
+    y2, x2 = np.roll(y1, -1), np.roll(x1, -1)
+    lat, lon = points[:, :1], points[:, 1:]
+    crosses = (y1 > lat) != (y2 > lat)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        x_cross = x1 + (lat - y1) * (x2 - x1) / (y2 - y1)
+    return np.count_nonzero(crosses & (lon < x_cross), axis=1) % 2 == 1
+
+
 def _signed_excess(ring):
     """Signed solid angle (steradians) of a ring, summed over a fan of triangles from its first vertex."""
     ring = np.asarray(ring, dtype=np.float64)

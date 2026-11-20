@@ -22,9 +22,37 @@ placewise.find("Lake", within="region:sf-bay-area", kinds="water")
 placewise.find("YYZ")                             # Toronto (the city it serves), then the airport
 placewise.find("YYZ", kinds="airport")            # Toronto Pearson International Airport
 placewise.get("census:0646870", geometry=True)    # by id, with the outline
+placewise.outline("iso:US-CA", simplify_m=500)    # the outline as a GeoJSON geometry (lon, lat)
+placewise.get("iso:US-CA", geometry=True).geojson(simplify_m=500)  # the whole GeoJSON Feature
 placewise.suggest("Mississ")                      # type-ahead: Mississauga ...
 
 geo = placewise.Geocoder(packs=[...])             # Geocoder.find / Geocoder.get: the same objects
+```
+
+## Outlines as GeoJSON
+
+`placewise.outline(id, simplify_m=None)` (also `Geocoder.outline`, `Client.outline`) gives a
+place's outline as a GeoJSON geometry dict (RFC 7946): positions in (lon, lat) order, a `Polygon`,
+or a `MultiPolygon` when the outline has several parts, every hole under the ring that holds it
+(an island in a lake in an island is a polygon again), outer rings counter-clockwise and holes
+clockwise; None for a place known only as a point. Packs hold outlines as even-odd rings
+(`Outline.rings`, (lat, lon)); the export works out which ring is a hole of which.
+`simplify_m` drops vertices while every ring stays within that many metres of the original
+(Douglas-Peucker, per ring): Natural Earth's California goes from 1,848 vertices to 746 at 500 m,
+Canada from 67,781 to 33,094 (its Arctic coast is mostly detail finer than that). Rings smaller than the tolerance (small islands, small holes) are left out, but never all
+of them.
+
+`Entity.geojson(simplify_m=None)` makes a `Feature` (id: the place id; `bbox`; properties: name,
+kind, tier, codes, city, region, country), with the outline when the Entity has one (`geometry=True`)
+and its point otherwise; `Outline.to_geojson()` the bare geometry. `placewise.io.to_geojson(items)`
+and `write_geojson(items, path)` make a `FeatureCollection` of Entities, Outlines or Features, for
+a "states, counties and parks visited" map:
+
+```python
+from placewise.io import write_geojson
+
+visited = [placewise.get(i, geometry=True) for i in ("iso:US-CA", "census:06085")]
+write_geojson(visited, "visited.geojson", simplify_m=200)
 ```
 
 ## What a query can be

@@ -91,6 +91,14 @@ class Outline(Model):
     def area_km2(self):
         return shapes.area(self.rings)
 
+    def to_geojson(self, simplify_m=None):
+        """This outline as a GeoJSON geometry dict, (lon, lat) order: a Polygon, or a MultiPolygon
+        when its rings make several, each hole under the ring that holds it; simplify_m: within
+        that many metres of the original (placewise.io.outline_geometry)."""
+        from placewise.io.geojson import outline_geometry
+
+        return outline_geometry(self, simplify_m)
+
 
 @dataclass(frozen=True, slots=True)
 class Feature(Model):
