@@ -383,8 +383,7 @@ def test_location_search_gets_places_from_search(geo):
 
 def test_search_and_lookup_share_region_and_park_ids(geo):
     """A stored lookup id (Result.regions, Result.within) joins with the Entity search finds."""
-    if not has(geo, "can", "usa-parks"):
-        pytest.skip("needs the can and usa-parks packs")
+    has(geo, "can", "usa-parks")  # skips without them
     cn_tower = geo.lookup(43.6426, -79.3871)
     assert geo.find("GTA")[0].place.id in {p.id for p in cn_tower.regions}
     valley = geo.lookup(37.7456, -119.5936)
