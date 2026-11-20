@@ -101,6 +101,9 @@ class Place(Model):
     codes: dict[str, str] = field(default_factory=dict)  # iata, icao, iso2, postal ...
     aliases: tuple[str, ...] = ()
     source: str | None = None  # attribution source id
+    # what sort of its kind it is, where the data says: a region "metro", "micro", "combined",
+    # "cma", "ca" or "curated"; an admin2 "county", "parish", "census division", "district" ...
+    type: str | None = None
 
     def __post_init__(self):
         if not self.id or not self.name:

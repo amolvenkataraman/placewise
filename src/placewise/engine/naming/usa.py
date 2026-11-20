@@ -43,7 +43,9 @@ class Usa:
     def __init__(self, pack, layers, admin, cities):
         names = const.USA_LAYERS
         self.layers, self.admin, self.cities, self._pack = layers, admin, cities, pack
-        self.county = layers.add(pack, names["county"], common.area_maker(PlaceKind.ADMIN2, "state"))
+        self.county = layers.add(
+            pack, names["county"], common.area_maker(PlaceKind.ADMIN2, "state", type_of=_county_type)
+        )
         self.place = layers.add(pack, names["place"], common.area_maker(PlaceKind.LOCALITY, "state", "class"))
         self.postal = self.postal_cities = self.cbsa = self.csa = self.regions = None
         if names["postal"] in pack:  # packs built before the ZIP Code areas moved to usa-zip
@@ -54,9 +56,9 @@ class Usa:
             self.regions = layers.add(pack, const.REGIONS, common.region_place)
         # the CBSA names the principal cities, whichever regions the Result lists
         if names["cbsa"] in pack:
-            self.cbsa = layers.add(pack, names["cbsa"], common.region_place)
+            self.cbsa = layers.add(pack, names["cbsa"], common.region_maker(lambda get: get("type")))
         if names["csa"] in pack:
-            self.csa = layers.add(pack, names["csa"], common.region_place)
+            self.csa = layers.add(pack, names["csa"], common.region_maker(lambda get: const.REGION_COMBINED))
 
     def add_packs(self, packs):
         """The ZIP Code areas from the usa-zip pack, when it is open and the usa pack lacks them."""
@@ -263,3 +265,8 @@ class Usa:
             if key is not None:
                 statistical.append((key, np.where(county >= 0, self._county[column][safe], -1)))
         common.set_regions(out, self.layers, lat, lon, self.regions, statistical)
+
+
+def _county_type(get):
+    """A county's Place.type: its LSAD in lower case ("county", "parish", "census area")."""
+    return get("lsad").lower()

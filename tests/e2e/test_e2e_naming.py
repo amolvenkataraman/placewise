@@ -198,3 +198,25 @@ def test_india_neighbourhoods(geo, point, sublocality, city):
     r = geo.lookup(*point)
     assert (r.sublocality.name, r.city.name) == (sublocality, city)
     assert r.sources["sublocality"] == "ind/neighbourhoods:nearest"
+
+
+@pytest.mark.parametrize(
+    ("point", "admin2", "kind"),
+    [
+        ((37.6155, -122.3900), "San Mateo County", "county"),  # SFO
+        ((29.9511, -90.0715), "Orleans Parish", "parish"),  # New Orleans
+        ((43.6777, -79.6248), "Peel", "regional municipality"),  # Pearson
+        ((43.6426, -79.3871), "Toronto", "census division"),  # CN Tower
+    ],
+)
+def test_admin2_says_what_sort_of_unit_it_is(geo, point, admin2, kind):
+    r = geo.lookup(*point)
+    assert (r.admin2.name, r.admin2.type) == (admin2, kind)
+
+
+def test_regions_say_what_sort_they_are(geo):
+    r = geo.lookup(43.6426, -79.3871)  # CN Tower
+    assert {p.id: p.type for p in r.regions}["region:gta"] == "curated"
+    assert "cma" in {p.type for p in r.regions}
+    sf = geo.lookup(37.7599, -122.4148)  # Mission District
+    assert {"metro", "combined", "curated"} <= {p.type for p in sf.regions}

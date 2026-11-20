@@ -50,6 +50,8 @@ def test_curated_regions_join_metro_areas_smallest_first(tmp_path, packs):
     r = geo.lookup(10.25, -148.6)
     assert [p.id for p in r.regions] == ["region:gta", "statcan:35535", "region:golden-horseshoe"]
     assert r.regions[0].kind == PlaceKind.REGION and r.regions[0].codes["kind"] == "vernacular"
+    assert [p.type for p in r.regions] == ["curated", "cma", "curated"]
+    assert (r.admin2.name, r.admin2.type) == ("Durham", "regional municipality")  # StatCan CD type RM
     assert r.sources["regions"] == "ca/regions:polygon"  # the smallest one's layer
     fort_erie = geo.lookup(10.1, -148.2)
     assert [p.id for p in fort_erie.regions] == ["statcan:35539", "region:golden-horseshoe"]

@@ -14,6 +14,13 @@ area, from the optional `usa-zip` pack; forward sortation area, PIN code area; e
 nearest postcode point of the optional `world-postal` pack, always `near`: `docs/postal.md`) and `regions`
 (smallest first). `Result.sources` names
 the layer and rule behind every field (`"usa/places:metro"`, `"can/csd:nearest"`).
+`Place.type` says what sort of unit a region or admin2 is, so callers needn't read id prefixes:
+a region is `"metro"` or `"micro"` (US core-based statistical areas), `"combined"` (US combined
+statistical areas), `"cma"` or `"ca"` (Canadian census metropolitan areas and agglomerations) or
+`"curated"` (GTA, Bay Area, Delhi NCR); an admin2 is the US county's legal description in lower
+case (`"county"`, `"parish"`, `"borough"`, `"census area"` ...), the Canadian census division's
+type (`"census division"`, `"regional municipality"`, `"county"`, `"regional district"` ...) or
+`"district"` in India.
 
 ## How each name was found
 
