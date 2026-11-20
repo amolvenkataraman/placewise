@@ -241,3 +241,10 @@ def test_result_certain_reads_the_country_and_admin1_matches():
     city = {"country": inside, "admin1": inside, "city": Match(Relation.NEAR, 3.0)}
     assert dataclasses.replace(r, matches=city).certain is True
     assert dataclasses.replace(r, matches={}).certain is True
+
+
+@pytest.mark.parametrize("member", [*PlaceKind, *Relation])
+def test_enums_hash_as_their_values_so_sets_and_dicts_agree_with_equality(member):
+    assert member == member.value and hash(member) == hash(member.value)
+    assert member in {member.value} and member.value in {member}
+    assert {member.value: 1}[member] == 1

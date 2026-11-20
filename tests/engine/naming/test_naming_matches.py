@@ -41,3 +41,13 @@ def test_geonames_fallback_city_is_near_by_great_circle(geo):
     relation, km = rel(r, "city")
     assert relation is Relation.NEAR and km > 0
     assert km == pytest.approx(float(haversine(10.15, -149.05, r.city.point.lat, r.city.point.lon)), abs=0.01)
+
+
+def test_metro_principal_city_distance_is_to_its_outline(geo):
+    r = geo.lookup(10.45, -149.2)  # unincorporated: San Francisco (10.6 .. 10.9 N) stands for it
+    assert r.sources["city"] == "us/places:metro"
+    assert rel(r, "city") == (Relation.NEAR, pytest.approx(0.15 * 111.195, abs=0.2))
+    r = geo.lookup(10.25, -148.6)  # Pickering rolls up to Toronto (10.5 .. 11 N)
+    assert r.sources["city"] == "ca/csd:metro"
+    assert rel(r, "city") == (Relation.NEAR, pytest.approx(0.25 * 111.195, abs=0.2))
+    assert rel(r, "locality") == (Relation.WITHIN, 0.0) and not r.city_within

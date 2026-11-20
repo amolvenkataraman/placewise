@@ -8,7 +8,9 @@ JSON, for Python 3.10 without tomli). The config dir is $XDG_CONFIG_HOME/placewi
 Environment variables are PLACEWISE_<SECTION>_<KEY> (PLACEWISE_NEAR_AIRPORT=5,
 PLACEWISE_WORLDVIEW_ORDER=IN,de_facto, PLACEWISE_DATA_OFFLINE=1), coerced to the field's type.
 Keyword arguments are `section_key=value` or `section={key: value}`. Unknown sections or keys are
-errors that name the key and where it came from, so a typo never silently does nothing.
+errors that name the key and where it came from, so a typo never silently does nothing; every
+PLACEWISE_* variable but PLACEWISE_CONFIG and PLACEWISE_KEYS_FILE is read as a setting, so apps
+must give their own variables another prefix (README, "Settings").
 
 Worldview lock: `[worldview] lock = true` is for operators with legal requirements to describe
 disputed areas one way. Once a layer sets it, higher layers (environment, keyword arguments) may not

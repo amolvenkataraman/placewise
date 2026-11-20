@@ -44,14 +44,22 @@ class Can:
         self.cd = self.cma = self.postal = self.regions = None
         if names["division"] in pack:
             self.cd = layers.add(
-                pack, names["division"], common.area_maker(PlaceKind.ADMIN2, "cdtype", "province")
+                pack,
+                names["division"],
+                common.area_maker(
+                    PlaceKind.ADMIN2,
+                    "cdtype",
+                    "province",
+                    type_of=lambda get: const.CD_TYPES.get(get("cdtype"), const.CENSUS_DIVISION),
+                ),
             )
         if names["postal"] in pack:
             self.postal = layers.add(
                 pack, names["postal"], common.area_maker(PlaceKind.POSTAL_CODE, "province")
             )
         if names["metro"] in pack:
-            self.cma = layers.add(pack, names["metro"], common.region_place)
+            cma_type = common.region_maker(lambda get: const.CMA_TYPES.get(get("kind")))
+            self.cma = layers.add(pack, names["metro"], cma_type)
         if const.REGIONS in pack:
             self.regions = layers.add(pack, const.REGIONS, common.region_place)
         self.named = None
@@ -199,4 +207,8 @@ class Can:
                 out.city[i] = self.layers.place(self.csd, int(head))
                 out.sources[i]["city"] = f"{self.csd}:{const.METRO}"
                 city[i] = head
+        rolled = np.flatnonzero(city != locality)
+        if len(rolled):  # how far the point is from the city it rolled up to
+            km = self.layers.layer(self.csd).nearest_edge_km(lat[rolled], lon[rolled], city[rolled])
+            out.measured("city", rolled, np.atleast_1d(km))
         return city, cma

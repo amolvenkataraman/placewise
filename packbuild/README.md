@@ -43,6 +43,16 @@ iterating on a builder). A new builder does the same: `add_keep_downloads(parser
 | `timezones` | polygon | the hand-drawn shapes of `datasets/timezones/world.json`; every unit's zone is the `tz` column of `countries` and `admin1` (see [Time zones](#time-zones)) | CC BY 4.0 + public domain |
 | `country_facts` | point | one row per country (`iso:XX`, at its capital, else Natural Earth's label point): GeoNames countryInfo, timeZones and capitals; CLDR currency, conventions and date patterns; Wikidata driving side (`packbuild.country_profiles`) | CC BY 4.0, Unicode-3.0, CC0 |
 
+**Admin-1 names and regions** (`sources.naturalearth.admin1`): `admin1.name` is English: the
+curated `datasets/names/admin1.json` (Natural Earth's name_en where it is wrong: Mexico City,
+South Tyrol), else Natural Earth's `name_en` (North Holland; it also fixes NE's "Seien-et-Marne"),
+except where that is the country's own name or another unit of the country has the same one
+(Latvia's municipalities named after their old district), else NE's `name`; `name_local` keeps
+NE's `name` where it differs (Noord-Holland), indexed for search. `region` and `region_code` are
+NE's grouping of the units where it gives one: for France and Italy the ISO 3166-2 first-level
+region of each department or province (Île-de-France, FR-IDF; Lombardia, IT-25), elsewhere a
+statistical region (England's "South East") or empty.
+
 **Names people type** (`packbuild.world_aliases`, for forward search's name index): `cities`,
 `admin1` and `countries` carry pipe-separated `aliases` (English names, exonyms, nicknames, short
 forms), `abbreviations` ("NYC", "Ont.", "U.S."), `former_names` ("Bombay", "Orissa", "Zaire") and,

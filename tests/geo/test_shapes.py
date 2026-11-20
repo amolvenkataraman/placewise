@@ -65,3 +65,32 @@ def test_area_ignores_winding_and_subtracts_holes():
     assert s.area([cell[::-1]]) == pytest.approx(s.area([cell]))
     hole = [(0.25, 0.25), (0.25, 0.75), (0.75, 0.75), (0.75, 0.25)]
     assert s.area([cell, hole]) == pytest.approx(s.area([cell]) - s.area([hole]))
+
+
+# --- nesting rings into polygons (GeoJSON output) ----------------------------------------------
+
+HOLE = [(4, 4), (4, 6), (6, 6), (6, 4)]
+ISLAND = [(4.5, 4.5), (4.5, 5.5), (5.5, 5.5), (5.5, 4.5)]  # inside HOLE: a polygon of its own
+APART = [(20, 20), (20, 22), (22, 22), (22, 20)]
+
+
+def test_nest_puts_each_hole_under_its_ring():
+    assert s.nest([SQUARE, HOLE]) == [[0, 1]]
+    assert s.nest([HOLE, SQUARE]) == [[1, 0]]  # order of the rings doesn't matter
+    assert s.nest([SQUARE, APART, HOLE]) == [[0, 2], [1]]
+
+
+def test_nest_an_island_in_a_lake_is_a_polygon_again():
+    assert s.nest([SQUARE, HOLE, ISLAND]) == [[0, 1], [2]]
+
+
+def test_nest_rings_touching_at_a_corner_still_nest():
+    corner = [(0, 0), (0, 3), (3, 3), (3, 0)]  # shares the outer ring's corner
+    assert s.nest([SQUARE, corner]) == [[0, 1]]
+
+
+def test_planar_signed_area_is_positive_counter_clockwise_on_a_map():
+    ccw = [(0, 0), (0, 10), (10, 10), (10, 0)]  # (lat, lon): east, north, west: counter-clockwise
+    assert s.planar_signed_area(ccw) == pytest.approx(100.0)
+    assert s.planar_signed_area(ccw[::-1]) == pytest.approx(-100.0)
+    assert s.planar_signed_area([*ccw, ccw[0]]) == pytest.approx(100.0)  # closed rings too

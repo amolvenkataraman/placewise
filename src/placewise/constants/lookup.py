@@ -29,6 +29,9 @@ NEAREST = "nearest"  # inside the country, outside its admin1 polygons (sliver b
 SCORE = "score"  # the provisional city score below
 SPLIT = "split"  # a time-zone unit split along a line no pack draws: its nearest town's zone decided
 WORLDVIEW = "worldview"  # the zone of the country the worldview reports, not the administering one's
+# Result.sources["tz"] of a point in no country (beyond the territorial sea): the nautical zone of
+# its longitude, Etc/GMT-n for UTC+n (placewise.engine._timezones.nautical)
+TZ_NAUTICAL = "nautical:longitude"
 # Result.matches (placewise.engine._results.matches): the rules that put the point inside the field's place;
 # OFFSHORE is "offshore", every other rule a fallback ("near")
 MATCH_WITHIN_RULES = frozenset({POLYGON, WORLDVIEW, STATE, NAME})
@@ -66,9 +69,21 @@ CITY_EXCLUDED_FEATURE_CODES = frozenset({"PPLX", "PPLH", "PPLQ", "PPLW", "PPLCH"
 NOTABLE_POPULATION = 50_000
 NOTABLE_CANDIDATES = 8  # per point; MAX_NEAR (5) plus the chosen city plus slack
 
-# an airport's point is near its centre and a big airport is a few km across: within this the
-# point is AT the airport, otherwise NEAR it (up to NearSettings.airport)
-AIRPORT_AT_KM = 2.0
+# Airports (placewise.engine._nearby.airports, docs/naming.md "Airports"), by OurAirports `type`.
+# An airport's point is near its centre: within AIRPORT_AT_KM of it the point is AT the airport.
+# Without airport footprints the radius follows the airport's size (a large airport is several km
+# across; a city airport like Billy Bishop is a few hundred metres, so 1 km keeps the downtown
+# blocks beside it out). A type missing from the tables reads as AIRPORT_DEFAULT_TYPE.
+LARGE_AIRPORT, MEDIUM_AIRPORT, SMALL_AIRPORT = "large_airport", "medium_airport", "small_airport"
+AIRPORT_DEFAULT_TYPE = MEDIUM_AIRPORT
+AIRPORT_AT_KM = {LARGE_AIRPORT: 2.5, MEDIUM_AIRPORT: 1.0, SMALL_AIRPORT: 0.5}
+# Where the point is AT no airport, the airport NEAR it is the one with the smallest distance times
+# this weight, among airports with scheduled service (NearSettings.airport_scheduled) within reach
+# (NearSettings.airport_large for large airports, NearSettings.airport for the others): a large
+# airport wins unless a medium one is three times nearer (Hyderabad's centre: HYD, not Begumpet;
+# the CN Tower: Billy Bishop at 1.8 km, not Pearson at 23 km)
+AIRPORT_WEIGHT = {LARGE_AIRPORT: 1.0, MEDIUM_AIRPORT: 3.0, SMALL_AIRPORT: 6.0}
+AIRPORT_CANDIDATES = 8  # nearest airports of every size weighed per point, beside the nearest large one
 
 # where no timezones polygon answers, the nearest city of the same country gives the time zone; and in
 # a split time-zone unit the nearest city inside it decides between its zones. Both search this
@@ -89,3 +104,13 @@ VIEW_COLUMN = "adm0_a3_{view}"  # the admin-0 unit a view groups each polygon in
 NO_VIEW = "-99"  # Natural Earth's "no value" (the un and wb columns hold nothing else)
 DE_FACTO = "de_facto"  # the default polygons: who administers the ground
 DISPUTED = "disputed"  # in an order: report no country where the views disagree
+
+# lookup_many looks up at most this many distinct points in one pass of the steps; bigger batches
+# run in chunks, so the steps' per-point arrays (candidates for cities, parks, water, notable
+# places, postcodes) stay bounded whatever the batch size. Measured with all 14 packs on points
+# near cities, indexes already built (docs/naming.md, "Batches"): 100,000 points with `near` in one
+# pass took +1.1 GB at its peak and 1,900 points/s; in passes of 10,000, +0.16 GB (the Results
+# themselves) and 2,950 points/s; 5,000 was slower again (2,200/s). Batches up to the size run in
+# one pass, as before.
+CHUNK_POINTS_NEAR = 10_000  # near=True: every distance index answers each point
+CHUNK_POINTS = 50_000  # near=False (100,000 points: 28 s in passes of 50,000, 30 s in one), search context

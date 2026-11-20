@@ -43,6 +43,26 @@ def simplify(points, tolerance_m, method="douglas_peucker"):
     return np.flatnonzero(keep)
 
 
+def simplify_ring(ring, tolerance_m, method="douglas_peucker"):
+    """Indices (ascending) of the vertices of a closed ring to keep, as `simplify` does for a path.
+    The ring is taken open (a closing repeat of the first vertex is dropped first, and never
+    returned) and cut at its first vertex and the vertex farthest from it, both always kept, so the
+    two halves simplify as paths. A ring may come back with fewer than three vertices: it is
+    smaller than the tolerance."""
+    pts = np.asarray(ring, dtype=np.float64).reshape(-1, 2)
+    if len(pts) > 1 and np.array_equal(pts[0], pts[-1]):
+        pts = pts[:-1]
+    n = len(pts)
+    if n <= 3:
+        return np.arange(n)
+    far = int(np.argmax(haversine(pts[0, 0], pts[0, 1], pts[:, 0], pts[:, 1])))
+    if far == 0:  # every vertex on one spot
+        return np.array([0])
+    first = simplify(pts[: far + 1], tolerance_m, method)
+    second = simplify(np.vstack([pts[far:], pts[:1]]), tolerance_m, method) + far
+    return np.union1d(first, second[second < n])
+
+
 def nearest_point_on_segment(lat, lon, a, b, radius_km=MEAN_RADIUS_KM):
     """(lat, lon, distance_km, fraction) of the point on the great-circle arc a -> b nearest to
     (lat, lon). `fraction` is how far along the arc it lies (0 at a, 1 at b); points beyond the

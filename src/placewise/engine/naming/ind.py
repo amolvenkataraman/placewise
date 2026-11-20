@@ -54,7 +54,10 @@ class Ind:
             return layers.add(pack, NAMES[role], make) if NAMES[role] in pack else None
 
         self.state = optional("state", common.area_maker(PlaceKind.ADMIN1, "iso", "lgd"))
-        self.district = optional("district", common.area_maker(PlaceKind.ADMIN2, "state_code", "lgd"))
+        self.district = optional(
+            "district",
+            common.area_maker(PlaceKind.ADMIN2, "state_code", "lgd", type_of=lambda get: const.DISTRICT),
+        )
         self.city = optional("city", common.area_maker(PlaceKind.LOCALITY, "state_code", "lgd", "type"))
         self.hoods = optional("neighbourhood", point_maker(PlaceKind.SUBLOCALITY))
         self.regions = layers.add(pack, const.REGIONS, common.region_place) if const.REGIONS in pack else None

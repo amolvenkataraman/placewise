@@ -137,3 +137,20 @@ CSD_UNORGANIZED = frozenset(
 OFFICE_SUFFIXES = (
     "S.O.", "B.O.", "H.O.", "S.O", "B.O", "H.O", "SO", "BO", "HO", "PO", "GPO", "G.P.O.", "G.P.O", "HPO",
 )  # fmt: skip
+
+# Place.type of regions (Result.regions): a US core-based statistical area by its CBSA type
+# ("metro", "micro"), a combined statistical area, a Canadian census metropolitan area or census
+# agglomeration, and placewise's curated regions (GTA, Bay Area, Delhi NCR)
+REGION_COMBINED = "combined"
+REGION_CURATED = "curated"
+CMA_TYPES = {"CMA": "cma", "CA": "ca"}  # the cma layer's `kind`
+# Place.type of admin2: US counties by their LSAD, lower case ("county", "parish", "borough",
+# "census area" ...); Canadian census divisions by StatCan's CD type; India's districts
+DISTRICT = "district"
+CENSUS_DIVISION = "census division"
+CD_TYPES = {  # StatCan census division types (Census Dictionary, "Census division type")
+    "CDR": "census division", "CT": "county", "CTY": "county", "DIS": "district",
+    "DM": "district municipality", "MRC": "regional county municipality", "RD": "regional district",
+    "REG": "region", "RM": "regional municipality", "TÉ": "territory equivalent", "TER": "territory",
+    "UC": "united counties",
+}  # fmt: skip

@@ -252,11 +252,11 @@ COASTAL = [
     ("Key West", ("usa",), "Key West", "Florida", "US"),
     ("Corpus Christi", ("usa",), "Corpus Christi", "Texas", "US"),
     ("Biloxi", ("usa",), "Biloxi", "Mississippi", "US"),
-    ("Quebec City", (), "Québec", "Québec", "CA"),
+    ("Quebec City", (), "Québec", ("Québec", "Quebec"), "CA"),  # NE's name, English after 2026.11.1
     ("Tofino", ("can",), "Tofino", "British Columbia", "CA"),
     ("Kochi", ("ind",), "Kochi", "Kerala", "IN"),
     ("Alappuzha", ("ind",), "Alappuzha", "Kerala", "IN"),
-    ("Victoria, Hong Kong", (), "Victoria", "Central and Western", "HK"),
+    ("Victoria, Hong Kong", (), "Victoria", ("Central and Western", "Central and Western District"), "HK"),
     ("Dubrovnik", (), "Dubrovnik", None, "HR"),
     ("Lagos", (), "Lagos", "Lagos", "NG"),
     ("Mombasa", (), "Mombasa", None, "KE"),
@@ -273,7 +273,7 @@ def test_coastal_places_are_in_the_country_and_region_of_their_coast(geo, text, 
     assert e.place.name == name, (text, e.place.id)
     assert e.country == country and e.region is not None, (text, e.country, e.region)
     if region is not None:
-        assert e.region == region, (text, e.region)
+        assert e.region in ((region,) if isinstance(region, str) else region), (text, e.region)
     full = geo.lookup(e.point.lat, e.point.lon)  # what reverse lookup says of the same point
     assert (e.country, e.region) == (full.cc, full.admin1.name)
     assert e.place.codes["iso2"] == country
@@ -379,3 +379,12 @@ def test_location_search_gets_places_from_search(geo):
     assert mississauga.city_verified and mississauga.place.codes["admin1"] == "ON"
     assert 43.5 < mississauga.place.point.lat < 43.7
     assert menlo.place.id == "census:0646870" and menlo.place.bbox is not None
+
+
+def test_search_and_lookup_share_region_and_park_ids(geo):
+    """A stored lookup id (Result.regions, Result.within) joins with the Entity search finds."""
+    has(geo, "can", "usa-parks")  # skips without them
+    cn_tower = geo.lookup(43.6426, -79.3871)
+    assert geo.find("GTA")[0].place.id in {p.id for p in cn_tower.regions}
+    valley = geo.lookup(37.7456, -119.5936)
+    assert geo.find("Yosemite National Park")[0].place.id == valley.within[0].id

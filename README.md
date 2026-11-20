@@ -74,7 +74,9 @@ thread, Python 3.14), placewise 0.1.0a2, data 2026.11.1. Run it on your own pack
 With every pack installed most of the time goes to `near`: distances to the nearest park, lake,
 landmark and postcode outline. `near=False` skips it when only the containing places are needed.
 First lookups are slower with the parks and water packs because their distance indexes are built
-on first use (making that lazy by region is planned).
+on first use (making that lazy by region is planned). Batches now run in passes of 10,000 points
+(`docs/naming.md`, "Batches"): measured since the table above, a 100k-point batch peaks about 1 GB
+lower and runs faster.
 
 **Accuracy** (`tests/e2e`, real packs, public places only)
 
@@ -133,6 +135,13 @@ with its state, for every area India claims; `"CN"` puts Taiwan, Hong Kong and M
   boundary, and state lines are Natural Earth's 1:10m outlines (a few hundred metres off at borders;
   where a US, Canadian or Indian pack's state or province holds the point, it decides the country:
   Niagara Falls, New York; Treasure Island; Petrapole, `docs/naming.md`).
+- Outside those three countries admin1 is Natural Earth's first-level unit, which for France and
+  Italy is the department or province (Seine-et-Marne, not Île-de-France) and for the UK and
+  Ireland the county. The 2026.11.1 world pack gives some in the local language (Noord-Holland,
+  Nordrhein-Westfalen); packs built after it carry Natural Earth's English names (North Holland),
+  keeping the local name for search, and each unit's region (Île-de-France) as data.
+- "At" an airport is a radius around its reference point that follows the airport's size (2.5 km
+  large, 1 km medium), not its outline (`docs/naming.md`, "Airports").
 - India's districts and cities are unions of PIN-code areas: state lines agree with an independent
   reference 99.7% of the time, districts 85%; large fringe PIN areas can fall outside a city, and
   satellite cities (Salt Lake → Bidhannagar) aren't rolled up yet. India has no open park outlines.
@@ -214,6 +223,7 @@ placewise.find("Yosemite")[0]                 # Entity: place, a point inside it
 placewise.find("Paris", country="USA")[0]     # Paris, Texas; also state=, near=, within=, kinds=
 placewise.find("YYZ")[0].place.name           # "Toronto" (the city it serves); kinds="airport" for the airport
 placewise.get("census:0646870")               # by id; placewise.suggest("Mississ") for type-ahead
+placewise.outline("iso:US-CA", simplify_m=500)  # its outline as GeoJSON (docs/search.md)
 
 from placewise.text import parse_location
 parse_location("US-CA-Menlo Park; Remote - US and Canada")  # structured places, offline
@@ -364,6 +374,17 @@ so an app that ships placewise data can link to that one file.
 
 Packs are published as release assets of `amolvenkataraman/placewise-data` (`index.json` plus one
 `.tar.xz` per pack); any copy of a release's files works as a mirror (`--index-url`, `data.mirrors`).
+
+## Settings
+
+Settings come from shipped defaults, then `placewise.toml` (`./placewise.toml`, else the user
+config folder, or `$PLACEWISE_CONFIG`), then environment variables, then keyword arguments
+(`placewise.load_settings(near_airport=5)`). Environment variables are
+`PLACEWISE_<SECTION>_<KEY>` (`PLACEWISE_NEAR_AIRPORT=5`, `PLACEWISE_DATA_MODE=locked`).
+**placewise reads every `PLACEWISE_*` variable and rejects one it doesn't know** with an error that
+names it, so a typo never silently does nothing; an app must name its own settings with another
+prefix (`MYAPP_PLACES_DB`, not `PLACEWISE_MYAPP_DB`). The only other names it takes are
+`PLACEWISE_CONFIG` (the settings file) and `PLACEWISE_KEYS_FILE` (the server's API keys).
 
 ## Conventions
 

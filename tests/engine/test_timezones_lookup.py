@@ -191,9 +191,9 @@ def test_offshore_within_territorial_waters_takes_the_country_unit(geo):
     assert tz(geo, 1.1, -139.5) == ("Pacific/North", "world/timezones:offshore")
 
 
-def test_far_at_sea_there_is_no_zone(geo):
-    r = geo.lookup(-30.0, -100.0)
-    assert r.tz is None and "tz" not in r.sources
+def test_far_at_sea_the_zone_is_nautical(geo):
+    r = geo.lookup(-30.0, -100.0)  # 100 W: the UTC-7 band
+    assert r.tz == "Etc/GMT+7" and r.sources["tz"] == "nautical:longitude"
 
 
 def test_the_finest_pack_wins_and_its_gaps_fall_back_to_the_world(packs):

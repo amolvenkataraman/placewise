@@ -25,6 +25,15 @@ class Named:
             setattr(self, field, np.full(m, None, dtype=object))
         self.regions = np.full(m, None, dtype=object)
         self.sources = [{} for _ in range(m)]
+        # {field: km} where a rule measured how far a fallback place is (Result.matches); None: none
+        self.km = [None] * m
+
+    def measured(self, field, pts, km):
+        """Points `pts` are `km` from their `field` place's outline (a fallback's distance)."""
+        for i, d in zip(np.asarray(pts).tolist(), np.asarray(km, dtype=np.float64).tolist(), strict=True):
+            if self.km[i] is None:
+                self.km[i] = {}
+            self.km[i][field] = d
 
     def set(self, field, pts, places, source):
         """Points `pts` (indexes into the m) get `places` (an object array) for `field`; the
@@ -222,16 +231,28 @@ def region_area(layers, key, row):
     return cache[row]
 
 
+def region_maker(type_of):
+    """A Place maker for a region layer; `type_of(get)` gives Place.type ("metro", "combined",
+    "curated" ...; constants.naming.REGION_TYPES)."""
+
+    def make(get, layer, i):
+        return Place(
+            get("id"), get("name") or get("id"), PlaceKind.REGION, bbox=layer.bbox(i),
+            codes=codes(get, "kind", "type", "country"), source=source_of(layer), type=type_of(get) or None,
+        )  # fmt: skip
+
+    return make
+
+
 def region_place(get, layer, i):
-    return Place(
-        get("id"), get("name") or get("id"), PlaceKind.REGION, bbox=layer.bbox(i),
-        codes=codes(get, "kind", "type", "country"), source=source_of(layer),
-    )  # fmt: skip
+    """A curated region's Place (the `regions` layer of a country pack): type "curated"."""
+    return CURATED_REGION(get, layer, i)
 
 
-def area_maker(kind, *fields, point=("intpt_lat", "intpt_lon"), name="name"):
+def area_maker(kind, *fields, point=("intpt_lat", "intpt_lon"), name="name", type_of=None):
     """A Place maker for a polygon layer: `kind`, its `name` field (falling back to the id), the
-    given code fields and the internal point if the layer has one."""
+    given code fields, the internal point if the layer has one and, with `type_of(get)`,
+    Place.type (an admin2's "county", "census division" ...)."""
 
     def make(get, layer, i):
         at = None
@@ -240,9 +261,12 @@ def area_maker(kind, *fields, point=("intpt_lat", "intpt_lon"), name="name"):
             at = Point(lat, lon) if lat is not None and lon is not None else None
         found = codes(get, *fields)
         return Place(get("id"), get(name) or get("id"), kind, point=at, bbox=layer.bbox(i), codes=found,
-                     source=source_of(layer))  # fmt: skip
+                     source=source_of(layer), type=type_of(get) or None if type_of else None)  # fmt: skip
 
     return make
+
+
+CURATED_REGION = region_maker(lambda get: const.REGION_CURATED)
 
 
 def population(layer):

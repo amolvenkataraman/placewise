@@ -19,7 +19,13 @@ from .bearing import (
 from .codes import from_quadkey, geohash_decode, geohash_encode, quadkey, tile, tile_bounds
 from .coords import format_decimal, format_dms, from_e7, from_exif, normalize_lon, parse, validate
 from .distances import distance, equirectangular, geodesic, haversine
-from .lines import nearest_point_on_polyline, nearest_point_on_segment, polyline_length, simplify
+from .lines import (
+    nearest_point_on_polyline,
+    nearest_point_on_segment,
+    polyline_length,
+    simplify,
+    simplify_ring,
+)
 from .plus_codes import decode as plus_code_decode
 from .plus_codes import encode as plus_code_encode
 from .polygon_index import PolygonIndex
@@ -41,7 +47,16 @@ from .projections import (
     to_utm_ups,
     to_web_mercator,
 )
-from .shapes import area, bbox_around, bbox_contains, bbox_split, contains
+from .shapes import (
+    area,
+    bbox_around,
+    bbox_contains,
+    bbox_split,
+    contains,
+    nest,
+    open_ring,
+    planar_signed_area,
+)
 from .sun import SunTimes, sun_position, sun_times
 from .units import convert
 
@@ -89,8 +104,11 @@ __all__ = [
     "midpoint",
     "nearest_point_on_polyline",
     "nearest_point_on_segment",
+    "nest",
     "normalize_lon",
+    "open_ring",
     "parse",
+    "planar_signed_area",
     "plus_code_decode",
     "plus_code_encode",
     "plus_codes",
@@ -102,6 +120,7 @@ __all__ = [
     "quadkey",
     "shapes",
     "simplify",
+    "simplify_ring",
     "sun",
     "sun_position",
     "sun_times",

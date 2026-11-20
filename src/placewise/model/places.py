@@ -12,7 +12,10 @@ from .geometry import BBox, Outline, Point
 
 
 class _Named:
-    """repr as Python reads it back (`PlaceKind.PARK`), so a Result's repr round-trips through eval."""
+    """repr as Python reads it back (`PlaceKind.PARK`), so a Result's repr round-trips through eval.
+    Members equal their values (`PlaceKind.PARK == "park"`) and hash as them, so `kind in {"park"}`
+    and `{"park": ...}[kind]` agree with `==` (str.__hash__ set on each enum, not left to Enum's,
+    which hashes the member's name)."""
 
     __slots__ = ()
 
@@ -43,6 +46,7 @@ class _Card:
 
 
 class PlaceKind(_Named, str, Enum):
+    __hash__ = str.__hash__
     COUNTRY = "country"
     ADMIN1 = "admin1"  # state, province, region
     ADMIN2 = "admin2"  # county, district
@@ -72,6 +76,8 @@ class PlaceKind(_Named, str, Enum):
 class Relation(_Named, str, Enum):
     """How a point relates to a place."""
 
+    __hash__ = str.__hash__
+
     AT = "at"  # airports, stations, buildings
     WITHIN = "within"  # areas
     NEAR = "near"
@@ -95,6 +101,9 @@ class Place(Model):
     codes: dict[str, str] = field(default_factory=dict)  # iata, icao, iso2, postal ...
     aliases: tuple[str, ...] = ()
     source: str | None = None  # attribution source id
+    # what sort of its kind it is, where the data says: a region "metro", "micro", "combined",
+    # "cma", "ca" or "curated"; an admin2 "county", "parish", "census division", "district" ...
+    type: str | None = None
 
     def __post_init__(self):
         if not self.id or not self.name:
@@ -207,6 +216,15 @@ class Entity(_Card, Model):
         if self.radius_km < 0:
             raise ValueError("radius can't be negative")
         set_field(self, "alternates", tuple(self.alternates))
+
+    def geojson(self, simplify_m=None):
+        """This entity as a GeoJSON Feature dict, (lon, lat) order: its outline (search with
+        geometry=True for one) as a Polygon or MultiPolygon, else its point; id the place's id,
+        properties its name, kind, codes and context. simplify_m: the outline within that many
+        metres of the original (placewise.io.entity_feature)."""
+        from placewise.io.geojson import entity_feature
+
+        return entity_feature(self, simplify_m)
 
     def contains(self, lat, lon):
         """Which points lie in this entity: inside its outline when it has one, otherwise within

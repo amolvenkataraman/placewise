@@ -15,11 +15,13 @@ NEAR_KM = {
     "lake": 1.0,
     "river": 0.3,
     "coast": 2.0,
-    "airport": 10.0,
+    "airport": 10.0,  # medium and small airports (constants.lookup, "Airports")
+    "airport_large": 40.0,  # large airports serve a whole metro: HYD is 25 km from Hyderabad's centre
     "notable_urban": 2.0,
     "notable_rural": 25.0,
 }
 MAX_NEAR = 5
+AIRPORT_SCHEDULED = True  # the airport NEAR a point has scheduled service (AT counts every airport)
 
 AUTO_UPDATE = "never"  # data never changes answers behind the user's back
 # How packs arrive (DataSettings.mode): "auto" fetches the packs a lookup or search needs, but by

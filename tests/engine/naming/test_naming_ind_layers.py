@@ -181,6 +181,7 @@ def test_a_point_in_a_city(geo):
         "lgd:district:572",
         "ind/districts:polygon",
     )
+    assert r.admin2.type == "district"
     assert (r.locality.name, r.city.name, r.sources["city"]) == (
         "Bengaluru",
         "Bengaluru",

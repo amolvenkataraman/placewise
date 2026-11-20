@@ -4,7 +4,8 @@ The label is "<name>, <admin1>, <country>", consecutive repeats dropped ("New Yo
 where <name> is the locality (label.style "locality", the default) or the city (style "city"),
 each falling back to the other; in a national or state park (_nearby.parks.label_park) it is "<name>,
 <park>", or the park alone without one (label.parks, on by default); label.template formats any
-field instead. Far offshore, the label names a reference place: "Offshore, 15 km S of Toronto".
+field instead. Far offshore, the label names a reference place: "Offshore, 15 km S of Toronto",
+and the time zone is the nautical zone of the longitude (Etc/GMT+10 at 150 W; source "nautical:longitude").
 On a sea or lake, the label names it ("On Lake Ontario"; placewise.engine._nearby.water).
 """
 
@@ -17,6 +18,7 @@ from placewise.model import Nearby, PlaceKind, Relation, Result
 from .._nearby import references as nearby
 from .._nearby.notable import RADIUS
 from .._nearby.parks import label_park
+from .._timezones import nautical
 from ..naming.rules import same_name
 from .matches import matches
 
@@ -49,6 +51,7 @@ def build(geo, lat, lon, a, named, order, locked):
     admin1_l = _places(layers, const.ADMIN1, a["aidx"])
     city_l0 = _places(layers, const.CITIES, np.where(land, city, -1))
     tz_l = _tz(geo, a, land, minus)
+    sea_tz = _sea_tz(lon, land)
     if town is not None:
         town_city_l = _places(layers, const.CITIES, a["town_city"])
         town_loc_l = _places(layers, const.CITIES, a["town_locality"])
@@ -62,6 +65,7 @@ def build(geo, lat, lon, a, named, order, locked):
     city_km = a.get("city_km", np.full(n, np.inf)).tolist()
     tz_zone, tz_source = (a[k].tolist() if k in a else [None] * n for k in ("tz_zone", "tz_source"))
     airport, airport_km = airport.tolist(), a.get("airport_km", np.full(n, np.inf)).tolist()
+    airport_at = a.get("airport_at", np.zeros(n, dtype=bool)).tolist()
     air_deg, air_word = air_deg.tolist(), air_word.tolist()
     water, water_km = a["water"].tolist(), a["water_km"].tolist()
     water_deg, water_word, back_word = water_deg.tolist(), water_word.tolist(), back_word.tolist()
@@ -81,6 +85,7 @@ def build(geo, lat, lon, a, named, order, locked):
         post_l = _world_postal(geo, a["postal_row"], post_l)
         src_postal = geo.postal.source
     regions_l, sources_l = named_lists.get("regions", empty), named_lists.get("sources", empty)
+    km_l = named_lists.get("km", empty)
     parks = a.get("parks")  # (within, near, sources) per point (placewise.engine._nearby.parks)
     notable = a.get("notable_places")  # (near, layer key) per point (placewise.engine._nearby.notable)
     label_settings, data_version = geo.settings.label, geo.data_version
@@ -113,7 +118,10 @@ def build(geo, lat, lon, a, named, order, locked):
             elif tz_l[i]:
                 tz = tz_l[i]
                 sources["tz"] = src_tz
-        elif water[i] >= 0:
+        else:  # beyond every territorial sea: the nautical zone of the longitude
+            tz = sea_tz[i]
+            sources["tz"] = const.TZ_NAUTICAL
+        if ci < 0 and water[i] >= 0:
             w = view_rows[water[i]]
             water_near = Nearby(
                 place(const.COUNTRIES, w if w >= 0 else water[i]), Relation.OFFSHORE,
@@ -130,7 +138,7 @@ def build(geo, lat, lon, a, named, order, locked):
             sources["postal"] = src_postal
         if airport[i] >= 0:
             km = airport_km[i]
-            rel = Relation.AT if km <= const.AIRPORT_AT_KM else Relation.NEAR
+            rel = Relation.AT if airport_at[i] else Relation.NEAR
             air = Nearby(place(const.AIRPORTS, airport[i]), rel, km, air_deg[i], air_word[i])
             sources["airport"] = src[const.AIRPORTS, const.NEAREST]
         near = ()
@@ -181,7 +189,8 @@ def build(geo, lat, lon, a, named, order, locked):
         results.append(
             Result(
                 lat=lats[i], lon=lons[i], label=label, tz=tz, near=near, disputed=disputed, sources=sources,
-                matches=matches(fields, sources, lats[i], lons[i]), data_version=data_version, **fields,
+                matches=matches(fields, sources, lats[i], lons[i], km_l[i]), data_version=data_version,
+                **fields,
             )
         )  # fmt: skip
     return results
@@ -213,6 +222,15 @@ def _places(layers, key, rows):
         made[:] = [layers.place(key, r) for r in unique.tolist()]
         out[have] = made[inverse.ravel()]
     return out.tolist()
+
+
+def _sea_tz(lon, land):
+    """The nautical zone of each point at sea (None on land)."""
+    out = [None] * len(land)
+    sea = np.flatnonzero(~land)
+    for i, zone in zip(sea.tolist(), nautical.zone_names(lon[sea]), strict=True):
+        out[i] = zone
+    return out
 
 
 def _tz(geo, a, land, minus):

@@ -10,14 +10,17 @@ The rules, in the order they run (constants in placewise.constants.lookup):
    elsewhere, the town or city outline a point is in, when the world-towns pack is open
    (naming.towns);
    elsewhere the nearest postcode of the world-postal pack (_nearby.postal);
-5. airport, and the nearest country far offshore (_nearby.references);
+5. the airport the point is at or near, by size and service (_nearby.airports), and the nearest
+   country far offshore (_nearby.references);
 6. parks the point is within or near, from the park packs (_nearby.parks);
 7. the sea or lake a point is on, and the water beside it, when a water pack is open (_nearby.water);
 8. notable places near it, when the world-notable pack is open (_nearby.notable);
 9. the Results and their labels (_results).
 
-`lookup_many` runs every spatial query for all points at once and then builds the Results;
-`lookup` is `lookup_many` with one point, so the two always agree. A point given more than once
+`lookup_many` runs every spatial query for all points at once and then builds the Results, in
+chunks of constants.lookup.CHUNK_POINTS distinct points (CHUNK_POINTS_NEAR with `near`) so a batch
+of any size stays within a bounded amount of memory; `lookup` is `lookup_many` with one point, so
+the two always agree. A point given more than once
 in a batch (at the same altitude, if any) is looked up once, and its Result (frozen) is shared by
 every position that has it. The optional altitude (metres above mean sea level) only decides
 whether a point on water is ON it or OVER it (placewise.engine._nearby.water.relation).
@@ -38,6 +41,7 @@ from ._admin import Admin
 from ._cities import Cities
 from ._layers import Layers
 from ._nearby import references
+from ._nearby.airports import Airports
 from ._nearby.notable import Notable
 from ._nearby.parks import Parks
 from ._nearby.postal import WorldPostal
@@ -105,6 +109,12 @@ class Geocoder:
         return found if found else None
 
     @once
+    def airports(self):
+        """The airports layer's sizes and service (placewise.engine._nearby.airports), or None."""
+        layer = self.layers.layer(const.AIRPORTS)
+        return Airports(layer) if layer is not None else None
+
+    @once
     def parks(self):
         """The park packs' layers (placewise.engine._nearby.parks), or None when no pack has any."""
         return Parks(self.packs, self.layers, self.settings.near) or None
@@ -154,6 +164,13 @@ class Geocoder:
         """The Entity with placewise id `ident` (placewise.search.get)."""
         return self.search.get(ident, **options)
 
+    def outline(self, ident, simplify_m=None):
+        """The outline of the place with id `ident` as a GeoJSON geometry dict ((lon, lat) order,
+        holes under their rings; simplify_m: within that many metres), or None for a place known
+        only as a point; KeyError for an unknown id."""
+        entity = self.get(ident, geometry=True)
+        return entity.outline.to_geojson(simplify_m) if entity.outline is not None else None
+
     def lookup(self, lat, lon, *, worldview=None, near=True, altitude_m=None):
         """The Result for one point (WGS84 degrees). `altitude_m`, metres above mean sea level
         (None: unknown), turns "On Lake Ontario" into "Over Lake Ontario" from 100 m above the
@@ -193,6 +210,22 @@ class Geocoder:
                 lat[first], lon[first], worldview, near, everything, None if alt is None else alt[first]
             )
             return [unique[i] for i in inverse.tolist()]
+        chunk = self._chunk_points(near, everything)
+        if len(lat) > chunk:  # bounded memory: the steps' arrays grow with the points looked up at once
+            results = []
+            for start in range(0, len(lat), chunk):
+                part = slice(start, start + chunk)
+                results += self._run(lat[part], lon[part], None if alt is None else alt[part], order, locked,
+                                     near, everything)  # fmt: skip
+            return results
+        return self._run(lat, lon, alt, order, locked, near, everything)
+
+    def _chunk_points(self, near, everything):
+        """How many distinct points one pass of the steps takes (constants.lookup.CHUNK_POINTS)."""
+        return const.CHUNK_POINTS_NEAR if near and everything else const.CHUNK_POINTS
+
+    def _run(self, lat, lon, alt, order, locked, near, everything):
+        """The Results of distinct, valid points, in one pass of the steps."""
         a, named = self._answer(lat, lon, order, near, everything)
         if alt is not None:
             a["altitude"] = alt
@@ -230,10 +263,12 @@ class Geocoder:
             if "postal" in named:
                 todo &= np.array([p is None for p in named["postal"].tolist()], dtype=bool)
             a["postal_row"], _ = self.postal.answer(lat, lon, self.admin.iso2_of_view(a), todo)
-        if everything and self.layers.has(const.AIRPORTS):
-            references.airports(
-                a, self.layers.layer(const.AIRPORTS), lat, lon, self._near_km(PlaceKind.AIRPORT)
-            )
+        if everything and self.airports is not None:
+            ns = self.settings.near
+            reach, large = self._near_km(PlaceKind.AIRPORT), ns.airport_large
+            if self._kind_tuning(PlaceKind.AIRPORT) is not None:  # a Tune rule: every airport's reach
+                large = reach
+            self.airports.answer(a, lat, lon, reach, large, ns.airport_scheduled)
         references.water(a, self.layers.layer(const.COUNTRIES), lat, lon)
         if (everything or self._rules_read_parks) and self.parks is not None:
             a["parks"] = self.parks.answer(lat, lon, near)
@@ -264,15 +299,19 @@ class Geocoder:
         return norm(order), locked
 
     def _near_km(self, kind):
-        """How far `near` / `airport` search for a kind: the settings, unless an override Tune rule
-        for the whole kind sets near_km (per-place near_km can only narrow; the engine applies it)."""
+        """How far `near` / `airport` search for a kind: the settings (for airports, the medium and
+        small ones' reach), unless an override Tune rule for the whole kind sets near_km (then the
+        reach of every airport; per-place near_km can only narrow; the engine applies it)."""
         default = (
             self.settings.near.airport if kind == PlaceKind.AIRPORT else self.settings.near.notable_rural
         )
+        tuned = self._kind_tuning(kind)
+        return default if tuned is None else tuned
+
+    def _kind_tuning(self, kind):
+        """The near_km an override Tune rule sets for the whole kind, or None."""
         tuning = getattr(self.overrides, "tuning", None)
-        if tuning is None:
-            return default
-        return tuning(kind=kind).get("near_km", default)
+        return None if tuning is None else tuning(kind=kind).get("near_km")
 
     def _relabel(self, result):
         """The label recomposed from a Result's fields, for the override engine after a rename."""

@@ -114,6 +114,7 @@ def test_postal_code_and_regions(geo):
     assert r.sources["postal"] == "us/zcta:polygon"
     assert [p.id for p in r.regions] == ["census:cbsa:29820", "census:csa:332"]  # smallest first
     assert all(p.kind == PlaceKind.REGION for p in r.regions)
+    assert [p.type for p in r.regions] == ["metro", "combined"]  # Place.type: no guessing from ids
 
 
 def test_water_by_the_shore_takes_the_nearest_county(geo):

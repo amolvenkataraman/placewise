@@ -7,7 +7,7 @@ from ._track_common import TrackReadWarning
 from .csv_tracks import read_csv_track, write_csv_track
 from .detect import detect_format, read_track
 from .fit import FitDevice, FitError, FitFile, FitLap, FitSession, read_fit
-from .geojson import read_geojson
+from .geojson import entity_feature, outline_geometry, read_geojson, to_geojson, write_geojson
 from .geojson_tracks import read_geojson_tracks, write_geojson_track
 from .gpx import GpxFile, Waypoint, read_gpx, write_gpx
 from .kml import read_kml
@@ -25,6 +25,8 @@ __all__ = [
     "TrackReadWarning",
     "Waypoint",
     "detect_format",
+    "entity_feature",
+    "outline_geometry",
     "read_csv_track",
     "read_fit",
     "read_geojson",
@@ -35,7 +37,9 @@ __all__ = [
     "read_shapefile",
     "read_tcx",
     "read_track",
+    "to_geojson",
     "write_csv_track",
+    "write_geojson",
     "write_geojson_track",
     "write_gpx",
     "write_tcx",

@@ -14,6 +14,13 @@ area, from the optional `usa-zip` pack; forward sortation area, PIN code area; e
 nearest postcode point of the optional `world-postal` pack, always `near`: `docs/postal.md`) and `regions`
 (smallest first). `Result.sources` names
 the layer and rule behind every field (`"usa/places:metro"`, `"can/csd:nearest"`).
+`Place.type` says what sort of unit a region or admin2 is, so callers needn't read id prefixes:
+a region is `"metro"` or `"micro"` (US core-based statistical areas), `"combined"` (US combined
+statistical areas), `"cma"` or `"ca"` (Canadian census metropolitan areas and agglomerations) or
+`"curated"` (GTA, Bay Area, Delhi NCR); an admin2 is the US county's legal description in lower
+case (`"county"`, `"parish"`, `"borough"`, `"census area"` ...), the Canadian census division's
+type (`"census division"`, `"regional municipality"`, `"county"`, `"regional district"` ...) or
+`"district"` in India.
 
 ## How each name was found
 
@@ -185,6 +192,53 @@ back to the PIN areas alone.
 - Features flagged `india_view_only` (PIN areas and units on ground only India's view puts in
   India) answer only when the IN worldview decided the country (docs/worldviews.md).
 
+## Airports
+
+`Result.airport` is the airport the point is at or near, from OurAirports (large and medium
+airports, and small ones with scheduled service), with its distance and bearing. Without airport
+footprints, two rules stand in for "the airport here" (constants in `placewise.constants.lookup`):
+
+1. **At.** The point is `at` an airport within a radius that follows the airport's OurAirports
+   size: 2.5 km of a large airport's reference point, 1 km of a medium one's, 0.5 km of a small
+   one's. Any airport counts, with or without scheduled service (a point on Begumpet's apron is at
+   BPM). The 1 km keeps the downtown blocks beside a city airport out: Toronto's Harbourfront is
+   1.6 km from Billy Bishop (YTZ), near it, not at it.
+2. **Near.** Otherwise it is the airport you would fly from: among airports with scheduled service
+   (`near.airport_scheduled = true`) in reach (`near.airport_large`, 40 km, for large airports;
+   `near.airport`, 10 km, for the others), the smallest distance times a size weight (large 1,
+   medium 3, small 6). A large airport wins unless a smaller one is three times nearer: from
+   Hyderabad's centre HYD (22 km), not Begumpet (no scheduled service); from Hillsdale in San Mateo
+   SFO (11 km), not San Carlos (5 km); from the CN Tower Billy Bishop (1.8 km), not Pearson
+   (23 km). Belmont, 2.3 km from San Carlos, gets San Carlos.
+
+`near.airport_scheduled = false` lets any airport be near; `near.airport = 0` leaves only large
+airports. An override `tune` rule for the kind `airport` with `near_km` sets every airport's reach.
+Packs built without OurAirports' `type` read every airport as medium, without `scheduled` as
+served. Airport outlines (OSM aeroway areas, or boxes from runway ends) would replace the radius;
+they are a future data item.
+
+## Time zones
+
+`Result.tz` is the IANA zone of the point: on land and within the territorial sea (12 nmi), from
+the zones the packs give their admin units (`placewise.engine._timezones`), else the nearest
+city's. Farther out at sea it is the nautical zone of the longitude, 15-degree bands centred on
+multiples of 15 degrees (UTC-10 from 157.5 W to 142.5 W), named as tzdb's fixed zones with their
+inverted sign (`Etc/GMT+10` for UTC-10, `Etc/GMT` for UTC), and `sources["tz"]` is
+`"nautical:longitude"` so a caller can tell it from a land zone. Ships and aircraft keep other
+times in practice; this is the zone a local date at sea is usually computed in.
+
+## Batches
+
+`lookup_many` takes any number of points. Exactly repeated points are looked up once; the
+distinct ones run through the steps in passes of at most 10,000 points with `near` (50,000
+without), so the per-point working arrays stay bounded however big the batch
+(`placewise.constants.lookup.CHUNK_POINTS_NEAR`, `CHUNK_POINTS`). Measured with all 14 packs on
+points near cities, after the indexes were built: a 100,000-point batch with `near` peaked 1.1 GB
+above its starting memory in one pass and 0.16 GB (the Results themselves) in passes, and ran
+faster (2,950 points/s instead of 1,900). What remains is the indexes the parks, water, notable
+and postal packs build on first use, per region a batch touches (about 1.5 GB for all of them),
+which no batch size changes; `near=False` skips most of them.
+
 ## Labels
 
 `label.style = "locality"` (the default) gives "<locality>, <admin1>, <country>", falling back to
@@ -211,6 +265,16 @@ Earth's longer form stays in `country.aliases`.
 
 ## Known gaps
 
+- Outside the US, Canada and India the admin1 is Natural Earth's unit. Its level isn't always
+  ISO 3166-2's first level: France's departments (Seine-et-Marne) and Italy's provinces (Milan)
+  stand where the regions (Île-de-France, Lombardy) are the first level, and the UK and Ireland
+  have counties. World packs built after 2026.11.1 carry each unit's `region` and `region_code`
+  (Natural Earth's; for France and Italy the ISO region, FR-IDF, IT-25), so a later placewise can
+  answer the region as admin1 with the department as admin2. Those packs also take Natural
+  Earth's English names (North Holland, North Rhine-Westphalia, Basra) with a curated list of
+  corrections (placewise-data `datasets/names/admin1.json`), keeping the local name
+  (`name_local`) for search; the 2026.11.1 pack has the local names, and Natural Earth's typo
+  "Seien-et-Marne".
 - US postal cities are ZIP Code Business Patterns' and GeoNames' names, not USPS's own file
   (copyrighted and sold per copy), and a ZCTA is only an approximation of a ZIP Code. A postal
   name that is no census place (Universal City, Yosemite National Park, Brooklyn) is never a

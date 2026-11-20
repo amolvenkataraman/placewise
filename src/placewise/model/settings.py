@@ -59,7 +59,8 @@ class LabelSettings(Model):
 
 @dataclass(frozen=True, slots=True)
 class NearSettings(Model):
-    """How far counts as "near", km, per layer and tier."""
+    """How far counts as "near", km, per layer and tier; and which airports Result.airport may name
+    when the point is not AT one (docs/naming.md, "Airports")."""
 
     park_tier1: float = defaults.NEAR_KM["park_tier1"]
     park_tier2: float = defaults.NEAR_KM["park_tier2"]
@@ -68,10 +69,13 @@ class NearSettings(Model):
     lake: float = defaults.NEAR_KM["lake"]
     river: float = defaults.NEAR_KM["river"]
     coast: float = defaults.NEAR_KM["coast"]
-    airport: float = defaults.NEAR_KM["airport"]
+    airport: float = defaults.NEAR_KM["airport"]  # medium and small airports
+    airport_large: float = defaults.NEAR_KM["airport_large"]
     notable_urban: float = defaults.NEAR_KM["notable_urban"]
     notable_rural: float = defaults.NEAR_KM["notable_rural"]
     max_near: int = defaults.MAX_NEAR
+    # NEAR names only airports with scheduled service (OurAirports); False: any airport in the pack
+    airport_scheduled: bool = defaults.AIRPORT_SCHEDULED
 
     def __post_init__(self):
         for name in self.__dataclass_fields__:

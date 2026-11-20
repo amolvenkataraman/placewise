@@ -113,6 +113,18 @@ def test_get_by_id_and_geometry(geo):
         geo.get("parks:NOPE")
 
 
+def test_outline_as_geojson(geo):
+    g = geo.outline("parks:ALFA")
+    s, w, n, e = PARK_BOX
+    assert g["type"] == "Polygon"
+    assert {tuple(p) for p in g["coordinates"][0]} == {(w, s), (e, s), (e, n), (w, n)}
+    assert geo.outline("parks:ALFA", simplify_m=100) == g  # a box has nothing to drop
+    assert geo.get("parks:ALFA", geometry=True).geojson()["geometry"] == g
+    assert geo.outline("wikidata:Q900001") is None  # known only as a point
+    with pytest.raises(KeyError):
+        geo.outline("parks:NOPE")
+
+
 def test_coordinates_as_text(geo):
     top = geo.find("0.75, -139.5")
     assert len(top) == 1
