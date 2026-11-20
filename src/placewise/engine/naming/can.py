@@ -199,4 +199,8 @@ class Can:
                 out.city[i] = self.layers.place(self.csd, int(head))
                 out.sources[i]["city"] = f"{self.csd}:{const.METRO}"
                 city[i] = head
+        rolled = np.flatnonzero(city != locality)
+        if len(rolled):  # how far the point is from the city it rolled up to
+            km = self.layers.layer(self.csd).nearest_edge_km(lat[rolled], lon[rolled], city[rolled])
+            out.measured("city", rolled, np.atleast_1d(km))
         return city, cma

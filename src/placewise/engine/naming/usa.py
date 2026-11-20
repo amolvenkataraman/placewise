@@ -171,9 +171,10 @@ class Usa:
         locality, city, lrule, crule, rolled = self._locality(place, prule, postal)
         # no locality: the metro's largest principal city in the state, if near
         head = np.where(county >= 0, self._county["head"][safe], -1)
-        head = self._within(lat, lon, np.where(locality < 0, head, -1), const.METRO_CITY_KM)
+        head, head_km = self._within(lat, lon, np.where(locality < 0, head, -1), const.METRO_CITY_KM, True)
         took = (locality < 0) & (head >= 0)
         city[took], crule[took] = head[took], const.METRO
+        out.measured("city", np.flatnonzero(took), head_km[took])  # how far outside the city
         out.put("locality", every, self.place, locality, lrule)
         out.put("city", every, self.place, city, crule)
         fallback = np.flatnonzero(city < 0)
@@ -231,16 +232,20 @@ class Usa:
         crule = np.where(under, const.POSTAL, lrule).astype(object)
         return locality, city, lrule, crule, rolled
 
-    def _within(self, lat, lon, rows, km):
+    def _within(self, lat, lon, rows, km, distances=False):
         """`rows` (place rows, -1 for none) with those whose boundary is farther than km from the
         point set to -1 (internal points can be far off: San Francisco's is on the Farallon
-        Islands)."""
+        Islands); with `distances`, also each point's km to its row's boundary (inf for none)."""
         layer, out = self.layers.layer(self.place), rows.copy()
         out[~common.near_bbox(layer.bboxes(), out, lat, lon, km)] = -1  # cheap test first
         group = np.flatnonzero(out >= 0)  # each point to its own place's boundary, at once
         km_away = np.atleast_1d(layer.nearest_edge_km(lat[group], lon[group], out[group]))
         out[group[km_away > np.broadcast_to(km, out.shape)[group]]] = -1
-        return out
+        if not distances:
+            return out
+        found = np.full(len(out), np.inf)
+        found[group] = km_away
+        return out, found
 
     def _borough(self, out, county):
         borough = self._county["borough"]

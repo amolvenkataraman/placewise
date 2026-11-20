@@ -22,8 +22,10 @@ FIELDS = ("country", "admin1", "admin2", "city", "locality", "sublocality", "bor
 WITHIN = Match(Relation.WITHIN, 0.0)  # shared: Matches are frozen
 
 
-def matches(fields, sources, lat, lon):
-    """{field: Match} for the place fields of one Result (`fields` a dict of them)."""
+def matches(fields, sources, lat, lon, measured=None):
+    """{field: Match} for the place fields of one Result (`fields` a dict of them). `measured`:
+    {field: km} a naming rule measured to a fallback place's outline (a metro's principal city),
+    used for that field's distance instead of the box estimate."""
     out = {}
     for name in FIELDS:
         place = fields.get(name)
@@ -38,7 +40,10 @@ def matches(fields, sources, lat, lon):
             out[name] = WITHIN
         else:
             relation, rule = kind
-            out[name] = Match(relation, _distance(place, rule, lat, lon))
+            if measured is not None and name in measured:
+                out[name] = Match(relation, round(measured[name], 3))
+            else:
+                out[name] = Match(relation, _distance(place, rule, lat, lon))
     return out
 
 

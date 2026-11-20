@@ -85,6 +85,7 @@ def build(geo, lat, lon, a, named, order, locked):
         post_l = _world_postal(geo, a["postal_row"], post_l)
         src_postal = geo.postal.source
     regions_l, sources_l = named_lists.get("regions", empty), named_lists.get("sources", empty)
+    km_l = named_lists.get("km", empty)
     parks = a.get("parks")  # (within, near, sources) per point (placewise.engine._nearby.parks)
     notable = a.get("notable_places")  # (near, layer key) per point (placewise.engine._nearby.notable)
     label_settings, data_version = geo.settings.label, geo.data_version
@@ -188,7 +189,8 @@ def build(geo, lat, lon, a, named, order, locked):
         results.append(
             Result(
                 lat=lats[i], lon=lons[i], label=label, tz=tz, near=near, disputed=disputed, sources=sources,
-                matches=matches(fields, sources, lats[i], lons[i]), data_version=data_version, **fields,
+                matches=matches(fields, sources, lats[i], lons[i], km_l[i]), data_version=data_version,
+                **fields,
             )
         )  # fmt: skip
     return results

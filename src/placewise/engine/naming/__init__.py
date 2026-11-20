@@ -47,10 +47,11 @@ class Naming:
         return work
 
     def names(self, a, lat, lon, work):
-        """{field: object array (n,)} of Places, plus "regions" (tuples) and "sources" (one dict
-        per point the rules answered, else None)."""
+        """{field: object array (n,)} of Places, plus "regions" (tuples), "sources" (one dict
+        per point the rules answered, else None) and "km" ({field: km} a rule measured for a
+        fallback place, else None)."""
         n = len(lat)
-        out = {f: np.full(n, None, dtype=object) for f in (*FIELDS, "regions", "sources")}
+        out = {f: np.full(n, None, dtype=object) for f in (*FIELDS, "regions", "sources", "km")}
         for rule, pts, state in work:
             named = rule.names(a, pts, lat[pts], lon[pts], state)
             for field in FIELDS:
@@ -59,4 +60,7 @@ class Naming:
             sources = np.empty(len(pts), dtype=object)
             sources[:] = named.sources
             out["sources"][pts] = sources
+            km = np.empty(len(pts), dtype=object)
+            km[:] = named.km
+            out["km"][pts] = km
         return out

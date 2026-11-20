@@ -25,6 +25,15 @@ class Named:
             setattr(self, field, np.full(m, None, dtype=object))
         self.regions = np.full(m, None, dtype=object)
         self.sources = [{} for _ in range(m)]
+        # {field: km} where a rule measured how far a fallback place is (Result.matches); None: none
+        self.km = [None] * m
+
+    def measured(self, field, pts, km):
+        """Points `pts` are `km` from their `field` place's outline (a fallback's distance)."""
+        for i, d in zip(np.asarray(pts).tolist(), np.asarray(km, dtype=np.float64).tolist(), strict=True):
+            if self.km[i] is None:
+                self.km[i] = {}
+            self.km[i][field] = d
 
     def set(self, field, pts, places, source):
         """Points `pts` (indexes into the m) get `places` (an object array) for `field`; the
